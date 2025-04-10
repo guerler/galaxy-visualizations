@@ -52,6 +52,10 @@ async function render() {
     igv.createBrowser(appElement, datasetContent)
         .then(() => {
             console.debug("Created IGV browser.");
+            const shadowRoot = appElement?.shadowRoot;
+            const igvNavbar = shadowRoot?.querySelector(".igv-navbar");
+            igvNavbar.style['flex-flow'] = "column";
+            igvNavbar.style.height = "100%";
         })
         .catch((e) => {
             console.error("Failed to create IGV browser", e);
