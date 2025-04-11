@@ -18,16 +18,26 @@ const viewport = ref();
 
 let nv;
 
+const MESH_TYPES = {}
+
+const VOLUME_TYPES = {
+    "nii1": "nii",
+    "nii1.gz": "nii.gz",
+    "png": "png",
+}
+
 async function create() {
     try {
         const { data } = await GalaxyApi().GET(`/api/datasets/${props.datasetId}`);
         const extension = data?.extension;
-        const url = `${props.datasetUrl}?extension=.${extension}`;
-        if (["nii", "nii.gz", "nii1.gz", "img", "hdr", "mgz", "mgh"].includes(extension)) {
+        if (VOLUME_TYPES[extension]) {
+            const url = `${props.datasetUrl}?extension=.${VOLUME_TYPES[extension]}`;
+            console.log(url);
             nv = new Niivue();
             await nv.attachTo("niivue-viewport");
             await nv.loadVolumes([{ url }]);
-        } else if (["obj", "stl", "ply", "gii", "vtk"].includes(extension)) {
+        } else if (MESH_TYPES[extension]) {
+            const url = `${props.datasetUrl}?extension=.${MESH_TYPES[extension]}`;
             nv = new Niivue();
             nv.opts.is3D = true;
             await nv.attachTo("niivue-viewport");
