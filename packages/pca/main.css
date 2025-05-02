@@ -1,0 +1,84 @@
+:root {
+    --background: #f9f9f9;
+    --foreground: #1f1f1f;
+    --highlight: #007acc;
+    --border-color: #ddd;
+    --message-background: rgba(255, 255, 255, 0.95);
+    --message-color: rgba(0, 0, 0, 0.9);
+    --font: "Segoe UI", Roboto, sans-serif;
+}
+
+body,
+html {
+    overscroll-behavior: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font);
+    background: var(--background);
+    color: var(--foreground);
+}
+
+#visualisation {
+    width: 100%;
+    height: 100vh;
+}
+
+#wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+#controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding: 0.5rem;
+    background: #fff;
+    z-index: 10;
+}
+
+label {
+    font-weight: 100;
+    font-size: 0.95rem;
+    line-height: 1.4rem;
+    margin-right: 0.5rem;
+    align-self: center;
+    min-width: 100px;
+    text-align: right;
+    color: var(--foreground);
+}
+
+select {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.3rem 1rem 0.3rem 0.5rem;
+    background: white url('data:image/svg+xml;utf8,<svg fill="gray" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat right 0.5rem center;
+    background-size: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4rem;
+    min-width: 180px;
+    color: var(--foreground);
+}
+
+select:focus {
+    border-color: var(--highlight);
+    outline: none;
+}
+
+#message {
+    background: var(--message-background);
+    border-radius: 6px;
+    color: var(--message-color);
+    display: none;
+    font-family: var(--font);
+    font-size: 0.85rem;
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
+    padding: 0.7rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 9999;
+}
