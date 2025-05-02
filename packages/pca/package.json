@@ -1,5 +1,5 @@
 {
-    "name": "galaxy-charts-vanilla",
+    "name": "@galaxyproject/pca",
     "version": "0.0.0",
     "license": "MIT",
     "type": "module",
@@ -14,10 +14,7 @@
         "preview": "vite preview"
     },
     "devDependencies": {
-        "buffer": "^6.0.3",
-        "d3": "^7.9.0",
         "ml-pca": "^4.1.1",
-        "pca-js": "^1.0.2",
         "plotly.js-dist": "^2.35.2",
         "prettier": "^3.5.3",
         "vite": "^6.2.2"

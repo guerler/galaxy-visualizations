@@ -1,4 +1,3 @@
-import * as d3 from "d3";
 import Plotly from "plotly.js-dist";
 import { PCA } from "ml-pca";
 
@@ -204,8 +203,7 @@ export async function render() {
             };
         });
 
-        const container = d3.select("#visualisation").node();
-        Plotly.newPlot(container, traces, layout);
+        Plotly.newPlot("visualisation", traces, layout);
         window.onresize = () => Plotly.Plots.resize(container);
     }
 
