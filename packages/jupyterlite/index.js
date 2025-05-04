@@ -16,7 +16,7 @@ const query = new URLSearchParams({
 
 // Load jupyter
 (function () {
-    const jupyterRoot = `${root}static/plugins/visualizations/jupyterlite/static/dist/_output`;
+    const jupyterRoot = `${root}static/plugins/visualizations/jupyterlite/static/dist`;
     const jupyterTarget = `${jupyterRoot}/lab/index.html?${query}`;
     window.location.replace(jupyterTarget);
 })();

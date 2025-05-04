@@ -12,11 +12,11 @@
         "client-only"
     ],
     "files": [
-        "index.html",
-        "jupyter-lite.json",
-        "config-utils.js",
-        "loader.js",
-        "lab/"
+        "_output/index.html",
+        "_output/jupyter-lite.json",
+        "_output/config-utils.js",
+        "_ouput/lab/",
+        "index.js",
+        "loader.js"
     ]
 }
-  
