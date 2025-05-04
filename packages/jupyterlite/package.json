@@ -1,0 +1,22 @@
+{
+    "name": "jupyterlite",
+    "version": "0.0.0",
+    "description": "CDN-distributable JupyterLite build",
+    "license": "MIT",
+    "keywords": [
+        "jupyterlite",
+        "galaxy",
+        "notebook",
+        "pyodide",
+        "cdn",
+        "client-only"
+    ],
+    "files": [
+        "index.html",
+        "jupyter-lite.json",
+        "config-utils.js",
+        "loader.js",
+        "lab/"
+    ]
+}
+  
