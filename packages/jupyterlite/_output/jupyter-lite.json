@@ -2,11 +2,19 @@
   "jupyter-config-data": {
     "appName": "JupyterLite",
     "appUrl": "./lab",
-    "appVersion": "0.4.5",
+    "appVersion": "0.5.0-alpha.0",
     "baseUrl": "./",
     "defaultKernelName": "python",
     "faviconUrl": "./lab/favicon.ico",
-    "federated_extensions": [],
+    "federated_extensions": [
+      {
+        "extension": "./extension",
+        "liteExtension": true,
+        "load": "static/remoteEntry.cdbf97db0179334e7548.js",
+        "name": "@jupyterlite/p5-kernel-extension",
+        "style": "./style"
+      }
+    ],
     "fileTypes": {
       "css": {
         "extensions": [
