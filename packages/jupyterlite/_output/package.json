@@ -40,8 +40,5 @@
       "notebooks",
       "consoles"
     ]
-  },
-  "dependencies": {
-    "@jupyterlite/pyodide-kernel-extension": "^0.5.2"
   }
 }

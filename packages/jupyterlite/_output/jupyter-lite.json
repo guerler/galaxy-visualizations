@@ -13,6 +13,12 @@
         "load": "static/remoteEntry.cdbf97db0179334e7548.js",
         "name": "@jupyterlite/p5-kernel-extension",
         "style": "./style"
+      },
+      {
+        "extension": "./extension",
+        "liteExtension": true,
+        "load": "index.js",
+        "name": "jl-galaxy"
       }
     ],
     "fileTypes": {
