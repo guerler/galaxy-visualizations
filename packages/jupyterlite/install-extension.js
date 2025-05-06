@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 // ---- Config ----
 const EXT_NAME = "jl-galaxy";
-const SOURCE_FILE = path.join(__dirname, "index.js");
+const SOURCE_FILE = path.join(__dirname, "extension.js");
 const DEST_DIR = path.join(__dirname, "_output", "extensions", EXT_NAME);
 const DEST_FILE = path.join(DEST_DIR, "index.js");
 const CONFIG_PATH = path.join(__dirname, "_output", "jupyter-lite.json");
