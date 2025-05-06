@@ -13,7 +13,7 @@ const CONFIG_PATH = path.join(__dirname, "_output", "jupyter-lite.json");
 
 const EXT_ENTRY = {
   name: EXT_NAME,
-  load: `extensions/${EXT_NAME}/index.js`,
+  load: "index.js",
   extension: "./extension",
   liteExtension: true
 };
