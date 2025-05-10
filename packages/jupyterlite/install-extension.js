@@ -17,9 +17,9 @@ if (wheelFiles.length === 0) {
 const JUPYTER_DIR = "static/dist/_output";
 const EXTENSION_NAME = "jl-galaxy";
 const CONFIG_PATH = path.join(__dirname, JUPYTER_DIR, "jupyter-lite.json");
+const PYPI_DIR = path.join(__dirname, JUPYTER_DIR, "pypi");
 const GXY_SOURCE_WHEEL = path.join(distDir, wheelFiles[0]);
-const GXY_TARGET_DIR = path.join(__dirname, JUPYTER_DIR, "pypi");
-const GXY_TARGET_WHEEL = path.join(GXY_TARGET_DIR, path.basename(GXY_SOURCE_WHEEL));
+const GXY_TARGET_WHEEL = path.join(PYPI_DIR, path.basename(GXY_SOURCE_WHEEL));
 
 // ---- Optionally disable extensions e.g. side panel ----
 const DISABLED = [
@@ -58,7 +58,7 @@ if (!config["jupyter-config-data"]) {
 const jupyterConfig = config["jupyter-config-data"];
 
 // ---- Copy GXY wheel to _output/pypi ----
-fs.mkdirSync(GXY_TARGET_DIR, { recursive: true });
+fs.mkdirSync(PYPI_DIR, { recursive: true });
 fs.copyFileSync(GXY_SOURCE_WHEEL, GXY_TARGET_WHEEL);
 console.log(`✅ Copied GXY wheel → ${GXY_TARGET_WHEEL}`);
 
