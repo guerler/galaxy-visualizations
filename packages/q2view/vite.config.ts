@@ -9,4 +9,17 @@ export default defineConfig({
     },
   },
   plugins: [svelte()],
+  build: {
+    outDir: './static',
+    emptyOutDir: true,
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        manualChunks: () => 'app',
+        entryFileNames: '[name].js',
+        chunkFileNames: '[name].js',
+        assetFileNames: '[name][extname]',
+      },
+    },
+  },
 });
