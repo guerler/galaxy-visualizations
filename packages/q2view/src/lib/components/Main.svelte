@@ -11,6 +11,14 @@
 
   const uuid4Regex = /[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}/;
 
+  // Access attached data
+  const appElement = document.querySelector("#app");
+  const incoming = JSON.parse(appElement.dataset?.incoming || "{}");
+  const datasetId = incoming.visualization_config?.dataset_id;
+  const root = incoming.root;
+  const galaxyUrl = "https://docs.qiime2.org/2024.2/data/tutorials/moving-pictures/taxa-bar-plots.qzv"; //`${root}api/datasets/${datasetId}/display`;
+  console.log("Accessing", galaxyUrl);
+
   onMount(() => {
     checkBrowserCompatibility();
     readerModel.attachToServiceWorker();
@@ -35,7 +43,7 @@
   // Case 4, The src changed and it is now empty:
   //  Reset the readerModel because we no longer have data.
   $effect(() => {
-    const newSrc = $url.searchParams.get("src");
+    const newSrc = galaxyUrl;
     const newTab = $url.pathname.replaceAll("/", "");
 
     if (newSrc !== readerModel.rawSrc) {

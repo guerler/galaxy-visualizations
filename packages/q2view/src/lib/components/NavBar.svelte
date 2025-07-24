@@ -16,7 +16,7 @@
     vendored?: boolean;
   }
 
-  let { vendored = false }: Props = $props();
+  let { vendored = true }: Props = $props();
 
   // Height of the navbar is bound to this var
   let nav_bar_height: number | undefined = $state();
@@ -82,9 +82,6 @@
   {/if}
   <div class="nav-wrapper mx-2">
     <div id="nav-container" class="max-width">
-      <button onclick={navLogoClicked} class='ml-1'>
-        <a href='/'><img id="navlogo" src="/images/q2view.png" alt="QIIME 2 view logo" /></a>
-      </button>
       {#if $readerModel.name}
         <ul class="mx-auto flex">
           <li id="file-text">

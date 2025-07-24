@@ -16,7 +16,7 @@
     <params>
         <param required="true">dataset_id</param>
     </params>
-    <entry_point entry_point_type="script" src="index.js" css="q2view.css" />
+    <entry_point entry_point_type="script" src="index.js" css="style.css" />
     <tests>
         <test>
             <param name="dataset_id" value="http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/matrix_generator_for_pc_and_lda_output.tabular" />
