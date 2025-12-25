@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE visualization SYSTEM "../../visualization.dtd">
+<visualization name="ChatAnalysis" embeddable="true">
+    <description>Natural language driven Data Analysis</description>
+    <data_sources>
+        <data_source>
+            <model_class>HistoryDatasetAssociation</model_class>
+            <test test_attr="ext">tabular</test>
+        </data_source>
+    </data_sources>
+    <params>
+        <param required="true">dataset_id</param>
+    </params>
+    <entry_point src="dist/index.js" css="dist/index.css" />
+    <specs>
+        <ai_api_key>ollama</ai_api_key>
+        <ai_api_base_url>http://localhost:11434/v1/</ai_api_base_url>
+        <ai_model>qwen3:8b</ai_model>
+        <ai_temperature>0.3</ai_temperature>
+    </specs>
+    <ai>
+        <prompt>You are data analysis expert.</prompt>
+    </ai>
+    <help format="markdown"><![CDATA[
+# What is ChatAnalysis?
+
+ChatAnalysis is an interactive, browser-based data analysis visualization for Galaxy datasets. It combines exploratory analysis, Python-based computation, and AI-assisted reasoning in a single, responsive interface that runs entirely in the browser using Pyodide.
+
+The visualization is designed for interactive, iterative workflows where users want to explore a dataset, generate plots, and ask questions in context, without requiring reproducibility or batch execution.
+
+## Key Features
+
+- **Dataset-Centric Analysis**: ChatAnalysis operates on a single Galaxy dataset selected from the history, providing immediate access to its contents and metadata.
+- **Interactive Chat Interface**: Use a simple, single-thread chat interface to guide analysis steps, request explanations, and refine results.
+- **Python-Based Computation**: Analysis and plotting are performed using Python running in Pyodide, enabling rich scientific workflows without server-side execution.
+- **AI-Assisted Exploration**: Integrates with Galaxy’s AI services to assist with data interpretation, plotting suggestions, and explanatory text.
+- **Rich Visual Output**: Generate plots and visual summaries directly in the visualization, with support for iterative refinement.
+- **No Server-Side Orchestration**: All interaction and control flow happens client-side, keeping the tool responsive and flexible for exploratory use.
+
+## Intended Use
+
+ChatAnalysis is intended for exploratory and interactive analysis. It prioritizes usability, immediacy, and flexibility over strict reproducibility. For fully reproducible or automated workflows, Galaxy tools and workflows should be used instead.
+
+This visualization is especially useful for:
+- rapid data inspection
+- exploratory plotting
+- hypothesis generation
+- interactive reasoning with AI assistance
+
+## How It Fits into Galaxy
+
+ChatAnalysis runs as a Galaxy visualization and integrates seamlessly with existing Galaxy histories and datasets. It does not replace notebooks or workflows, but complements them by providing a fast, interactive analysis surface directly in the browser.
+
+]]></help>
+
+</visualization>
