@@ -1,0 +1,34 @@
+{
+    "name": "galaxy-charts-starter",
+    "version": "0.0.0",
+    "type": "module",
+    "license": "MIT",
+    "files": [
+        "static"
+    ],
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "prettier": "prettier --config ./prettier.config.js --write './*.{js,ts,json}' 'src/**/*.{js,ts,json,css,vue}'",
+        "test": "npm run test:unit",
+        "test:ui": "vitest --ui",
+        "test:unit": "vitest run",
+        "test:watch": "vitest --watch"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.1.18",
+        "@types/node": "^22.9.0",
+        "@vitejs/plugin-vue": "^6.0.3",
+        "@vitest/ui": "^4.0.16",
+        "galaxy-charts": "^0.0.96",
+        "galaxy-charts-xml-parser": "^1.0.3",
+        "happy-dom": "^20.0.11",
+        "prettier": "^3.7.4",
+        "tailwindcss": "^4.1.18",
+        "typescript": "^5.9.3",
+        "vite": "^7.3.0",
+        "vitest": "^4.0.16",
+        "vue": "^3.5.26"
+    }
+}
