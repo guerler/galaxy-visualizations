@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick } from "vue";
+import { onMounted, ref, nextTick } from "vue";
 
 type Role = "user" | "assistant" | "system";
 
@@ -17,46 +17,65 @@ const props = defineProps<{
         ai_api_base_url: string;
         ai_api_key: string;
         ai_model: string;
-        ai_temperature: number;
+        ai_temperature: string;
     };
 }>();
 
+const TEST_DATA = "test-data/1.tabular";
+
 const viewport = ref<HTMLElement | null>(null);
 const input = ref("");
-const messages = ref<Message[]>([
-    {
-        id: 0,
-        role: "system",
-        content: "Dataset loaded. You can start your analysis.",
-    },
-]);
+const messages = ref<Message[]>([]);
 
-let nextId = 1;
+let nextId = 0;
 
-async function send() {
-    const text = input.value.trim();
-    if (!text) {
-        return;
-    }
+async function onInit() {
+    const isTestData = props.datasetId === "__test__";
+    const url = isTestData ? TEST_DATA : `${props.root}api/datasets/${props.datasetId}/display`;
+
+    const response = await fetch(url);
+    const content = await response.text();
 
     messages.value.push({
         id: nextId++,
-        role: "user",
-        content: text,
+        role: "system",
+        content: `You are a dataset analysis assistant.
+
+The following dataset is provided for analysis.
+
+# DATASTART
+${content}
+# DATAEND`,
     });
 
-    input.value = "";
+    nextTick(scrollToBottom);
+}
 
+async function onMessage() {
+    const text = input.value.trim();
+    if (text) {
+        messages.value.push({
+            id: nextId++,
+            role: "user",
+            content: text,
+        });
+        input.value = "";
+        await requestAssistantReply();
+    }
+}
+
+async function requestAssistantReply() {
     const assistantId = nextId++;
     messages.value.push({
         id: assistantId,
         role: "assistant",
         content: "Thinking…",
     });
-
     nextTick(scrollToBottom);
-
     try {
+        const payloadMessages = messages.value
+            .filter((m) => m.id !== assistantId)
+            .map(({ role, content }) => ({ role, content }));
         const response = await fetch(`${props.specs.ai_api_base_url}chat/completions`, {
             method: "POST",
             headers: {
@@ -65,17 +84,12 @@ async function send() {
             },
             body: JSON.stringify({
                 model: props.specs.ai_model,
-                messages: messages.value.map(({ role, content }) => ({
-                    role,
-                    content,
-                })),
-                temperature: props.specs.ai_temperature,
+                messages: payloadMessages,
+                temperature: parseFloat(props.specs.ai_temperature),
             }),
         });
-
         const data = await response.json();
         const reply = data.choices?.[0]?.message?.content;
-
         const msg = messages.value.find((m) => m.id === assistantId);
         if (msg) {
             msg.content = reply || "No response.";
@@ -86,7 +100,6 @@ async function send() {
             msg.content = "Error contacting AI service.";
         }
     }
-
     nextTick(scrollToBottom);
 }
 
@@ -96,17 +109,9 @@ function scrollToBottom() {
     }
 }
 
-async function render() {}
-
 onMounted(() => {
-    render();
+    onInit();
 });
-
-watch(
-    () => props,
-    () => render(),
-    { deep: true },
-);
 </script>
 
 <template>
@@ -138,7 +143,7 @@ watch(
 
         <!-- Input -->
         <div class="border-t border-gray-700 px-4 py-3">
-            <form class="flex items-center gap-2" @submit.prevent="send">
+            <form class="flex items-center gap-2" @submit.prevent="onMessage">
                 <input
                     v-model="input"
                     type="text"

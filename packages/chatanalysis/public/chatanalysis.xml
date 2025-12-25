@@ -17,10 +17,8 @@
         <ai_api_base_url>http://localhost:11434/v1/</ai_api_base_url>
         <ai_model>qwen3:8b</ai_model>
         <ai_temperature>0.3</ai_temperature>
+        <ai_prompt>You are data analysis expert.</ai_prompt>
     </specs>
-    <ai>
-        <prompt>You are data analysis expert.</prompt>
-    </ai>
     <help format="markdown"><![CDATA[
 # What is ChatAnalysis?
 
@@ -52,5 +50,4 @@ This visualization is especially useful for:
 ChatAnalysis runs as a Galaxy visualization and integrates seamlessly with existing Galaxy histories and datasets. It does not replace notebooks or workflows, but complements them by providing a fast, interactive analysis surface directly in the browser.
 
 ]]></help>
-
 </visualization>
