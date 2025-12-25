@@ -16,8 +16,10 @@ const props = defineProps<{
     specs: {
         ai_api_base_url: string;
         ai_api_key: string;
+        ai_max_tokens: string;
         ai_model: string;
         ai_temperature: string;
+        ai_top_p: string;
     };
 }>();
 
@@ -45,7 +47,11 @@ The following dataset is provided for analysis.
 
 # DATASTART
 ${content}
-# DATAEND`,
+# DATAEND
+
+
+Respond with a structured Vega JSON.
+`,
     });
 
     nextTick(scrollToBottom);
@@ -83,9 +89,11 @@ async function requestAssistantReply() {
                 Authorization: `Bearer ${props.specs.ai_api_key}`,
             },
             body: JSON.stringify({
-                model: props.specs.ai_model,
+                max_tokens: parseInt(props.specs.ai_max_tokens),
                 messages: payloadMessages,
+                model: props.specs.ai_model,
                 temperature: parseFloat(props.specs.ai_temperature),
+                top_p: parseFloat(props.specs.ai_top_p),
             }),
         });
         const data = await response.json();
