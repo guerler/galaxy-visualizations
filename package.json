@@ -6,6 +6,7 @@
   "author": "Galaxy Contributors",
   "license": "MIT",
   "devDependencies": {
-    "lerna": "^4.0.0"
+    "lerna": "^4.0.0",
+    "pyodide": "^0.29.0"
   }
 }
