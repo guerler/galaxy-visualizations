@@ -2,7 +2,7 @@ import { completionsPost, getToolCall, type CompletionsReply, type CompletionsMe
 import { type TranscriptMessageType, TRANSCRIPT_VARIANT } from "galaxy-charts";
 
 import { buildChooseShellTool, buildFillShellParamsTool } from "@/modules/tools";
-import { shells } from "@/modules/shells/shells";
+import { shells } from "@/modules/shells";
 import { profileCsv } from "@/modules/csv/profiler";
 import { valuesFromCsv } from "@/modules/csv/values";
 import { runAnalysis } from "@/pyodide/pyodide-runner";
@@ -59,8 +59,8 @@ export class Orchestra {
                             }
                             // STEP 4: Analysis (if shell requires it)
                             let effectiveValues = values;
-                            if ((shell as any).analysis?.language === "python") {
-                                effectiveValues = await runAnalysis(pyodide, (shell as any).analysis.id);
+                            if (shell.analysis?.language === "python") {
+                                effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
                                 console.debug("[orchestra]", effectiveValues);
                             }
                             // STEP 5: Compile via shell

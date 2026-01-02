@@ -3,10 +3,8 @@ import type { AnalysisType, FieldType, ShellType, ValidationResult } from "@/mod
 
 const VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
 
-export class CorrelationHeatmapShell implements ShellType {
+export class HeatmapCorrelationShell implements ShellType {
     analysis: AnalysisType = { language: "python", id: "correlation_matrix" };
-    family = "correlation_matrix";
-    id = "heatmap_correlation";
     optional = {};
     name = "Correlation Heatmap";
     required = {};

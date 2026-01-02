@@ -1,5 +1,4 @@
 import type { DatasetProfile } from "@/modules/csv/profiler";
-import type { ValidationResult } from "@/modules/vega/types";
 
 export interface AnalysisType {
     id: string;
@@ -24,9 +23,7 @@ export type ShellParamsType = Record<string, any>;
 
 export interface ShellType {
     // identity
-    id: string;
     name: string;
-    family: string;
 
     // planning / orchestration contracts
     analysis?: AnalysisType;
