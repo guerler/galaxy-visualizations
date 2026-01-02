@@ -12,7 +12,6 @@ function parsePackages() {
 
 self.onmessage = async (e) => {
     const { type, payload, id } = e.data;
-
     if (type === "init") {
         try {
             pyodide = await loadPyodide({ indexURL: payload.indexURL });
@@ -22,40 +21,35 @@ self.onmessage = async (e) => {
             self.postMessage({ type: "error", error: String(err) });
         }
         return;
-    }
-
-    if (!pyodide) {
-        self.postMessage({ id, error: "Pyodide not initialized" });
-        return;
-    }
-
-    if (type === "fsWrite") {
-        try {
-            const fs = pyodide.FS;
-            const dir = payload.dest.substring(0, payload.dest.lastIndexOf("/"));
-            if (dir) {
-                fs.mkdirTree(dir);
+    } else if (pyodide) {
+        if (type === "fsWrite") {
+            try {
+                const fs = pyodide.FS;
+                const dir = payload.dest.substring(0, payload.dest.lastIndexOf("/"));
+                if (dir) {
+                    fs.mkdirTree(dir);
+                }
+                fs.writeFile(payload.dest, payload.content);
+                self.postMessage({ id, result: true });
+            } catch (err) {
+                self.postMessage({ id, error: String(err) });
             }
-            fs.writeFile(payload.dest, payload.content);
-            self.postMessage({ id, result: true });
-        } catch (err) {
-            self.postMessage({ id, error: String(err) });
+            return;
         }
-        return;
-    }
-
-    if (type === "run") {
-        running = true;
-        try {
-            const raw = await pyodide.runPythonAsync(payload.code);
-            const result = typeof raw === "string" ? JSON.parse(raw) : raw;
-            self.postMessage({ id, result });
-        } catch (err) {
-            self.postMessage({ id, error: String(err) });
-        } finally {
-            running = false;
+        if (type === "run") {
+            running = true;
+            try {
+                const raw = await pyodide.runPythonAsync(payload.code);
+                const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+                self.postMessage({ id, result });
+            } catch (err) {
+                self.postMessage({ id, error: String(err) });
+            } finally {
+                running = false;
+            }
         }
+        self.postMessage({ id, error: `Unknown message type: ${type}` });
+    } else {
+        self.postMessage({ id, error: "Pyodide not initialized" });
     }
-
-    self.postMessage({ id, error: `Unknown message type: ${type}` });
 };
