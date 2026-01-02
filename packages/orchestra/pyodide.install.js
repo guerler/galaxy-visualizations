@@ -123,14 +123,17 @@ export function getPackageNames(repoRoot) {
 function main() {
     const repoRoot = __dirname;
     const nodeModulesPyodide = path.join(repoRoot, "node_modules", "pyodide");
-    const outDir = path.join(repoRoot, "static", "pyodide");
-    console.log("Copying node_modules/pyodide to static/pyodide");
-    copyDir(nodeModulesPyodide, outDir);
+    const destDir = path.join(repoRoot, "static", "pyodide");
+    const tempDir = path.join(repoRoot, "temp", "pyodide");
+    console.log("Copying node_modules/pyodide to temp/pyodide");
+    copyDir(nodeModulesPyodide, tempDir);
     const version = getInstalledVersion(repoRoot);
     console.log(`Installed version: ${version}.`);
     const installPackages = getPackageNames(repoRoot);
-    const dependencies = getPackageFileNames(outDir, installPackages);
-    downloadFiles(outDir, dependencies, version);
+    const dependencies = getPackageFileNames(tempDir, installPackages);
+    downloadFiles(tempDir, dependencies, version);
+    console.log("Copying temp/pyodide to static/pyodide");
+    copyDir(tempDir, destDir);
     console.log("Done.");
 }
 

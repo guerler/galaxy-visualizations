@@ -25,4 +25,7 @@ export default defineConfig({
         globals: true,
         include: ["src/**/*.test.{js,ts,jsx,tsx}"],
     },
+    worker: {
+        format: "es",
+    },
 });
