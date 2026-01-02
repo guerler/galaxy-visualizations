@@ -35,7 +35,7 @@ export class Orchestra {
                     // Log intent
                     transcripts.push({
                         role: "assistant",
-                        content: `I will plot a ${shell.name}.`,
+                        content: `I will produce a ${shell.name}.`,
                         variant: TRANSCRIPT_VARIANT.INFO,
                     });
                     transcripts.push({
