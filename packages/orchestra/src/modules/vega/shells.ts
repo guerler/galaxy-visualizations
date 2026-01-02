@@ -76,16 +76,27 @@ export const shells: Record<string, ShellDefinition> = {
             tooltip: "any",
         },
     },
-    line_ordered: {
-        name: "Line Chart",
+    line_ordinal: {
+        name: "Line Chart Ordinal",
         family: "trend",
-        signatures: [
-            ["ordinal", "quantitative"],
-            ["quantitative", "quantitative"],
-        ],
+        signatures: [["ordinal", "quantitative"]],
         mark: "line",
         required: {
             x: { type: "ordinal" },
+            y: { type: "quantitative" },
+        },
+        optional: {
+            color: { type: "nominal" },
+            tooltip: "any",
+        },
+    },
+    line_quantitative: {
+        name: "Line Chart Quantitative",
+        family: "trend",
+        signatures: [["quantitative", "quantitative"]],
+        mark: "line",
+        required: {
+            x: { type: "quantitative" },
             y: { type: "quantitative" },
         },
         optional: {

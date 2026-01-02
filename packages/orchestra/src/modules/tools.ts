@@ -25,19 +25,14 @@ export function buildChooseShellTool() {
 
 export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
     const properties: Record<string, any> = {};
+    const required: string[] = [];
     function fieldsForType(expectedType: string): string[] {
         if (expectedType === "any") {
             return Object.keys(profile.fields);
         }
         if (expectedType === "temporal") {
-            const temporal = Object.entries(profile.fields)
-                .filter(([_, meta]) => meta.type === "temporal")
-                .map(([name]) => name);
-            if (temporal.length > 0) {
-                return temporal;
-            }
             return Object.entries(profile.fields)
-                .filter(([_, meta]) => meta.type === "nominal" || meta.type === "quantitative")
+                .filter(([_, meta]) => meta.type === "temporal")
                 .map(([name]) => name);
         }
         return Object.entries(profile.fields)
@@ -55,6 +50,7 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
                     type: "string",
                     enum: fields,
                 };
+                required.push(encoding);
             }
         }
     }
@@ -69,12 +65,6 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             }
         }
     }
-    if (shell.constraints?.aggregateRequired || hasAggregate(shell)) {
-        properties.aggregate = {
-            type: "string",
-            enum: ["count", "sum", "mean", "median", "min", "max"],
-        };
-    }
     if (hasBin(shell)) {
         properties.bin = {
             type: "boolean",
@@ -88,14 +78,11 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             parameters: {
                 type: "object",
                 properties,
+                required,
                 additionalProperties: false,
             },
         },
     };
-}
-
-function hasAggregate(shell: any): boolean {
-    return Object.values(shell.required || {}).some((v: any) => v.aggregate === true);
 }
 
 function hasBin(shell: any): boolean {

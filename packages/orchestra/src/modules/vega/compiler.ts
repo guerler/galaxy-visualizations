@@ -21,7 +21,6 @@ export function compileVegaLite(
 ): VegaLiteSpec {
     const encoding: Record<string, any> = {};
     let transform: any[] | undefined = undefined;
-
     if (shell.family === "correlation_matrix") {
         return {
             $schema: VEGA_LITE_SCHEMA,
@@ -68,8 +67,6 @@ export function compileVegaLite(
             transform,
         };
     }
-
-    // --- required encodings ---
     for (const [channel, constraint] of Object.entries(shell.required)) {
         const field = (params as any)[channel];
         const enc: Record<string, any> = {
@@ -78,8 +75,8 @@ export function compileVegaLite(
         if (field !== undefined) {
             enc.field = field;
         }
-        if (constraint.aggregate === true && params.aggregate) {
-            enc.aggregate = params.aggregate;
+        if (constraint.aggregate === true) {
+            enc.aggregate = params.aggregate ?? "mean";
         } else if (typeof constraint.aggregate === "string") {
             enc.aggregate = constraint.aggregate;
         }
@@ -88,8 +85,6 @@ export function compileVegaLite(
         }
         encoding[channel] = enc;
     }
-
-    // --- optional encodings ---
     if (shell.optional) {
         for (const [channel, constraint] of Object.entries(shell.optional)) {
             const field = (params as any)[channel];
@@ -104,7 +99,6 @@ export function compileVegaLite(
             };
         }
     }
-
     return {
         $schema: VEGA_LITE_SCHEMA,
         data: { values },

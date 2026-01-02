@@ -25,6 +25,7 @@ export class Orchestra {
         const msgs: ConsoleMessageType[] = [];
         const wdgs: any[] = [];
 
+        // Parse data
         const profile = profileCsv(csvText);
         const values = valuesFromCsv(csvText);
 
@@ -41,6 +42,9 @@ export class Orchestra {
             throw `Unknown shell selected: ${chooseShell.shellId}`;
         }
         const shell = shells[chooseShell.shellId];
+        const requiredEncodings = Object.entries(shell.required || {})
+            .filter(([_, spec]) => isEncodingSpec(spec) && typeof spec.aggregate !== "string")
+            .map(([enc]) => enc);
         transcripts.push({
             role: "assistant",
             content: `I will plot a ${shell.name}.`,
@@ -53,27 +57,23 @@ export class Orchestra {
         });
 
         // STEP 2: Fill parameters
-        const paramReply = await this.completions(transcripts, [buildFillShellParamsTool(shell, profile)]);
-        if (!paramReply) {
-            throw "No response when filling shell parameters";
+        let effectiveParams: any = {};
+        for (let i = 0; i < 3; i++) {
+            const paramReply = await this.completions(transcripts, [buildFillShellParamsTool(shell, profile)]);
+            if (!paramReply) {
+                throw "No response when filling shell parameters";
+            }
+            const params = getToolCall("fill_shell_params", paramReply.choices?.[0]?.message?.tool_calls);
+            if (params) {
+                effectiveParams = { ...effectiveParams, ...params };
+            }
+            const hasAllRequired = requiredEncodings.every(
+                (enc) => effectiveParams[enc] !== undefined && effectiveParams[enc] !== null,
+            );
+            if (hasAllRequired) {
+                break;
+            }
         }
-        const params = getToolCall("fill_shell_params", paramReply.choices?.[0]?.message?.tool_calls);
-        if (!params) {
-            throw "LLM did not provide shell parameters";
-        }
-        transcripts.push({
-            role: "assistant",
-            content: `I created the plot for you.`,
-            variant: TRANSCRIPT_VARIANT.INFO,
-        });
-        transcripts.push({
-            role: "assistant",
-            content: `Calling fill_shell_params with: ${JSON.stringify(params)}}`,
-            variant: TRANSCRIPT_VARIANT.DATA,
-        });
-
-        // Validate
-        const effectiveParams = { ...params };
         for (const [encoding, spec] of Object.entries(shell.required || {})) {
             if (isEncodingSpec(spec) && typeof spec.aggregate === "string") {
                 effectiveParams[encoding] = {
@@ -82,21 +82,22 @@ export class Orchestra {
                 };
             }
         }
+
+        // STEP 3: Validate
         const validation = validateShellParams(shell, effectiveParams, profile);
         if (!validation.ok) {
+            console.debug("[orchestra]", effectiveParams, validation);
             throw "Invalid visualization parameters";
         }
         for (const w of validation.warnings) {
             msgs.push({ type: "warning", content: w.code, details: w.details });
         }
-
-        // Run python code
         let effectiveValues = values;
         if (shell.analysis?.language === "python") {
             effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
-            console.debug("[orchestra]", effectiveValues);
         }
-        // Create vega spec
+
+        // STEP 4: Create Schema
         const vegaSpec = compileVegaLite(shell, effectiveParams, effectiveValues);
         wdgs.push(vegaSpec);
         return wdgs;
@@ -113,7 +114,6 @@ export class Orchestra {
     }
 }
 
-// utilities
 function isEncodingSpec(spec: unknown): spec is { type: string; aggregate?: boolean; bin?: boolean } {
     return typeof spec === "object" && spec !== null && "type" in spec && typeof (spec as any).type === "string";
 }
