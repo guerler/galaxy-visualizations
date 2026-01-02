@@ -1,4 +1,4 @@
-import { shells } from "@/modules/vega/shells";
+import { shells } from "@/modules/shells/shells";
 import { type DatasetProfile } from "@/modules/csv/profiler";
 
 export function buildChooseShellTool(profile: DatasetProfile) {

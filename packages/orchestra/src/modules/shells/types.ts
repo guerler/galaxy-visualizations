@@ -42,3 +42,29 @@ export interface ShellType {
 
     compile(params: ShellParamsType, values: Record<string, unknown>[], RendererType: RendererType): unknown;
 }
+
+export interface ValidationError {
+    code:
+        | "aggregate_missing"
+        | "bin_missing"
+        | "invalid_aggregate_target"
+        | "invalid_bin_target"
+        | "invalid_field_type"
+        | "invalid_signature"
+        | "missing_required_encoding"
+        | "not_enough_quantitative_fields"
+        | "unknown_field"
+        | "unknown_shell";
+    details?: Record<string, unknown>;
+}
+
+export interface ValidationWarning {
+    code: "high_cardinality_color" | "high_cardinality_x" | "large_dataset_embedded";
+    details?: Record<string, unknown>;
+}
+
+export interface ValidationResult {
+    errors: ValidationError[];
+    ok: boolean;
+    warnings: ValidationWarning[];
+}

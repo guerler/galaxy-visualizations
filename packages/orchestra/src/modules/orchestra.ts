@@ -1,6 +1,5 @@
 import { completionsPost, getToolCall, type CompletionsReply, type CompletionsMessage } from "@/modules/ai/completions";
 import { type TranscriptMessageType, TRANSCRIPT_VARIANT } from "galaxy-charts";
-import type { ConsoleMessageType } from "@/types";
 
 import { buildChooseShellTool, buildFillShellParamsTool } from "@/modules/tools";
 import { shells } from "@/modules/shells/shells";

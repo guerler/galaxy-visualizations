@@ -1,6 +1,5 @@
 import type { DatasetProfile } from "@/modules/csv/profiler";
-import type { AnalysisType, FieldType, ShellType } from "@/modules/shells/types";
-import type { ValidationResult } from "@/modules/vega/types";
+import type { AnalysisType, FieldType, ShellType, ValidationResult } from "@/modules/shells/types";
 
 const VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
 
