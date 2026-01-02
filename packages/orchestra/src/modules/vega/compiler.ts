@@ -21,6 +21,7 @@ export function compileVegaLite(
 ): VegaLiteSpec {
     const encoding: Record<string, any> = {};
     let transform: any[] | undefined = undefined;
+
     if (shell.family === "correlation_matrix") {
         return {
             $schema: VEGA_LITE_SCHEMA,
@@ -43,6 +44,7 @@ export function compileVegaLite(
             },
         };
     }
+
     if (shell.family === "distribution" && shell.mark === "area") {
         const xField = (params as any).x;
         transform = [
@@ -67,7 +69,9 @@ export function compileVegaLite(
             transform,
         };
     }
-    for (const [channel, constraint] of Object.entries(shell.required)) {
+
+    // required encodings
+    for (const [channel, constraint] of Object.entries(shell.required || {})) {
         const field = (params as any)[channel];
         const enc: Record<string, any> = {};
         if (constraint.type && constraint.type !== "any") {
@@ -77,7 +81,7 @@ export function compileVegaLite(
             enc.field = field;
         }
         if (constraint.aggregate === true) {
-            enc.aggregate = params.aggregate ?? "mean";
+            enc.aggregate = "mean";
         } else if (typeof constraint.aggregate === "string") {
             enc.aggregate = constraint.aggregate;
         }
@@ -86,29 +90,47 @@ export function compileVegaLite(
         }
         encoding[channel] = enc;
     }
-    for (const enc of Object.values(encoding)) {
-        if (!enc.type && enc.field) {
-            enc.type = "nominal";
-        }
-    }
+
+    // optional encodings
     if (shell.optional) {
         for (const [channel, constraint] of Object.entries(shell.optional)) {
             const field = (params as any)[channel];
             if (!field) continue;
             if (constraint === "any") {
                 encoding[channel] = { field };
-                continue;
+            } else {
+                encoding[channel] = {
+                    field,
+                    type: constraint.type,
+                };
             }
-            encoding[channel] = {
-                field,
-                type: constraint.type,
+        }
+    }
+
+    // default type fallback (never emit "any")
+    for (const enc of Object.values(encoding)) {
+        if (!enc.type && enc.field) {
+            enc.type = "nominal";
+        }
+    }
+
+    // bar value: synthesize row index, never aggregate
+    if (shell.family === "value" && shell.mark === "bar") {
+        if (!encoding.x && encoding.y) {
+            transform = [...(transform ?? []), { window: [{ op: "row_number", as: "__index__" }] }];
+            encoding.x = {
+                field: "__index__",
+                type: "ordinal",
+                title: "Index",
             };
         }
     }
+
     return {
         $schema: VEGA_LITE_SCHEMA,
         data: { values },
         mark: { type: shell.mark },
         encoding,
+        transform,
     };
 }

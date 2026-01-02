@@ -24,13 +24,25 @@ export const shells: Record<string, ShellDefinition> = {
     bar_count: {
         name: "Bar Count",
         family: "categorical_count",
-        signatures: [["nominal"]],
+        signatures: [["nominal"], ["ordinal"], ["quantitative"]],
         mark: "bar",
         required: {
             x: { type: "any" },
         },
         optional: {
             color: { type: "nominal" },
+            tooltip: "any",
+        },
+    },
+    bar_value: {
+        name: "Bar Values",
+        family: "value",
+        signatures: [["quantitative"]],
+        mark: "bar",
+        required: {
+            y: { type: "quantitative" },
+        },
+        optional: {
             tooltip: "any",
         },
     },
