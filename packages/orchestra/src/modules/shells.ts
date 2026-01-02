@@ -1,16 +1,16 @@
 import type { ShellType } from "@/modules/shells/types";
-import { HeatmapCorrelationShell } from "@/modules/shells/heatmap_correlation";
+import { HeatmapCorrelationShell } from "@/modules/shells/heatmap-correlation";
 import { HistogramShell } from "@/modules/shells/histogram";
 import { BoxPlotShell } from "@/modules/shells/boxplot";
-import { DensityShell } from "@/modules/shells//density";
-import { ScatterShell } from "@/modules/shells//scatter";
-import { BarCountShell } from "@/modules/shells/bar_count";
-import { BarSeriesShell } from "./shells/bar_series";
-import { BarValueShell } from "./shells/bar_value";
-import { BarAggregateShell } from "./shells/bar_aggregate";
-import { LineTimeShell } from "./shells/line_time";
-import { LineGenericShell } from "./shells/line_generic";
-import { StackedAreaShell } from "./shells/stacked_area";
+import { DensityShell } from "@/modules/shells/density";
+import { ScatterShell } from "@/modules/shells/scatter";
+import { BarCountShell } from "@/modules/shells/bar-count";
+import { BarSeriesShell } from "./shells/bar-series";
+import { BarValueShell } from "./shells/bar-value";
+import { BarAggregateShell } from "./shells/bar-aggregate";
+import { LineTimeShell } from "./shells/line-time";
+import { LineGenericShell } from "./shells/line-generic";
+import { StackedAreaShell } from "./shells/stacked-area";
 
 export const shells: Record<string, ShellType> = {
     bar_aggregate: new BarAggregateShell(),
