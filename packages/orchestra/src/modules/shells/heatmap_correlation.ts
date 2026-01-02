@@ -1,36 +1,18 @@
 import type { DatasetProfile } from "@/modules/csv/profiler";
-import type { ValidationResult } from "@/modules/vega/types";
 import type { AnalysisType, FieldType, ShellType } from "@/modules/shells/types";
+import type { ValidationResult } from "@/modules/vega/types";
 
 const VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
 
 export class CorrelationHeatmapShell implements ShellType {
-    id = "heatmap_correlation";
-    name = "Correlation Heatmap";
-    family = "correlation_matrix";
-
     analysis: AnalysisType = { language: "python", id: "correlation_matrix" };
-    signatures: FieldType[][] = [["quantitative", "quantitative"]];
-    required = {};
+    family = "correlation_matrix";
+    id = "heatmap_correlation";
     optional = {};
-
+    name = "Correlation Heatmap";
+    required = {};
     rowSemantics = "aggregate" as const;
-
-    validate(_params: Record<string, any>, profile: DatasetProfile): ValidationResult {
-        const quantitativeCount = Object.values(profile.fields).filter((f) => f.type === "quantitative").length;
-        if (quantitativeCount < 2) {
-            return {
-                ok: false,
-                errors: [{ code: "not_enough_quantitative_fields" }],
-                warnings: [],
-            };
-        }
-        return {
-            ok: true,
-            errors: [],
-            warnings: [],
-        };
-    }
+    signatures: FieldType[][] = [["quantitative", "quantitative"]];
 
     compile(_params: Record<string, any>, values: Record<string, unknown>[], renderer: "vega-lite"): unknown {
         if (renderer !== "vega-lite") {
@@ -39,7 +21,6 @@ export class CorrelationHeatmapShell implements ShellType {
         return {
             $schema: VEGA_LITE_SCHEMA,
             data: { values },
-            mark: { type: "rect" },
             encoding: {
                 x: { field: "x", type: "nominal" },
                 y: { field: "y", type: "nominal" },
@@ -55,6 +36,23 @@ export class CorrelationHeatmapShell implements ShellType {
                     { field: "value", type: "quantitative", format: ".2f" },
                 ],
             },
+            mark: { type: "rect" },
+        };
+    }
+
+    validate(_params: Record<string, any>, profile: DatasetProfile): ValidationResult {
+        const quantitativeCount = Object.values(profile.fields).filter((f) => f.type === "quantitative").length;
+        if (quantitativeCount < 2) {
+            return {
+                errors: [{ code: "not_enough_quantitative_fields" }],
+                ok: false,
+                warnings: [],
+            };
+        }
+        return {
+            errors: [],
+            ok: true,
+            warnings: [],
         };
     }
 }

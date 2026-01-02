@@ -32,7 +32,7 @@ export interface ShellType {
     analysis?: AnalysisType;
     signatures: FieldType[][];
     required: EncodingMapType;
-    optional?: EncodingMapType;
+    optional?: EncodingMapType | "any";
 
     // semantic declaration
     rowSemantics: "rowwise" | "aggregate";

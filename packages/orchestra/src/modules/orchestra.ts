@@ -20,7 +20,6 @@ export class Orchestra {
     }
 
     async process(transcripts: TranscriptMessageType[], pyodide: any, csvText: string): Promise<any[]> {
-        const msgs: ConsoleMessageType[] = [];
         const wdgs: any[] = [];
 
         // Parse dataset
@@ -57,13 +56,13 @@ export class Orchestra {
                         const validation = shell.validate(params, profile);
                         if (validation.ok) {
                             for (const w of validation.warnings) {
-                                msgs.push({ type: "warning", content: w.code, details: w.details });
+                                console.debug("[orchestra]", w.code, w.details);
                             }
                             // STEP 4: Analysis (if shell requires it)
                             let effectiveValues = values;
                             if ((shell as any).analysis?.language === "python") {
                                 effectiveValues = await runAnalysis(pyodide, (shell as any).analysis.id);
-                                console.log("[orchestra]", effectiveValues);
+                                console.debug("[orchestra]", effectiveValues);
                             }
                             // STEP 5: Compile via shell
                             const spec = shell.compile(params, effectiveValues, "vega-lite");
