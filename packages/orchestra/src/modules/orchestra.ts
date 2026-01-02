@@ -3,9 +3,7 @@ import { type TranscriptMessageType, TRANSCRIPT_VARIANT } from "galaxy-charts";
 import type { ConsoleMessageType } from "@/types";
 
 import { buildChooseShellTool, buildFillShellParamsTool } from "@/modules/tools";
-import { shells } from "@/modules/vega/shells";
-import { validateShellParams } from "@/modules/vega/validator";
-import { compileVegaLite } from "@/modules/vega/compiler";
+import { shells } from "@/modules/shells/shells";
 import { profileCsv } from "@/modules/csv/profiler";
 import { valuesFromCsv } from "@/modules/csv/values";
 import { runAnalysis } from "@/pyodide/pyodide-runner";
@@ -25,7 +23,7 @@ export class Orchestra {
         const msgs: ConsoleMessageType[] = [];
         const wdgs: any[] = [];
 
-        // Parse data
+        // Parse dataset
         const profile = profileCsv(csvText);
         const values = valuesFromCsv(csvText);
 
@@ -34,17 +32,17 @@ export class Orchestra {
         if (!chooseReply) {
             throw "No response from AI provider";
         }
+
         const chooseShell = getToolCall("choose_shell", chooseReply.choices?.[0]?.message?.tool_calls);
         if (!chooseShell?.shellId) {
             throw "LLM did not select a visualization shell";
         }
-        if (!(chooseShell.shellId in shells)) {
+
+        const shell = shells[chooseShell.shellId];
+        if (!shell) {
             throw `Unknown shell selected: ${chooseShell.shellId}`;
         }
-        const shell = shells[chooseShell.shellId];
-        const requiredEncodings = Object.entries(shell.required || {})
-            .filter(([_, spec]) => isEncodingSpec(spec) && typeof spec.aggregate !== "string")
-            .map(([enc]) => enc);
+
         transcripts.push({
             role: "assistant",
             content: `I will plot a ${shell.name}.`,
@@ -57,42 +55,39 @@ export class Orchestra {
         });
 
         // STEP 2: Fill parameters
-        let effectiveParams: any = {};
+        let params: Record<string, any> = {};
         const paramReply = await this.completions(transcripts, [buildFillShellParamsTool(shell, profile)]);
-        if (paramReply) {
-            const params = getToolCall("fill_shell_params", paramReply.choices?.[0]?.message?.tool_calls);
-            if (params) {
-                effectiveParams = { ...effectiveParams, ...params };
-            }
-        } else {
+        if (!paramReply) {
             throw "No response when filling shell parameters";
         }
-        for (const [encoding, spec] of Object.entries(shell.required || {})) {
-            if (isEncodingSpec(spec) && typeof spec.aggregate === "string") {
-                effectiveParams[encoding] = {
-                    field: null,
-                    aggregate: spec.aggregate,
-                };
-            }
+
+        const filled = getToolCall("fill_shell_params", paramReply.choices?.[0]?.message?.tool_calls);
+        if (filled) {
+            params = { ...params, ...filled };
         }
 
-        // STEP 3: Validate
-        const validation = validateShellParams(shell, effectiveParams, profile);
+        // STEP 3: Shell validation
+        const validation = shell.validate(params, profile);
         if (!validation.ok) {
-            console.debug("[orchestra]", effectiveParams, validation);
+            console.debug("[orchestra]", params, validation);
             throw "Invalid visualization parameters";
         }
+
         for (const w of validation.warnings) {
             msgs.push({ type: "warning", content: w.code, details: w.details });
         }
+
+        // STEP 4: Analysis (if shell requires it)
         let effectiveValues = values;
-        if (shell.analysis?.language === "python") {
-            effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
+        if ((shell as any).analysis?.language === "python") {
+            effectiveValues = await runAnalysis(pyodide, (shell as any).analysis.id);
+            console.log(effectiveValues);
         }
 
-        // STEP 4: Create Schema
-        const vegaSpec = compileVegaLite(shell, effectiveParams, effectiveValues);
-        wdgs.push(vegaSpec);
+        // STEP 5: Compile via shell
+        const spec = shell.compile(params, effectiveValues, "vega-lite");
+        wdgs.push(spec);
+
         return wdgs;
     }
 
@@ -105,10 +100,6 @@ export class Orchestra {
             tools,
         });
     }
-}
-
-function isEncodingSpec(spec: unknown): spec is { type: string; aggregate?: boolean; bin?: boolean } {
-    return typeof spec === "object" && spec !== null && "type" in spec && typeof (spec as any).type === "string";
 }
 
 function sanitizeTranscripts(transcripts: TranscriptMessageType[]): CompletionsMessage[] {
