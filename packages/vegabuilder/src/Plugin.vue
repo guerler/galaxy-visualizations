@@ -55,7 +55,6 @@ const datasetUrl = isTestData ? TEST_DATA : `${props.root}api/datasets/${props.d
 const isDev = (import.meta as any).env.DEV;
 const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
 const pyodide = new PyodideManager({ indexURL: `${props.root}${pyodideBaseUrl}static/pyodide` });
-//const pyodide = new PyodideManager({ indexURL: `` });
 
 // References
 const datasetContent = ref();
