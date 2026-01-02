@@ -14,7 +14,6 @@ function copyDir(src, dest) {
     for (const entry of entries) {
         const srcPath = path.join(src, entry.name);
         const destPath = path.join(dest, entry.name);
-        console.log(`Copying ${srcPath}.`);
         if (entry.isDirectory()) {
             copyDir(srcPath, destPath);
         } else if (entry.isFile()) {
@@ -125,14 +124,14 @@ function main() {
     const nodeModulesPyodide = path.join(repoRoot, "node_modules", "pyodide");
     const destDir = path.join(repoRoot, "static", "pyodide");
     const tempDir = path.join(repoRoot, "temp", "pyodide");
-    console.log("Copying node_modules/pyodide to temp/pyodide");
+    console.log("Copying node_modules/pyodide to temp/pyodide.");
     copyDir(nodeModulesPyodide, tempDir);
     const version = getInstalledVersion(repoRoot);
     console.log(`Installed version: ${version}.`);
     const installPackages = getPackageNames(repoRoot);
     const dependencies = getPackageFileNames(tempDir, installPackages);
     downloadFiles(tempDir, dependencies, version);
-    console.log("Copying temp/pyodide to static/pyodide");
+    console.log("Copying temp/pyodide to static/pyodide.");
     copyDir(tempDir, destDir);
     console.log("Done.");
 }
