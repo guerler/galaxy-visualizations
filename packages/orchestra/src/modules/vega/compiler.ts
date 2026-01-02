@@ -69,9 +69,10 @@ export function compileVegaLite(
     }
     for (const [channel, constraint] of Object.entries(shell.required)) {
         const field = (params as any)[channel];
-        const enc: Record<string, any> = {
-            type: constraint.type,
-        };
+        const enc: Record<string, any> = {};
+        if (constraint.type && constraint.type !== "any") {
+            enc.type = constraint.type;
+        }
         if (field !== undefined) {
             enc.field = field;
         }
@@ -84,6 +85,11 @@ export function compileVegaLite(
             enc.bin = true;
         }
         encoding[channel] = enc;
+    }
+    for (const enc of Object.values(encoding)) {
+        if (!enc.type && enc.field) {
+            enc.type = "nominal";
+        }
     }
     if (shell.optional) {
         for (const [channel, constraint] of Object.entries(shell.optional)) {

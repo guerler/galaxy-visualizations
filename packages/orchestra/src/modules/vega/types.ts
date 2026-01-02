@@ -1,4 +1,4 @@
-export type FieldType = "nominal" | "ordinal" | "quantitative" | "temporal";
+export type FieldType = "any" | "nominal" | "ordinal" | "quantitative" | "temporal";
 
 export interface DatasetFieldProfile {
     cardinality: number;

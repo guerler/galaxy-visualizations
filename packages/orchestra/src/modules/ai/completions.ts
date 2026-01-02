@@ -42,13 +42,25 @@ export async function completionsPost(payload: CompletionsPayload): Promise<Comp
 }
 
 export function getToolCall(name: string, toolCalls: Array<any>): Record<string, any> | undefined {
+    let result: Record<string, any> = {};
+    let found = false;
     if (toolCalls && toolCalls.length > 0) {
-        const call = toolCalls.find((c: any) => c?.function?.name === name);
-        if (call) {
-            return JSON.parse(call.function.arguments);
+        for (const call of toolCalls) {
+            if (call?.function?.name === name) {
+                found = true;
+                const args = call.function.arguments;
+                if (typeof args === "string" && args.length > 0) {
+                    try {
+                        const parsed = JSON.parse(args);
+                        result = { ...result, ...parsed };
+                    } catch {
+                        continue;
+                    }
+                }
+            }
         }
     }
-    return undefined;
+    return found ? result : undefined;
 }
 
 function normalizeParameter(v: number | undefined, min: number, max: number, fallback: number) {

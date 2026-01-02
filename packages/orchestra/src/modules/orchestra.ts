@@ -30,7 +30,7 @@ export class Orchestra {
         const values = valuesFromCsv(csvText);
 
         // STEP 1: Choose shell
-        const chooseReply = await this.completions(transcripts, [buildChooseShellTool()]);
+        const chooseReply = await this.completions(transcripts, [buildChooseShellTool(profile)]);
         if (!chooseReply) {
             throw "No response from AI provider";
         }
@@ -58,21 +58,14 @@ export class Orchestra {
 
         // STEP 2: Fill parameters
         let effectiveParams: any = {};
-        for (let i = 0; i < 3; i++) {
-            const paramReply = await this.completions(transcripts, [buildFillShellParamsTool(shell, profile)]);
-            if (!paramReply) {
-                throw "No response when filling shell parameters";
-            }
+        const paramReply = await this.completions(transcripts, [buildFillShellParamsTool(shell, profile)]);
+        if (paramReply) {
             const params = getToolCall("fill_shell_params", paramReply.choices?.[0]?.message?.tool_calls);
             if (params) {
                 effectiveParams = { ...effectiveParams, ...params };
             }
-            const hasAllRequired = requiredEncodings.every(
-                (enc) => effectiveParams[enc] !== undefined && effectiveParams[enc] !== null,
-            );
-            if (hasAllRequired) {
-                break;
-            }
+        } else {
+            throw "No response when filling shell parameters";
         }
         for (const [encoding, spec] of Object.entries(shell.required || {})) {
             if (isEncodingSpec(spec) && typeof spec.aggregate === "string") {

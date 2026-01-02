@@ -21,6 +21,19 @@ export const shells: Record<string, ShellDefinition> = {
             aggregateRequired: true,
         },
     },
+    bar_count: {
+        name: "Bar Count",
+        family: "categorical_count",
+        signatures: [["nominal"]],
+        mark: "bar",
+        required: {
+            x: { type: "any" },
+        },
+        optional: {
+            color: { type: "nominal" },
+            tooltip: "any",
+        },
+    },
     boxplot: {
         name: "Box Plot",
         family: "distribution",
@@ -77,7 +90,7 @@ export const shells: Record<string, ShellDefinition> = {
         },
     },
     line_ordinal: {
-        name: "Line Chart Ordinal",
+        name: "Ordinal Line Chart",
         family: "trend",
         signatures: [["ordinal", "quantitative"]],
         mark: "line",
@@ -91,7 +104,7 @@ export const shells: Record<string, ShellDefinition> = {
         },
     },
     line_quantitative: {
-        name: "Line Chart Quantitative",
+        name: "Quantitative Line Chart",
         family: "trend",
         signatures: [["quantitative", "quantitative"]],
         mark: "line",

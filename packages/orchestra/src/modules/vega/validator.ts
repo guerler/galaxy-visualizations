@@ -72,7 +72,12 @@ export function validateShellParams(
         const expected =
             shell.required?.[enc]?.type ??
             (shell.optional?.[enc] !== "any" ? (shell.optional?.[enc] as any)?.type : null);
-        if (expected && actualType !== expected && !(expected === "temporal" && actualType === "quantitative")) {
+        if (
+            expected &&
+            expected !== "any" &&
+            actualType !== expected &&
+            !(expected === "temporal" && actualType === "quantitative")
+        ) {
             errors.push({
                 code: "invalid_field_type",
                 details: {

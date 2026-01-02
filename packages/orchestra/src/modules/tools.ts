@@ -1,7 +1,14 @@
 import { shells } from "@/modules/vega/shells";
 import { type DatasetProfile } from "@/modules/csv/profiler";
 
-export function buildChooseShellTool() {
+export function buildChooseShellTool(profile: DatasetProfile) {
+    const compatibleShellIds = Object.entries(shells)
+        .filter(([_, shell]) =>
+            shell.signatures.some((sig: string[]) =>
+                sig.every((type: string) => Object.values(profile.fields).some((f) => f.type === type)),
+            ),
+        )
+        .map(([id]) => id);
     return {
         type: "function",
         function: {
@@ -12,7 +19,7 @@ export function buildChooseShellTool() {
                 properties: {
                     shellId: {
                         type: "string",
-                        enum: Object.keys(shells),
+                        enum: compatibleShellIds,
                         description: "The id of the selected visualization shell. Must be one of the available shells.",
                     },
                 },
