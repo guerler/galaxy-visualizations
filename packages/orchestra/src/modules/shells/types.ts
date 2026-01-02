@@ -49,6 +49,7 @@ export interface ValidationError {
         | "invalid_field_type"
         | "invalid_signature"
         | "missing_required_encoding"
+        | "not_enough_fields"
         | "not_enough_quantitative_fields"
         | "unknown_field"
         | "unknown_shell";
