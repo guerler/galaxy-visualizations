@@ -40,8 +40,8 @@ const emit = defineEmits<{
 
 // Constants
 const MESSAGE_INITIAL = "Hi, I will create plots for you.";
-const MESSAGE_SUCCESS = "I produced an output.";
 const MESSAGE_FAILED = "I failed to complete your request.";
+const MESSAGE_SUCCESS = "I produced an output.";
 const PROMPT_DATASET = "The content of 'dataset.csv' follows.";
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "vegabuilder";
