@@ -27,6 +27,7 @@ export interface ShellType {
 
     // planning / orchestration contracts
     analysis?: AnalysisType;
+    description?: string;
     signatures: FieldType[][];
     required: EncodingMapType;
     optional?: EncodingMapType | "any";

@@ -13,6 +13,13 @@ const VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
 export class BarSeriesShell implements ShellType {
     analysis: AnalysisType | undefined = undefined;
     name = "Multi-Series Bar Chart";
+    description = `
+        Compare multiple quantitative fields per row using grouped bars.
+        Each dataset row becomes a category on the x axis.
+        Each selected field becomes a colored bar within that category.
+        Useful for comparing measurements side by side across records.
+        Not for aggregations over categories.
+    `;
     optional: EncodingMapType = { tooltip: { type: "any" } };
     required: EncodingMapType = { values: { type: "quantitative" } };
     rowSemantics = "rowwise" as const;

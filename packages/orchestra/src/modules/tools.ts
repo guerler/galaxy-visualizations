@@ -2,26 +2,31 @@ import { shells } from "@/modules/shells";
 import { type DatasetProfile } from "@/modules/csv/profiler";
 
 export function buildChooseShellTool(profile: DatasetProfile) {
-    const compatibleShellIds = Object.entries(shells)
+    const compatibleShells = Object.entries(shells)
         .filter(([_, shell]) =>
             shell.signatures.some((sig) =>
                 sig.every((type) => Object.values(profile.fields).some((f) => f.type === type)),
             ),
         )
-        .map(([id]) => id);
-
+        .map(([id, shell]) => {
+            const description = (shell.description ?? "").replace(/\s+/g, " ").trim();
+            return {
+                id,
+                label: description ? `${id}: ${description}` : id,
+            };
+        });
     return {
         type: "function",
         function: {
             name: "choose_shell",
-            description: "You must select the most appropriate visualization shell for the user request.",
+            description: "Select the most appropriate visualization shell for the user request.",
             parameters: {
                 type: "object",
                 properties: {
                     shellId: {
                         type: "string",
-                        enum: compatibleShellIds,
-                        description: "The id of the selected visualization shell. Must be one of the available shells.",
+                        enum: compatibleShells.map((s) => s.id),
+                        description: compatibleShells.map((s) => s.label).join("\n"),
                     },
                 },
                 required: ["shellId"],
