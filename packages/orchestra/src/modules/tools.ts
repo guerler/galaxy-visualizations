@@ -4,11 +4,12 @@ import { type DatasetProfile } from "@/modules/csv/profiler";
 export function buildChooseShellTool(profile: DatasetProfile) {
     const compatibleShellIds = Object.entries(shells)
         .filter(([_, shell]) =>
-            shell.signatures.some((sig: string[]) =>
-                sig.every((type: string) => Object.values(profile.fields).some((f) => f.type === type)),
+            shell.signatures.some((sig) =>
+                sig.every((type) => Object.values(profile.fields).some((f) => f.type === type)),
             ),
         )
         .map(([id]) => id);
+
     return {
         type: "function",
         function: {
@@ -33,6 +34,7 @@ export function buildChooseShellTool(profile: DatasetProfile) {
 export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
     const properties: Record<string, any> = {};
     const required: string[] = [];
+
     function fieldsForType(expectedType: string): string[] {
         if (expectedType === "any") {
             return Object.keys(profile.fields);
@@ -46,6 +48,7 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             .filter(([_, meta]) => meta.type === expectedType)
             .map(([name]) => name);
     }
+
     for (const [encoding, spec] of Object.entries(shell.required || {})) {
         if (isEncodingSpec(spec)) {
             if (typeof spec.aggregate === "string") {
@@ -61,6 +64,7 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             }
         }
     }
+
     for (const [encoding, spec] of Object.entries(shell.optional || {})) {
         if (isEncodingSpec(spec)) {
             const fields = fieldsForType(spec.type);
@@ -72,11 +76,13 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             }
         }
     }
+
     if (hasBin(shell)) {
         properties.bin = {
             type: "boolean",
         };
     }
+
     return {
         type: "function",
         function: {
