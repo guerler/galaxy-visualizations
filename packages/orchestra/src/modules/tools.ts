@@ -56,11 +56,22 @@ export function buildFillShellParamsTool(shell: any, profile: DatasetProfile) {
             }
             const fields = fieldsForType(spec.type);
             if (fields.length > 0) {
-                properties[encoding] = {
-                    type: "string",
-                    enum: fields,
-                };
-                required.push(encoding);
+                if (encoding === "values") {
+                    properties[encoding] = {
+                        type: "array",
+                        items: {
+                            type: "string",
+                            enum: fields,
+                        },
+                        minItems: 2,
+                    };
+                } else {
+                    properties[encoding] = {
+                        type: "string",
+                        enum: fields,
+                    };
+                    required.push(encoding);
+                }
             }
         }
     }
