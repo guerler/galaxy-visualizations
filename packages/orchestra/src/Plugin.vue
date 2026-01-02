@@ -78,7 +78,6 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
-        transcripts.push({ content: "create a correlation matrix", role: "user" });
         emit("update", { transcripts });
     }
 }
