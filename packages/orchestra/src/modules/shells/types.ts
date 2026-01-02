@@ -3,6 +3,11 @@ import type { ValidationResult } from "@/modules/vega/types";
 
 export type Renderer = "vega-lite"; // extensible later
 
+export interface AnalysisType {
+    id: string;
+    language?: "python";
+}
+
 export interface EncodingSpec {
     type: FieldType;
     aggregate?: boolean | string;
@@ -20,6 +25,7 @@ export interface ShellInterface {
     family: string;
 
     // planning / orchestration contracts
+    analysis?: AnalysisType;
     signatures: FieldType[][];
     required: EncodingSpecMap;
     optional?: EncodingSpecMap;
