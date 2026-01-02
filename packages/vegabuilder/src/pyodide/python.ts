@@ -28,16 +28,27 @@ export async function runShellAnalysis(
     datasetPath = "dataset.csv",
 ): Promise<Record<string, unknown>[]> {
     const analysis = PYTHON_ANALYSES[analysisId];
-    if (analysis) {
-        const code = `${analysis}run("${datasetPath}")`;
-        const result = await pyodide.runPythonAsync(code);
-        const jsResult = result.toJs({ dict_converter: Object.fromEntries });
-        result.destroy();
-        if (!Array.isArray(jsResult)) {
-            throw new Error("Python analysis did not return array");
-        }
-        return jsResult as Record<string, unknown>[];
-    } else {
+    if (!analysis) {
         throw new Error(`Unknown analysis: ${analysisId}`);
     }
+
+    const code = `
+import json
+${analysis}
+json.dumps(run("${datasetPath}"))
+`;
+
+    const raw = await pyodide.runPythonAsync(code);
+
+    if (typeof raw !== "string") {
+        throw new Error("Python analysis did not return JSON string");
+    }
+
+    const result = JSON.parse(raw);
+
+    if (!Array.isArray(result)) {
+        throw new Error("Python analysis did not return array");
+    }
+
+    return result as Record<string, unknown>[];
 }

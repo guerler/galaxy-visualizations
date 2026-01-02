@@ -39,8 +39,7 @@ self.onmessage = async (e) => {
         if (type === "run") {
             running = true;
             try {
-                const raw = await pyodide.runPythonAsync(payload.code);
-                const result = typeof raw === "string" ? JSON.parse(raw) : raw;
+                const result = await pyodide.runPythonAsync(payload.code);
                 self.postMessage({ id, result });
             } catch (err) {
                 self.postMessage({ id, error: String(err) });
