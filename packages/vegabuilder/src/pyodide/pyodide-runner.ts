@@ -22,7 +22,7 @@ const PYTHON_ANALYSES: Record<string, string> = {
     pivot_long_to_wide,
 };
 
-export async function runShellAnalysis(
+export async function runAnalysis(
     pyodide: any,
     analysisId: string,
     datasetPath = "dataset.csv",

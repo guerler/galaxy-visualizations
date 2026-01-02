@@ -8,14 +8,12 @@ export class PyodideManager {
     private pending: Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>;
     private destroyed: boolean;
 
-    constructor(options: { indexURL: string }) {
+    constructor(options: PyodideManagerOptions) {
         this.pending = new Map();
         this.destroyed = false;
-
-        this.worker = new Worker(new URL("./pyodide.worker.ts", import.meta.url), {
+        this.worker = new Worker(new URL("./pyodide-worker.ts", import.meta.url), {
             type: "module",
         });
-
         this.ready = new Promise((resolve, reject) => {
             this.worker.onmessage = (e) => {
                 const { type, id, result, error } = e.data;
@@ -33,9 +31,8 @@ export class PyodideManager {
                 reject(e);
             };
         });
-
         this.worker.postMessage({
-            type: "init",
+            type: "initialize",
             payload: { indexURL: options.indexURL },
         });
     }
@@ -43,12 +40,13 @@ export class PyodideManager {
     private call(type: string, payload?: any): Promise<any> {
         if (this.destroyed) {
             return Promise.reject("Pyodide destroyed");
+        } else {
+            return new Promise((resolve, reject) => {
+                const id = crypto.randomUUID();
+                this.pending.set(id, { resolve, reject });
+                this.worker.postMessage({ type, payload, id });
+            });
         }
-        return new Promise((resolve, reject) => {
-            const id = crypto.randomUUID();
-            this.pending.set(id, { resolve, reject });
-            this.worker.postMessage({ type, payload, id });
-        });
     }
 
     destroy(): void {
@@ -85,6 +83,6 @@ export class PyodideManager {
 
     async runPythonAsync(code: string): Promise<any> {
         await this.ready;
-        return await this.call("run", { code });
+        return await this.call("runPythonAsync", { code });
     }
 }

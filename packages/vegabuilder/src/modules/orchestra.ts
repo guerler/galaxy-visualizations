@@ -8,7 +8,7 @@ import { validateShellParams } from "@/modules/vega/validator";
 import { compileVegaLite } from "@/modules/vega/compiler";
 import { profileCsv } from "@/modules/csv/profiler";
 import { valuesFromCsv } from "@/modules/csv/values";
-import { runShellAnalysis } from "@/pyodide/python";
+import { runAnalysis } from "@/pyodide/pyodide-runner";
 
 export class Orchestra {
     private aiBaseUrl: string;
@@ -93,7 +93,7 @@ export class Orchestra {
         // Run python code
         let effectiveValues = values;
         if (shell.analysis?.language === "python") {
-            effectiveValues = await runShellAnalysis(pyodide, shell.analysis.id);
+            effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
             console.log(effectiveValues);
         }
         // Create vega spec

@@ -12,7 +12,7 @@ function parsePackages() {
 
 self.onmessage = async (e) => {
     const { type, payload, id } = e.data;
-    if (type === "init") {
+    if (type === "initialize") {
         try {
             pyodide = await loadPyodide({ indexURL: payload.indexURL });
             await pyodide.loadPackage(parsePackages());
@@ -36,7 +36,7 @@ self.onmessage = async (e) => {
             }
             return;
         }
-        if (type === "run") {
+        if (type === "runPythonAsync") {
             running = true;
             try {
                 const result = await pyodide.runPythonAsync(payload.code);
