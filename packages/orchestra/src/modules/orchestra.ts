@@ -94,7 +94,7 @@ export class Orchestra {
         let effectiveValues = values;
         if (shell.analysis?.language === "python") {
             effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
-            console.log(effectiveValues);
+            console.debug("[orchestra]", effectiveValues);
         }
         // Create vega spec
         const vegaSpec = compileVegaLite(shell, effectiveParams, effectiveValues);

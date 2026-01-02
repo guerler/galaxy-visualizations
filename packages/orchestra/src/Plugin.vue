@@ -44,7 +44,7 @@ const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "I produced an output.";
 const PROMPT_DATASET = "The content of 'dataset.csv' follows.";
 const PROMPT_DEFAULT = "How can I help you?";
-const PLUGIN_NAME = "vegabuilder";
+const PLUGIN_NAME = "orchestra";
 const TEST_DATA = "test-data/dataset.csv";
 
 // Dataset URL

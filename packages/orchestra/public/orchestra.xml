@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE visualization SYSTEM "../../visualization.dtd">
-<visualization name="VIntent" embeddable="true">
+<visualization name="Orchestra" embeddable="true">
     <description>Natural language driven Vega builder</description>
     <data_sources>
         <data_source>
