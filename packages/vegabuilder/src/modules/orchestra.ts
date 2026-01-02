@@ -8,7 +8,7 @@ import { validateShellParams } from "@/modules/vega/validator";
 import { compileVegaLite } from "@/modules/vega/compiler";
 import { profileCsv } from "@/modules/csv/profiler";
 import { valuesFromCsv } from "@/modules/csv/values";
-import { runShellAnalysis } from "@/modules/python";
+import { runShellAnalysis } from "@/pyodide/python";
 
 export class Orchestra {
     private aiBaseUrl: string;

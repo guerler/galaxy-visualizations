@@ -10,7 +10,7 @@ import {
     SparklesIcon,
 } from "@heroicons/vue/24/outline";
 import { Orchestra } from "@/modules/orchestra";
-import { PyodideManager } from "@/modules/pyodide";
+import { PyodideManager } from "@/pyodide/pyodide";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 import Tabular from "@/components/Tabular.vue";
