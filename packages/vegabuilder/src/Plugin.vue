@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, onUnmounted, ref, watch } from "vue";
 import {
     AcademicCapIcon,
     ArrowPathIcon,
@@ -131,6 +131,10 @@ async function processUserRequest() {
 onMounted(() => {
     loadPrompt();
     loadPyodide();
+});
+
+onUnmounted(() => {
+    pyodide.destroy();
 });
 
 watch(

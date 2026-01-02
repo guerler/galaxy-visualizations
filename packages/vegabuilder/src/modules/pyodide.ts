@@ -49,7 +49,7 @@ export class PyodideManager {
         return content;
     }
 
-    reset(): void {
+    destroy(): void {
         this.pyodide = null;
         this.running = false;
     }
