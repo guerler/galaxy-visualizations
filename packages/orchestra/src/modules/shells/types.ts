@@ -1,24 +1,28 @@
 import type { DatasetProfile } from "@/modules/csv/profiler";
 import type { ValidationResult } from "@/modules/vega/types";
 
-export type Renderer = "vega-lite"; // extensible later
-
 export interface AnalysisType {
     id: string;
-    language?: "python";
+    language?: LanguageType;
 }
 
-export interface EncodingSpec {
+export interface EncodingSpecType {
     type: FieldType;
     aggregate?: boolean | string;
     bin?: boolean;
 }
 
-export type EncodingSpecMap = Record<string, EncodingSpec>;
+export type EncodingMapType = Record<string, EncodingSpecType>;
 
 export type FieldType = "nominal" | "ordinal" | "quantitative" | "temporal" | "any";
 
-export interface ShellInterface {
+export type LanguageType = "python";
+
+export type RendererType = "vega-lite";
+
+export type ShellParamsType = Record<string, any>;
+
+export interface ShellType {
     // identity
     id: string;
     name: string;
@@ -27,16 +31,14 @@ export interface ShellInterface {
     // planning / orchestration contracts
     analysis?: AnalysisType;
     signatures: FieldType[][];
-    required: EncodingSpecMap;
-    optional?: EncodingSpecMap;
+    required: EncodingMapType;
+    optional?: EncodingMapType;
 
     // semantic declaration
     rowSemantics: "rowwise" | "aggregate";
 
     // behavior
-    validate(params: ShellParams, profile: DatasetProfile): ValidationResult;
+    validate(params: ShellParamsType, profile: DatasetProfile): ValidationResult;
 
-    compile(params: ShellParams, values: Record<string, unknown>[], renderer: Renderer): unknown;
+    compile(params: ShellParamsType, values: Record<string, unknown>[], RendererType: RendererType): unknown;
 }
-
-export type ShellParams = Record<string, any>;

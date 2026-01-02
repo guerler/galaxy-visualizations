@@ -1,10 +1,10 @@
 import type { DatasetProfile } from "@/modules/csv/profiler";
 import type { ValidationResult } from "@/modules/vega/types";
-import type { AnalysisType, FieldType, ShellInterface } from "@/modules/shells/types";
+import type { AnalysisType, FieldType, ShellType } from "@/modules/shells/types";
 
 const VEGA_LITE_SCHEMA = "https://vega.github.io/schema/vega-lite/v5.json";
 
-export class CorrelationHeatmapShell implements ShellInterface {
+export class CorrelationHeatmapShell implements ShellType {
     id = "heatmap_correlation";
     name = "Correlation Heatmap";
     family = "correlation_matrix";
