@@ -2,13 +2,15 @@
 import yaml from "yaml";
 import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
-import { AcademicCapIcon, ClockIcon, ExclamationTriangleIcon, SparklesIcon } from "@heroicons/vue/24/outline";
+import { AcademicCapIcon, ArrowPathIcon, CheckIcon, ClockIcon, ExclamationTriangleIcon, SparklesIcon } from "@heroicons/vue/24/outline";
 import type { ConsoleMessageType } from "@/types";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 
 import { AgentRunner } from "@/modules/agent-runner";
 import { ClientRegistry } from "./modules/client-registry";
+
+import { PyodideManager } from "@/pyodide/pyodide-manager";
 
 import AGENT_YML from "@/agent.yml?raw";
 
@@ -41,9 +43,15 @@ const MESSAGE_SUCCESS = "Successfully produced output.";
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "orchestra";
 
+// Load pyodide
+const isDev = (import.meta as any).env.DEV;
+const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
+const pyodide = new PyodideManager({ indexURL: `${props.root}${pyodideBaseUrl}static/pyodide` });
+
 // References
 const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
+const isLoadingPyodide = ref<boolean>(true);
 
 // Create orchestra
 const registry = new ClientRegistry({
@@ -71,6 +79,19 @@ async function loadPrompt() {
     }
 }
 
+// Load Pyodide
+async function loadPyodide() {
+    if (isLoadingPyodide.value) {
+        const pyodideMessageIndex = consoleMessages.value.length;
+        consoleMessages.value.push({ content: "Loading Pyodide...", icon: ArrowPathIcon, spin: true });
+        await pyodide.initialize();
+        //datasetContent.value = await pyodide.fsFetch(datasetUrl, "dataset.csv");
+        consoleMessages.value[pyodideMessageIndex] = { content: "Pyodide ready.", icon: CheckIcon };
+        isLoadingPyodide.value = false;
+        processUserRequest();
+    }
+}
+
 // Get system prompt
 function systemPrompt() {
     return `${props.specs?.ai_prompt || PROMPT_DEFAULT}`;
@@ -78,7 +99,7 @@ function systemPrompt() {
 
 // Process user request
 async function processUserRequest() {
-    if (props.transcripts.length > 0) {
+    if (props.transcripts.length > 0 && !isLoadingPyodide.value) {
         const lastTranscript = props.transcripts[props.transcripts.length - 1];
         if (!isProcessingRequest.value && lastTranscript.role === "user") {
             isProcessingRequest.value = true;
@@ -114,6 +135,7 @@ async function processUserRequest() {
 
 onMounted(() => {
     loadPrompt();
+    loadPyodide();
 });
 
 onUnmounted(() => {});
