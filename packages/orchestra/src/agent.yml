@@ -12,10 +12,10 @@ inputs:
     type: object
 
 state:
-  vars:
-    type: object
-  artifacts:
+  histories:
     type: array
+  dataset:
+    type: object
 
 nodes:
   plan:
@@ -39,7 +39,7 @@ nodes:
       input:
         limit: 10
     emit:
-      state.vars.histories: result
+      state.histories: result
     next: api_2
 
   api_2:
@@ -50,12 +50,11 @@ nodes:
       input:
         dataset_id: ${inputs.context.datasetId}
     emit:
-      state.vars.dataset: result
+      state.dataset: result
     next: done
 
   done:
     type: terminal
     emit:
-      state.artifacts:
-        histories: ${state.vars.histories}
-        dataset: ${state.vars.dataset}
+      histories: ${state.histories}
+      dataset: ${state.dataset}

@@ -101,7 +101,6 @@ async function processUserRequest() {
                         icon: AcademicCapIcon,
                     });
                 }
-                
             } catch (e) {
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });

@@ -34,12 +34,16 @@ export async function completionsPost(payload: CompletionsPayload): Promise<Comp
         top_p: normalizeParameter(payload.aiTopP, Number.EPSILON, 1, TOP_P),
     };
     if (payload.tools && payload.tools.length > 0) {
+        body.tools = payload.tools;
+    }
+    if (payload.tool_choice) {
+        body.tool_choice = payload.tool_choice;
+    } else if (payload.tools && payload.tools.length > 0) {
         const firstTool = payload.tools[0] as any;
         const toolName = firstTool?.function?.name;
         if (!toolName) {
             throw new Error("Tool provided without function name");
         }
-        body.tools = payload.tools;
         body.tool_choice = {
             type: "function",
             function: { name: toolName },

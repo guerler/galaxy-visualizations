@@ -59,7 +59,7 @@ export class ClientRegistry {
                 content:
                     "You are a routing component.\n" +
                     "You MUST call the provided tool.\n" +
-                    "The field `next` MUST be exactly the string \"api_1\".\n" +
+                    'The field `next` MUST be exactly the string "api_1".\n' +
                     "No other value is allowed.\n" +
                     "Do not respond with text.",
             },
@@ -93,7 +93,6 @@ export class ClientRegistry {
 
         return call;
     }
-
 
     async callApi(ctx: ExecContext, spec: ApiCallSpec): Promise<OpResult> {
         const fn = this.apiTargets[spec.target];
