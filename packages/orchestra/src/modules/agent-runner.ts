@@ -55,6 +55,22 @@ export class AgentRunner {
                         this.applyEmit(node.emit, selected);
                     }
                     res = selected;
+                }
+                if (node.run?.op === "state.lookup") {
+                    const input = resolvedInput;
+                    const source = input.from;
+                    if (!Array.isArray(source)) {
+                        throw new Error("state.lookup: source is not an array");
+                    }
+                    const match = source.find((item: any) => item?.[input.match?.field] === input.match?.equals);
+                    if (!match) {
+                        throw new Error("state.lookup: no match");
+                    }
+                    if (!(input.select in match)) {
+                        throw new Error("state.lookup: select field not found");
+                    }
+                    res = { ok: true, result: match[input.select] };
+                    this.applyEmit(node.emit, res);
                 } else {
                     throw new Error(`Unknown executor op: ${node.run?.op}`);
                 }
