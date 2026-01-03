@@ -23,6 +23,7 @@
         "@vitejs/plugin-vue": "^6.0.3",
         "@vitest/ui": "^4.0.16",
         "@vueuse/core": "^14.1.0",
+        "ajv": "^8.17.1",
         "galaxy-charts": "^0.1.2",
         "galaxy-charts-xml-parser": "^1.0.3",
         "happy-dom": "^20.0.11",

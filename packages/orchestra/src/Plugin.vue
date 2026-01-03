@@ -3,8 +3,6 @@ import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import {
     AcademicCapIcon,
-    ArrowPathIcon,
-    CheckIcon,
     ClockIcon,
     ExclamationTriangleIcon,
     SparklesIcon,
