@@ -3,7 +3,7 @@ id: galaxy_api_agent_minimal
 kind: agent_pipeline
 description: Client-side demo agent executing read-only Galaxy API calls
 
-start: plan
+start: api_histories
 
 inputs:
   transcripts:
@@ -14,24 +14,17 @@ inputs:
 state:
   histories:
     type: array
+  history_id:
+    type: string
+  contents:
+    type: array
+  dataset_id:
+    type: string
   dataset:
     type: object
 
 nodes:
-  plan:
-    type: planner
-    tools:
-      - route
-    output_schema:
-      type: object
-      required: [next]
-      properties:
-        next:
-          type: string
-          enum: [api_1]
-    next: ${next}
-
-  api_1:
+  api_histories:
     type: executor
     run:
       op: api.call
@@ -40,15 +33,53 @@ nodes:
         limit: 10
     emit:
       state.histories: result
-    next: api_2
+    next: pick_history
 
-  api_2:
+  pick_history:
+    type: executor
+    run:
+      op: state.select
+      input:
+        from: ${state.histories}
+        index: 1
+        field: id
+    emit:
+      state.history_id: result
+    next: api_contents
+
+  api_contents:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.history.contents
+      input:
+        history_id: ${state.history_id}
+    emit:
+      state.contents: result
+    next: pick_dataset
+
+  pick_dataset:
+    type: executor
+    run:
+      op: state.select
+      input:
+        from: ${state.contents}
+        filter:
+          field: history_content_type
+          equals: dataset
+        index: 0
+        field: id
+    emit:
+      state.dataset_id: result
+    next: api_dataset
+
+  api_dataset:
     type: executor
     run:
       op: api.call
       target: galaxy.dataset.show
       input:
-        dataset_id: ${inputs.context.datasetId}
+        dataset_id: ${state.dataset_id}
     emit:
       state.dataset: result
     next: done
@@ -56,5 +87,4 @@ nodes:
   done:
     type: terminal
     emit:
-      histories: ${state.histories}
       dataset: ${state.dataset}

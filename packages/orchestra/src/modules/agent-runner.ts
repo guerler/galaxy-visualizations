@@ -36,17 +36,26 @@ export class AgentRunner {
             this.applyEmit(node.emit, planned);
             res = { ok: true, result: planned };
         } else if (node.type === "executor") {
+            const resolvedInput = this.resolveTemplates(node.run?.input);
             if (node.run?.op === "api.call") {
-                const spec = { target: String(node.run.target), input: this.resolveInputTemplate(node.run.input) };
-                const called = await this.registry.callApi(ctx, spec);
-                if (called.ok) {
-                    this.applyEmit(node.emit, { result: called.result });
-                    res = { ok: true, result: called.result };
-                } else {
-                    res = called;
+                const called = await this.registry.callApi(ctx, {
+                    target: node.run.target,
+                    input: resolvedInput,
+                });
+                if (called?.ok === true) {
+                    this.applyEmit(node.emit, called);
                 }
+                res = called;
             } else {
-                res = { ok: false, error: { code: "unknown_executor_op", message: String(node.run?.op ?? "null") } };
+                if (node.run?.op === "state.select") {
+                    const selected = this.runStateSelect(resolvedInput);
+                    if (selected?.ok === true) {
+                        this.applyEmit(node.emit, selected);
+                    }
+                    res = selected;
+                } else {
+                    throw new Error(`Unknown executor op: ${node.run?.op}`);
+                }
             }
         } else if (node.type === "control") {
             const decided = this.evalBranch(node.condition);
@@ -64,6 +73,27 @@ export class AgentRunner {
         }
         return res;
     }
+    runStateSelect(input: any) {
+        const source = input.from;
+        console.log("first", source);
+        if (!Array.isArray(source)) {
+            throw new Error("state.select: source is not an array");
+        }
+        console.log(source);
+        let items = source;
+        if (input.filter) {
+            items = items.filter((item: any) => item?.[input.filter.field] === input.filter.equals);
+        }
+        const item = items[input.index ?? 0];
+        if (!item) {
+            throw new Error("state.select: index out of bounds");
+        }
+        if (!input.field || !(input.field in item)) {
+            throw new Error("state.select: field not found");
+        }
+        return { ok: true, result: item[input.field] };
+    }
+
     private resolveNext(node: any, res: any) {
         let next: any = null;
         if (node.type === "control") {
@@ -101,6 +131,22 @@ export class AgentRunner {
                 }
             }
         }
+    }
+    resolveTemplates(value: any): any {
+        if (typeof value === "string") {
+            return this.resolveInputTemplate(value);
+        }
+        if (Array.isArray(value)) {
+            return value.map((v) => this.resolveTemplates(v));
+        }
+        if (value && typeof value === "object") {
+            const out: any = {};
+            for (const [k, v] of Object.entries(value)) {
+                out[k] = this.resolveTemplates(v);
+            }
+            return out;
+        }
+        return value;
     }
     private resolveInputTemplate(tpl: any): any {
         if (tpl === null || tpl === undefined) {

@@ -39,6 +39,13 @@ export class ClientRegistry {
                 }
                 return await res.json();
             },
+            "galaxy.history.contents": async (input) => {
+                const res = await fetch(`/api/histories/${input.history_id}/contents`, { credentials: "same-origin" });
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+                return await res.json();
+            },
             "galaxy.dataset.show": async (input) => {
                 const id = input?.dataset_id;
                 if (!id) {
