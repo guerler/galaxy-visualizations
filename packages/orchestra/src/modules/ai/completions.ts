@@ -44,17 +44,19 @@ export async function completionsPost(payload: CompletionsPayload): Promise<Comp
 export function getToolCall(name: string, toolCalls: Array<any>): Record<string, any> | undefined {
     let result: Record<string, any> = {};
     let found = false;
-    if (toolCalls && toolCalls.length > 0) {
+    if (Array.isArray(toolCalls)) {
         for (const call of toolCalls) {
             if (call?.function?.name === name) {
-                found = true;
                 const args = call.function.arguments;
                 if (typeof args === "string" && args.length > 0) {
                     try {
                         const parsed = JSON.parse(args);
-                        result = { ...result, ...parsed };
+                        if (parsed && typeof parsed === "object") {
+                            result = { ...result, ...parsed };
+                            found = true;
+                        }
                     } catch {
-                        continue;
+                        return undefined;
                     }
                 }
             }

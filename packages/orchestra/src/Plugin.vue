@@ -109,7 +109,7 @@ async function processUserRequest() {
             const transcripts = [...props.transcripts];
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
-                const newWidgets = await orchestra.process(transcripts, pyodide, datasetContent.value);
+                const newWidgets = await orchestra.run(transcripts, pyodide, datasetContent.value);
                 if (newWidgets.length > 0) {
                     widgets.value.push(...newWidgets);
                     consoleMessages.value.push({ content: MESSAGE_SUCCESS, icon: CheckIcon });

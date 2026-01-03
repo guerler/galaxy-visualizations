@@ -1,0 +1,121 @@
+version: 1
+id: orchestra_minimal
+kind: agent_pipeline
+description: Deterministic visualization planner and compiler
+
+start: parse_dataset
+
+inputs:
+  transcripts:
+    type: transcript_stream
+  dataset:
+    type: csv
+  runtime:
+    pyodide: required
+
+state:
+  profile:
+    type: object
+  values:
+    type: array
+  shell_id:
+    type: string
+  params:
+    type: object
+  effective_values:
+    type: array
+  vega_spec:
+    type: object
+
+nodes:
+
+  parse_dataset:
+    type: executor
+    run:
+      op: parse_csv
+      inputs:
+        csv: inputs.dataset
+    emit:
+      state.profile: profile
+      state.values: values
+    next: choose_shell
+
+  choose_shell:
+    type: planner
+    tools:
+      - choose_shell
+    output_schema:
+      type: object
+      required: [shellId]
+      properties:
+        shellId:
+          type: string
+    emit:
+      state.shell_id: shellId
+    next: fill_shell_params
+
+  fill_shell_params:
+    type: planner
+    tools:
+      - fill_shell_params
+    output_schema:
+      type: object
+      additionalProperties: true
+    emit:
+      state.params: .
+    next: validate_shell
+
+  validate_shell:
+    type: executor
+    run:
+      op: validate_shell
+      inputs:
+        shell_id: state.shell_id
+        params: state.params
+        profile: state.profile
+    on:
+      ok: maybe_run_analysis
+      error: fail
+
+  maybe_run_analysis:
+    type: control
+    condition:
+      shell_requires_analysis: true
+    next:
+      true: run_analysis
+      false: compile_shell
+
+  run_analysis:
+    type: executor
+    run:
+      op: run_python_analysis
+      inputs:
+        shell_id: state.shell_id
+        pyodide: inputs.runtime.pyodide
+    emit:
+      state.effective_values: effective_values
+    next: compile_shell
+
+  compile_shell:
+    type: executor
+    run:
+      op: compile_vega
+      inputs:
+        shell_id: state.shell_id
+        params: state.params
+        values:
+          prefer:
+            - state.effective_values
+            - state.values
+    emit:
+      state.vega_spec: vega_spec
+    next: stop
+
+  stop:
+    type: terminal
+    output:
+      vega_spec: state.vega_spec
+
+  fail:
+    type: terminal
+    error: true
