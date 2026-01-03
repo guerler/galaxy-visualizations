@@ -59,23 +59,12 @@ export class ClientRegistry {
             },
         };
     }
-    async plan(ctx: ExecContext, spec: { tools: any[]; outputSchema: any }) {
-        const messages = [
-            {
-                role: "system",
-                content:
-                    "You are a routing component.\n" +
-                    "You MUST call the provided tool.\n" +
-                    'The field `next` MUST be exactly the string "api_1".\n' +
-                    "No other value is allowed.\n" +
-                    "Do not respond with text.",
-            },
-            ...this.sanitize(ctx.inputs.transcripts as any[]),
-        ];
-
-        const tools = this.buildRouteTool(ctx.graph);
+    async plan(ctx: ExecContext, spec: { prompt?: string; node: any; tools: any[]; outputSchema: any }) {
+        const systemPrompt =
+            spec.prompt || "You are a routing component. You MUST call the provided tool. Do not respond with text.";
+        const messages = [{ role: "system", content: systemPrompt }, ...this.sanitize(ctx.inputs.transcripts as any[])];
+        const tools = this.buildRouteTool(ctx, spec.node, spec.outputSchema);
         const toolName = tools[0].function.name;
-
         const reply = await completionsPost({
             ...this.aiConfig,
             messages,
@@ -85,19 +74,16 @@ export class ClientRegistry {
                 function: { name: toolName },
             },
         });
-
         const call = getToolCall(toolName, reply?.choices?.[0]?.message?.tool_calls);
         if (!call) {
             throw new Error("planner did not produce tool call");
         }
-
         if (spec.outputSchema) {
             const validate = this.ajv.compile(spec.outputSchema);
             if (!validate(call)) {
                 throw new Error(`planner output schema violation: ${this.ajv.errorsText(validate.errors)}`);
             }
         }
-
         return call;
     }
 
@@ -125,23 +111,57 @@ export class ClientRegistry {
             .map((t) => ({ role: t.role, content: t.content }));
     }
 
-    private buildRouteTool(graph: any) {
-        const nodeIds = Object.keys(graph.nodes);
+    private buildRouteTool(ctx: ExecContext, node: any, outputSchema?: any) {
+        let nextEnum: string[];
+        if (
+            outputSchema &&
+            outputSchema.properties &&
+            outputSchema.properties.next &&
+            Array.isArray(outputSchema.properties.next.enum)
+        ) {
+            nextEnum = outputSchema.properties.next.enum;
+        } else {
+            nextEnum = Object.keys(ctx.graph.nodes);
+        }
+        const properties: any = {
+            next: {
+                type: "string",
+                enum: nextEnum,
+            },
+        };
+        const required = new Set<string>(["next"]);
+        if (node.enum_from && outputSchema && Array.isArray(outputSchema.required)) {
+            const src = ctx.state[node.enum_from.state];
+            if (!Array.isArray(src)) {
+                throw new Error(`enum_from source is not an array: ${node.enum_from.state}`);
+            }
+            let values = src;
+            if (node.enum_from.filter) {
+                values = values.filter((v: any) => v?.[node.enum_from.filter.field] === node.enum_from.filter.equals);
+            }
+            const enumValues = values
+                .map((v: any) => v?.[node.enum_from.field])
+                .filter((v: any) => typeof v === "string");
+            const field = outputSchema.required.find((k: string) => k !== "next");
+            if (field) {
+                properties[field] = {
+                    type: "string",
+                    enum: enumValues,
+                };
+                required.add(field);
+            }
+        }
         return [
             {
                 type: "function",
                 function: {
                     name: "route",
-                    description: "Select the next node to execute",
+                    description: "Select the next node and required identifiers.",
                     parameters: {
                         type: "object",
-                        required: ["next"],
-                        properties: {
-                            next: {
-                                type: "string",
-                                enum: nodeIds,
-                            },
-                        },
+                        required: Array.from(required),
+                        properties,
+                        additionalProperties: false,
                     },
                 },
             },

@@ -30,6 +30,8 @@ export class AgentRunner {
         let res: any = null;
         if (node.type === "planner") {
             const planned = await this.registry.plan(ctx, {
+                node: node,
+                prompt: node.prompt ?? "",
                 tools: node.tools ?? [],
                 outputSchema: node.output_schema ?? null,
             });

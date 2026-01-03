@@ -36,16 +36,26 @@ nodes:
     next: pick_history
 
   pick_history:
-    type: executor
-    run:
-      op: state.select
-      input:
-        from: ${state.histories}
-        index: 1
-        field: id
+    type: planner
+    prompt: |
+      Select a history from the list.
+    enum_from:
+      state: histories
+      field: id
+    tools:
+      - route
+    output_schema:
+      type: object
+      required: [next, history_id]
+      properties:
+        next:
+          type: string
+          enum: [api_contents]
+        history_id:
+          type: string
     emit:
-      state.history_id: result
-    next: api_contents
+      state.history_id: history_id
+    next: ${next}
 
   api_contents:
     type: executor
