@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE visualization SYSTEM "../../visualization.dtd">
-<visualization name="Orchestra" embeddable="true">
+<visualization name="VIntent" embeddable="true">
     <description>Natural language driven Vega builder</description>
     <data_sources>
         <data_source>
@@ -42,15 +42,15 @@ The client controls the workflow and which tools are available.
         </ui>
     </specs>
     <help format="markdown"><![CDATA[
-# What is Orchestra
+# What is VIntent
 
-Orchestra is a client side orchestration layer for building Vega Lite visualizations through an interactive, chat driven workflow. It translates user intent into structured visualization steps that result in valid Vega Lite specifications.
+VIntent is a client side layer for building Vega Lite visualizations through an interactive, chat driven workflow. It translates user intent into structured visualization steps that result in valid Vega Lite specifications.
 
-Orchestra coordinates shell selection, parameter resolution, validation, and specification assembly, enabling users to move from a dataset to a concrete Vega Lite visualization in a controlled and iterative way.
+VIntent coordinates shell selection, parameter resolution, validation, and specification assembly, enabling users to move from a dataset to a concrete Vega Lite visualization in a controlled and iterative way.
 
 ## Core Capabilities
 
-- **Vega Lite Orchestration**
+- **Vega Lite**
   Drives the construction of Vega Lite specifications using predefined visualization shells and explicit parameter rules.
 
 - **Shell Based Specification Building**
@@ -64,7 +64,7 @@ Orchestra coordinates shell selection, parameter resolution, validation, and spe
 
 ## Intended Use
 
-Orchestra is designed for exploratory visualization building with Vega Lite. It emphasizes clarity of structure, correctness of specifications, and rapid iteration.
+VIntent is designed for exploratory visualization building with Vega Lite. It emphasizes clarity of structure, correctness of specifications, and rapid iteration.
 
 It is suited for:
 - generating Vega Lite visualizations from datasets
@@ -73,6 +73,6 @@ It is suited for:
 
 ## How It Fits In
 
-Orchestra provides the logic that connects user intent to Vega Lite specifications. It sits between user interaction and rendering, forming a tight loop for building and refining visualizations in an interactive environment.
+VIntent provides the logic that connects user intent to Vega Lite specifications. It sits between user interaction and rendering, forming a tight loop for building and refining visualizations in an interactive environment.
 ]]></help>
 </visualization>
