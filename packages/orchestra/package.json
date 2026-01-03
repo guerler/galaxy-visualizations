@@ -8,8 +8,7 @@
     ],
     "scripts": {
         "dev": "vite",
-        "build": "vite build && npm run build:pyodide",
-        "build:pyodide": "node pyodide.install.js",
+        "build": "vite build",
         "preview": "vite preview",
         "prettier": "prettier --config ./prettier.config.js --write './*.{js,ts,json}' 'src/**/*.{js,ts,json,css,vue}'",
         "test": "npm run test:unit",

@@ -10,10 +10,8 @@ import {
     SparklesIcon,
 } from "@heroicons/vue/24/outline";
 import { Orchestra } from "@/modules/orchestra";
-import { PyodideManager } from "@/pyodide/pyodide-manager";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
-import Tabular from "@/components/Tabular.vue";
 import type { ConsoleMessageType } from "@/types";
 
 // Props
@@ -49,19 +47,11 @@ const TEST_DATA = "test-data/dataset.csv";
 
 // Dataset URL
 const isTestData = props.datasetId === "__test__";
-const datasetUrl = isTestData ? TEST_DATA : `${props.root}api/datasets/${props.datasetId}/display`;
-
-// Load pyodide
-const isDev = (import.meta as any).env.DEV;
-const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
-const pyodide = new PyodideManager({ indexURL: `${props.root}${pyodideBaseUrl}static/pyodide` });
 
 // References
 const datasetContent = ref();
 const consoleMessages = ref<ConsoleMessageType[]>([]);
-const isLoadingPyodide = ref<boolean>(true);
 const isProcessingRequest = ref<boolean>(false);
-const widgets = ref<any>([]);
 
 // Create orchestra
 const orchestra = new Orchestra({
@@ -82,19 +72,6 @@ async function loadPrompt() {
     }
 }
 
-// Load Pyodide
-async function loadPyodide() {
-    if (isLoadingPyodide.value) {
-        const pyodideMessageIndex = consoleMessages.value.length;
-        consoleMessages.value.push({ content: "Loading Pyodide...", icon: ArrowPathIcon, spin: true });
-        await pyodide.initialize();
-        datasetContent.value = await pyodide.fsFetch(datasetUrl, "dataset.csv");
-        consoleMessages.value[pyodideMessageIndex] = { content: "Pyodide ready.", icon: CheckIcon };
-        isLoadingPyodide.value = false;
-        processUserRequest();
-    }
-}
-
 // Get system prompt
 function systemPrompt() {
     return `${props.specs?.ai_prompt || PROMPT_DEFAULT}\n\n${PROMPT_DATASET}\n${datasetContent.value}`;
@@ -102,20 +79,14 @@ function systemPrompt() {
 
 // Process user request
 async function processUserRequest() {
-    if (props.transcripts.length > 0 && !isLoadingPyodide.value) {
+    if (props.transcripts.length > 0) {
         const lastTranscript = props.transcripts[props.transcripts.length - 1];
         if (!isProcessingRequest.value && lastTranscript.role == "user") {
             isProcessingRequest.value = true;
             const transcripts = [...props.transcripts];
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
-                const newWidgets = await orchestra.process(transcripts, pyodide, datasetContent.value);
-                if (newWidgets.length > 0) {
-                    widgets.value.push(...newWidgets);
-                    consoleMessages.value.push({ content: MESSAGE_SUCCESS, icon: CheckIcon });
-                } else {
-                    consoleMessages.value.push({ content: MESSAGE_FAILED, icon: ExclamationTriangleIcon });
-                }
+                transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
             } catch (e) {
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
@@ -129,11 +100,9 @@ async function processUserRequest() {
 
 onMounted(() => {
     loadPrompt();
-    loadPyodide();
 });
 
 onUnmounted(() => {
-    pyodide.destroy();
 });
 
 watch(
@@ -146,8 +115,7 @@ watch(
 <template>
     <div class="flex flex-col h-screen p-2 bg-gray-700 text-white">
         <div class="flex-1 min-h-0">
-            <Dashboard v-if="widgets.length > 0" :widgets="widgets" />
-            <Tabular v-else-if="datasetContent" :csv="datasetContent" />
+            <Dashboard />
         </div>
         <Console class="shrink-0" :messages="consoleMessages" />
     </div>

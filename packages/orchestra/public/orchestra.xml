@@ -42,37 +42,5 @@ The client controls the workflow and which tools are available.
         </ui>
     </specs>
     <help format="markdown"><![CDATA[
-# What is Orchestra
-
-Orchestra is a client side orchestration layer for building Vega Lite visualizations through an interactive, chat driven workflow. It translates user intent into structured visualization steps that result in valid Vega Lite specifications.
-
-Orchestra coordinates shell selection, parameter resolution, validation, and specification assembly, enabling users to move from a dataset to a concrete Vega Lite visualization in a controlled and iterative way.
-
-## Core Capabilities
-
-- **Vega Lite Orchestration**
-  Drives the construction of Vega Lite specifications using predefined visualization shells and explicit parameter rules.
-
-- **Shell Based Specification Building**
-  Selects appropriate shells, resolves required and optional fields, applies defaults, and validates inputs before compilation.
-
-- **Interactive Refinement Loop**
-  Supports stepwise refinement of encodings, aggregations, and visual structure through chat based interaction.
-
-- **Client Side Control Flow**
-  Executes entirely in the browser, keeping visualization building fast, transparent, and responsive.
-
-## Intended Use
-
-Orchestra is designed for exploratory visualization building with Vega Lite. It emphasizes clarity of structure, correctness of specifications, and rapid iteration.
-
-It is suited for:
-- generating Vega Lite visualizations from datasets
-- refining visual encodings interactively
-- exploring data through structured visualization patterns
-
-## How It Fits In
-
-Orchestra provides the logic that connects user intent to Vega Lite specifications. It sits between user interaction and rendering, forming a tight loop for building and refining visualizations in an interactive environment.
 ]]></help>
 </visualization>
