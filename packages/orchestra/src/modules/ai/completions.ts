@@ -12,6 +12,7 @@ export interface CompletionsPayload {
     aiTopP?: number;
     messages: CompletionsMessage[];
     tools?: object[];
+    tool_choice?: object;
 }
 
 export type CompletionsReply = any;
@@ -25,18 +26,32 @@ const TOP_P = 0.8;
 export async function completionsPost(payload: CompletionsPayload): Promise<CompletionsReply> {
     const baseUrl = payload.aiBaseUrl.replace(/\/+$/, "");
     const url = `${baseUrl}/chat/completions`;
+    const body: any = {
+        model: payload.aiModel,
+        messages: payload.messages,
+        max_tokens: normalizeParameter(payload.aiMaxTokens, 1, Infinity, MAX_TOKENS),
+        temperature: normalizeParameter(payload.aiTemperature, 0, Infinity, TEMPERATURE),
+        top_p: normalizeParameter(payload.aiTopP, Number.EPSILON, 1, TOP_P),
+    };
+    if (payload.tools && payload.tools.length > 0) {
+        const firstTool = payload.tools[0] as any;
+        const toolName = firstTool?.function?.name;
+        if (!toolName) {
+            throw new Error("Tool provided without function name");
+        }
+        body.tools = payload.tools;
+        body.tool_choice = {
+            type: "function",
+            function: { name: toolName },
+        };
+    }
     const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${payload.aiApiKey}` },
-        body: JSON.stringify({
-            model: payload.aiModel,
-            messages: payload.messages,
-            max_tokens: normalizeParameter(payload.aiMaxTokens, 1, Infinity, MAX_TOKENS),
-            temperature: normalizeParameter(payload.aiTemperature, 0, Infinity, TEMPERATURE),
-            top_p: normalizeParameter(payload.aiTopP, Number.EPSILON, 1, TOP_P),
-            tools: payload.tools,
-            tool_choice: "auto",
-        }),
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${payload.aiApiKey}`,
+        },
+        body: JSON.stringify(body),
     });
     return await response.json();
 }

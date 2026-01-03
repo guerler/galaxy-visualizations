@@ -1,0 +1,61 @@
+version: 1
+id: galaxy_api_agent_minimal
+kind: agent_pipeline
+description: Client-side demo agent executing read-only Galaxy API calls
+
+start: plan
+
+inputs:
+  transcripts:
+    type: transcript_stream
+  context:
+    type: object
+
+state:
+  vars:
+    type: object
+  artifacts:
+    type: array
+
+nodes:
+  plan:
+    type: planner
+    tools:
+      - route
+    output_schema:
+      type: object
+      required: [next]
+      properties:
+        next:
+          type: string
+          enum: [api_1]
+    next: ${next}
+
+  api_1:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.history.list
+      input:
+        limit: 10
+    emit:
+      state.vars.histories: result
+    next: api_2
+
+  api_2:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.dataset.show
+      input:
+        dataset_id: ${inputs.context.datasetId}
+    emit:
+      state.vars.dataset: result
+    next: done
+
+  done:
+    type: terminal
+    emit:
+      state.artifacts:
+        histories: ${state.vars.histories}
+        dataset: ${state.vars.dataset}

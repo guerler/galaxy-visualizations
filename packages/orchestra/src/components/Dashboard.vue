@@ -1,7 +1,4 @@
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>
 <template>
-    <div class="h-full">
-        Empty
-    </div>
+    <div class="h-full">Empty</div>
 </template>

@@ -1,16 +1,16 @@
 <script setup lang="ts">
+import yaml from "yaml";
 import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
-import {
-    AcademicCapIcon,
-    ClockIcon,
-    ExclamationTriangleIcon,
-    SparklesIcon,
-} from "@heroicons/vue/24/outline";
-import { Orchestra } from "@/modules/orchestra";
+import { AcademicCapIcon, ClockIcon, ExclamationTriangleIcon, SparklesIcon } from "@heroicons/vue/24/outline";
+import type { ConsoleMessageType } from "@/types";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
-import type { ConsoleMessageType } from "@/types";
+
+import { AgentRunner } from "@/modules/agent-runner";
+import { ClientRegistry } from "./modules/client-registry";
+
+import AGENT_YML from "@/agent.yml?raw";
 
 // Props
 const props = defineProps<{
@@ -35,28 +35,29 @@ const emit = defineEmits<{
 }>();
 
 // Constants
-const MESSAGE_INITIAL = "Hi, I will create plots for you.";
+const MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
 const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
-const PROMPT_DATASET = "The content of 'dataset.csv' follows.";
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "orchestra";
-const TEST_DATA = "test-data/dataset.csv";
-
-// Dataset URL
-const isTestData = props.datasetId === "__test__";
 
 // References
-const datasetContent = ref();
 const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
 
 // Create orchestra
-const orchestra = new Orchestra({
+const registry = new ClientRegistry({
     aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
     aiApiKey: props.specs.ai_api_key || "unknown",
     aiModel: props.specs.ai_model || "unknown",
 });
+
+const graph = yaml.parse(AGENT_YML);
+if (!graph || typeof graph !== "object") {
+    throw new Error("Invalid agent yml");
+}
+
+const agentRunner = new AgentRunner(graph, registry);
 
 // Inject Prompt
 async function loadPrompt() {
@@ -72,22 +73,38 @@ async function loadPrompt() {
 
 // Get system prompt
 function systemPrompt() {
-    return `${props.specs?.ai_prompt || PROMPT_DEFAULT}\n\n${PROMPT_DATASET}\n${datasetContent.value}`;
+    return `${props.specs?.ai_prompt || PROMPT_DEFAULT}`;
 }
 
 // Process user request
 async function processUserRequest() {
     if (props.transcripts.length > 0) {
         const lastTranscript = props.transcripts[props.transcripts.length - 1];
-        if (!isProcessingRequest.value && lastTranscript.role == "user") {
+        if (!isProcessingRequest.value && lastTranscript.role === "user") {
             isProcessingRequest.value = true;
             const transcripts = [...props.transcripts];
             try {
-                consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
+                emit("update", { transcripts });
+                consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
+                const result = await agentRunner.run({
+                    transcripts,
+                    context: {
+                        datasetId: props.datasetId,
+                    },
+                });
+                consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
+                console.log(result);
+                if (result?.state?.output) {
+                    consoleMessages.value.push({
+                        content: JSON.stringify(result.state.output, null, 2),
+                        icon: AcademicCapIcon,
+                    });
+                }
+                
             } catch (e) {
-                transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
+                transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
                 console.error(e);
             }
             emit("update", { transcripts });
@@ -100,8 +117,7 @@ onMounted(() => {
     loadPrompt();
 });
 
-onUnmounted(() => {
-});
+onUnmounted(() => {});
 
 watch(
     () => props.transcripts,

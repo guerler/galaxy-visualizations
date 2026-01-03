@@ -18,22 +18,7 @@
         <ai_max_tokens>32000</ai_max_tokens>
         <ai_model>qwen3:8b</ai_model>
         <ai_prompt><![CDATA[
-You are a visualization planning agent.
-
-You must NOT generate code.
-You must NOT generate Vega-Lite, JSON specifications, or prose.
-
-You must ONLY communicate by calling the tools that are provided to you.
-You always must at least call one tool.
-
-Rules:
-- Only use the provided tool schemas.
-- Only use values allowed by the tool parameters.
-- Do not invent shell identifiers.
-- Do not invent or rename dataset fields.
-- Do not explain your reasoning.
-
-The client controls the workflow and which tools are available.
+You must ALWAYS pick a tool if one is available.
         ]]></ai_prompt>
         <ai_temperature>0.3</ai_temperature>
         <ai_top_p>0.9</ai_top_p>
