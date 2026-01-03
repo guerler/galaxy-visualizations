@@ -9,12 +9,12 @@ import {
     ExclamationTriangleIcon,
     SparklesIcon,
 } from "@heroicons/vue/24/outline";
-import { Orchestra } from "@/modules/orchestra";
 import { PyodideManager } from "@/pyodide/pyodide-manager";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 import Tabular from "@/components/Tabular.vue";
 import type { ConsoleMessageType } from "@/types";
+import { Orchestra } from "./modules/orchestra";
 
 // Props
 const props = defineProps<{
@@ -44,7 +44,7 @@ const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
 const PROMPT_DATASET = "The content of 'dataset.csv' follows.";
 const PROMPT_DEFAULT = "How can I help you?";
-const PLUGIN_NAME = "orchestra";
+const PLUGIN_NAME = "vintent";
 const TEST_DATA = "test-data/dataset.csv";
 
 // Dataset URL
@@ -63,8 +63,8 @@ const isLoadingPyodide = ref<boolean>(true);
 const isProcessingRequest = ref<boolean>(false);
 const widgets = ref<any>([]);
 
-// Create orchestra
-const orchestra = new Orchestra({
+// Create vintent
+const vintent = new Orchestra({
     aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
     aiApiKey: props.specs.ai_api_key || "unknown",
     aiModel: props.specs.ai_model || "unknown",
@@ -109,7 +109,7 @@ async function processUserRequest() {
             const transcripts = [...props.transcripts];
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
-                const newWidgets = await orchestra.run(transcripts, pyodide, datasetContent.value);
+                const newWidgets = await vintent.run(transcripts, pyodide, datasetContent.value);
                 if (newWidgets.length > 0) {
                     widgets.value.push(...newWidgets);
                     consoleMessages.value.push({ content: MESSAGE_SUCCESS, icon: CheckIcon });
