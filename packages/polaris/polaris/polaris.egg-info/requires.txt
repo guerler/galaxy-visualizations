@@ -1,6 +1,0 @@
-
-[dev]
-black
-ruff
-mypy
-pytest
