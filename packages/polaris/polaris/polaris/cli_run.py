@@ -1,15 +1,6 @@
-import json
-from pathlib import Path
-import yaml
 from polaris import Registry, Runner
 
-def load_default_agent():
-    path = Path(__file__).parent / "agents" / "default.yml"
-    with path.open("r") as f:
-        return yaml.safe_load(f)
-
-async def run_agent(config, transcripts):
-    agent = load_default_agent()
+async def run_agent(agent, config, transcripts):
     payload = {
         "graph": agent,
         "inputs": {
