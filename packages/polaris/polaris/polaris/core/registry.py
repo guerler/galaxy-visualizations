@@ -138,9 +138,11 @@ class Registry:
                 for v in values
                 if isinstance(v.get(enum_from["field"]), str)
             ]
-
             field = next(k for k in output_schema["required"] if k != "next")
-
+            if not enum_values:
+                raise Exception(
+                    f"No valid enum values for field '{field}' from state '{enum_from['state']}'"
+                )
             properties[field] = {
                 "type": "string",
                 "enum": enum_values,
