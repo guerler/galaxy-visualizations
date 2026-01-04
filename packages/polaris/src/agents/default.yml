@@ -1,0 +1,120 @@
+version: 1
+id: default
+kind: agent_pipeline
+description: Client-side demo agent executing read-only Galaxy API calls
+
+start: api_histories
+
+inputs:
+  transcripts:
+    type: transcript_stream
+  context:
+    type: object
+
+state:
+  histories:
+    type: array
+  history_id:
+    type: string
+  contents:
+    type: array
+  dataset_id:
+    type: string
+  dataset:
+    type: object
+
+nodes:
+  api_histories:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.history.list
+      input:
+        limit: 10
+    emit:
+      state.histories: result
+    next: pick_history
+
+  pick_history:
+    type: planner
+    prompt: |
+      Select a history from the list.
+    enum_from:
+      state: histories
+      field: name
+    output_schema:
+      type: object
+      required: [next, history_name]
+      properties:
+        next:
+          type: string
+          enum: [resolve_history]
+        history_name:
+          type: string
+    emit:
+      state.history_name: history_name
+    next: ${next}
+
+  resolve_history:
+    type: executor
+    run:
+      op: state.lookup
+      input:
+        from: ${state.histories}
+        match:
+          field: name
+          equals: ${state.history_name}
+        select: id
+    emit:
+      state.history_id: result
+    next: api_contents
+
+  api_contents:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.history.contents
+      input:
+        history_id: ${state.history_id}
+    emit:
+      state.contents: result
+    next: pick_dataset
+
+  pick_dataset:
+    type: planner
+    prompt: |
+      Select a dataset from the list.
+    enum_from:
+      state: contents
+      field: id
+    tools:
+      - route
+    output_schema:
+      type: object
+      required: [next, dataset_id]
+      properties:
+        next:
+          type: string
+          enum: [api_dataset]
+        dataset_id:
+          type: string
+    emit:
+      state.dataset_id: dataset_id
+    next: ${next}
+
+  api_dataset:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.dataset.show
+      input:
+        dataset_id: ${state.dataset_id}
+    emit:
+      state.dataset: result
+    next: done
+
+  done:
+    type: terminal
+    emit:
+      history_name: ${state.history_name}
+      dataset_id: ${state.dataset_id}
