@@ -2,24 +2,18 @@ Metadata-Version: 2.4
 Name: polaris
 Version: 0.0.0
 Summary: Execution runtime for Polaris intent graphs
-Home-page: https://github.com/galaxyproject
 Author: Galaxy Team
-Author-email: info@galaxyproject.org
 License: MIT
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
-Dynamic: author
-Dynamic: author-email
-Dynamic: classifier
-Dynamic: description
-Dynamic: description-content-type
-Dynamic: home-page
-Dynamic: license
-Dynamic: requires-python
-Dynamic: summary
+Provides-Extra: dev
+Requires-Dist: black; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: pytest; extra == "dev"
 
 # polaris
 Polaris Agent Runner
