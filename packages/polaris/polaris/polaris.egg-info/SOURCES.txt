@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 polaris/__init__.py
+polaris/cli.py
 polaris/client.py
 polaris/completions.py
 polaris/registry.py
