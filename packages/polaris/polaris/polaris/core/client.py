@@ -53,25 +53,31 @@ class BrowserHttpClient(HttpClient):
 class ServerHttpClient(HttpClient):
     def __init__(self):
         import aiohttp
-
         self._aiohttp = aiohttp
 
     async def request(self, method, url, headers=None, body=None):
         async with self._aiohttp.ClientSession() as session:
+            data = None
+            if body is not None:
+                data = json.dumps(body)
+                headers = headers or {}
+                headers.setdefault("Content-Type", "application/json")
+
             async with session.request(
                 method=method.upper(),
                 url=url,
                 headers=headers,
-                json=body,
+                data=data,
             ) as response:
                 if response.status >= 400:
                     text = await response.text()
                     raise Exception(f"HTTP {response.status}: {text}")
 
-                content_type = response.headers.get("content-type", "")
-                if "application/json" in content_type:
-                    return await response.json()
-                return await response.text()
+                text = await response.text()
+                try:
+                    return json.loads(text)
+                except Exception:
+                    return text
 
 
 # ----------------------------
