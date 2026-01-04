@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import type { TranscriptMessageType, EmitUpdateType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
-import { AcademicCapIcon, ArrowPathIcon, CheckIcon, ClockIcon, ExclamationTriangleIcon, SparklesIcon } from "@heroicons/vue/24/outline";
+import {
+    AcademicCapIcon,
+    ArrowPathIcon,
+    CheckIcon,
+    ClockIcon,
+    ExclamationTriangleIcon,
+    SparklesIcon,
+} from "@heroicons/vue/24/outline";
 import type { ConsoleMessageType } from "@/types";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
@@ -44,7 +51,10 @@ const PLUGIN_NAME = "orchestra";
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
 const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
-const pyodide = new PyodideManager({ indexURL: `${props.root}${pyodideBaseUrl}static/pyodide`, packages: ["polaris"] });
+const pyodide = new PyodideManager({
+    indexURL: `${props.root}${pyodideBaseUrl}static/pyodide`,
+    packages: ["polaris-0.0.0-py3-none-any.whl"],
+});
 
 // References
 const consoleMessages = ref<ConsoleMessageType[]>([]);

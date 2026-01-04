@@ -18,13 +18,14 @@ export default defineConfig({
                     dest: "pyodide",
                 },
                 {
-                    src: "temp/pyodide/*",
+                    src: "temp/pyodide/*.whl",
                     dest: "pyodide",
                 },
                 {
                     src: "polaris/dist/polaris-*.whl",
                     dest: "pyodide",
-                }
+                    overwrite: true,
+                },
             ],
         }),
         vue(),

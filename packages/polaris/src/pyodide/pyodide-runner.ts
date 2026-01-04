@@ -2,6 +2,7 @@ import DEFAULT_AGENT from "@/agents/default.yml";
 
 export async function runAgent(id: string, pyodide: any, transcripts: any) {
     const agent = DEFAULT_AGENT;
+
     return agent;
 }
 
