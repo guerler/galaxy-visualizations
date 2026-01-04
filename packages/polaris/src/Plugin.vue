@@ -107,15 +107,15 @@ async function processUserRequest() {
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
                 emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const result = await runAgent("default", config, pyodide, transcripts);
+                const reply = await runAgent("default", config, pyodide, transcripts);
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
-                console.log(result);
-                /*if (result?.state?.output) {
+                console.debug("[polaris]", reply);
+                if (reply && reply.last && reply.last.result) {
                     consoleMessages.value.push({
-                        content: JSON.stringify(result.state.output, null, 2),
+                        content: JSON.stringify(reply.last.result, null, 2).substring(0, 250),
                         icon: AcademicCapIcon,
                     });
-                }*/
+                }
             } catch (e) {
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
