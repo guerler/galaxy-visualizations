@@ -18,6 +18,10 @@ export default defineConfig({
                     dest: "pyodide",
                 },
                 {
+                    src: "temp/pyodide/*",
+                    dest: "pyodide",
+                },
+                {
                     src: "polaris/dist/polaris-*.whl",
                     dest: "pyodide",
                 }
