@@ -1,6 +1,6 @@
 import argparse
+import asyncio
 import yaml
-
 from pathlib import Path
 from .cli_run import run_agent
 
@@ -10,19 +10,23 @@ config = {
     "aiModel": "unknown",
 }
 
-def load_default_agent():
-    path = Path(__file__).parent / "agents" / "default.yml"
-    with path.open("r") as f:
+def load_agent(path):
+    p = Path(path)
+    with p.open("r") as f:
         return yaml.safe_load(f)
 
-def main():
+async def main_async():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("run")
+    run = sub.add_parser("run")
+    run.add_argument("--agent", required=True)
     sub.add_parser("test")
     args = parser.parse_args()
     if args.cmd == "run":
-        agent = load_default_agent()
-        run_agent(agent, config, [{ "content": "Pick aminos.", "role": "user" }])
+        agent = load_agent(args.agent)
+        await run_agent(agent, config, [{"content": "Pick aminos.", "role": "user"}])
     else:
-        print("not run")
+        print("Unknown command:", args.cmd)
+
+def main():
+    asyncio.run(main_async())
