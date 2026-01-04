@@ -1,4 +1,4 @@
-class AgentRunner:
+class Runner:
     def __init__(self, graph, registry):
         self.graph = graph
         self.registry = registry

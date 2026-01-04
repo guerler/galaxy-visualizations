@@ -1,8 +1,11 @@
-from jsonschema import Draft7Validator
 import json
 
+from completions import completions_post, get_tool_call
+from client import http
+from jsonschema import Draft7Validator
 
-class ClientRegistry:
+
+class Registry:
     def __init__(self, ai_config):
         self.ai_config = ai_config
         self.capabilities = ["llm", "galaxy.read"]
@@ -17,7 +20,7 @@ class ClientRegistry:
     async def plan(self, ctx, spec):
         system_prompt = spec.get(
             "prompt",
-            "You are a routing component. You MUST call the provided tool. Do not respond with text."
+            "You are a routing component. You MUST call the provided tool. Do not respond with text.",
         )
 
         messages = [{"role": "system", "content": system_prompt}]
@@ -36,19 +39,15 @@ class ClientRegistry:
             },
         })
 
-        call = get_tool_call(
+        arguments = get_tool_call(
             tool_name,
             reply.get("choices", [{}])[0]
                 .get("message", {})
-                .get("tool_calls")
+                .get("tool_calls"),
         )
 
-        if not call:
+        if not arguments:
             raise Exception("planner did not produce tool call")
-
-        arguments = call["function"]["arguments"]
-        if isinstance(arguments, str):
-            arguments = json.loads(arguments)
 
         if spec.get("outputSchema"):
             validator = Draft7Validator(spec["outputSchema"])
@@ -163,22 +162,28 @@ class ClientRegistry:
             }
         ]
 
-    # ---------- Galaxy API stubs ----------
+    # ---------- Galaxy API ----------
 
     async def _history_list(self, input):
         limit = input.get("limit")
         params = f"?limit={limit}" if limit else ""
-        res = await fetch(f"/api/histories{params}")
-        return await res.json()
+        return await http.request(
+            "GET",
+            f"/api/histories{params}",
+        )
 
     async def _history_contents(self, input):
         history_id = input["history_id"]
-        res = await fetch(f"/api/histories/{history_id}/contents")
-        return await res.json()
+        return await http.request(
+            "GET",
+            f"/api/histories/{history_id}/contents",
+        )
 
     async def _dataset_show(self, input):
         dataset_id = input.get("dataset_id")
         if not dataset_id:
             raise Exception("dataset_id missing")
-        res = await fetch(f"/api/datasets/{dataset_id}")
-        return await res.json()
+        return await http.request(
+            "GET",
+            f"/api/datasets/{dataset_id}",
+        )
