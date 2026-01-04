@@ -2,39 +2,34 @@ version: 1
 id: default
 kind: agent_pipeline
 description: Client-side demo agent executing read-only Galaxy API calls
-
 start: api_histories
-
 inputs:
   transcripts:
     type: transcript_stream
   context:
     type: object
-
 state:
   histories:
     type: array
-  history_id:
-    type: string
+  selection:
+    type: object
+  history:
+    type: object
   contents:
     type: array
-  dataset_id:
-    type: string
   dataset:
     type: object
-
 nodes:
   api_histories:
     type: executor
     run:
       op: api.call
-      target: galaxy.history.list
+      target: galaxy.histories.get
       input:
         limit: 10
     emit:
       state.histories: result
     next: pick_history
-
   pick_history:
     type: planner
     prompt: |
@@ -48,38 +43,41 @@ nodes:
       properties:
         next:
           type: string
-          enum: [resolve_history]
+          enum: [api_contents]
         history_name:
           type: string
     emit:
-      state.history_name: history_name
-    next: ${next}
-
-  resolve_history:
-    type: executor
-    run:
-      op: state.lookup
-      input:
-        from: ${state.histories}
-        match:
-          field: name
-          equals: ${state.history_name}
-        select: id
-    emit:
-      state.history_id: result
-    next: api_contents
-
+      state.selection:
+        history_name:
+          $ref: result.history_name
+        next:
+          $ref: result.next
+    next:
+      $ref: state.selection.next
   api_contents:
     type: executor
     run:
       op: api.call
-      target: galaxy.history.contents
+      target: galaxy.histories.show.contents.get
       input:
-        history_id: ${state.history_id}
+        history_id:
+          $expr:
+            op: lookup
+            from:
+              $ref: state.histories
+            match:
+              field: name
+              equals:
+                $ref: state.selection.history_name
+            select: id
     emit:
+      state.history:
+        name:
+          $ref: state.selection.history_name
+        id:
+          $ref: run.input.history_id
       state.contents: result
     next: pick_dataset
-
   pick_dataset:
     type: planner
     prompt: |
@@ -87,8 +85,6 @@ nodes:
     enum_from:
       state: contents
       field: id
-    tools:
-      - route
     output_schema:
       type: object
       required: [next, dataset_id]
@@ -99,22 +95,31 @@ nodes:
         dataset_id:
           type: string
     emit:
-      state.dataset_id: dataset_id
-    next: ${next}
-
+      state.selection:
+        dataset_id:
+          $ref: result.dataset_id
+        next:
+          $ref: result.next
+    next:
+      $ref: state.selection.next
   api_dataset:
     type: executor
     run:
       op: api.call
-      target: galaxy.dataset.show
+      target: galaxy.datasets.show.get
       input:
-        dataset_id: ${state.dataset_id}
+        dataset_id:
+          $ref: state.selection.dataset_id
     emit:
       state.dataset: result
     next: done
-
   done:
     type: terminal
-    emit:
-      history_name: ${state.history_name}
-      dataset_id: ${state.dataset_id}
+    output:
+      history:
+        id:
+          $ref: state.history.id
+        name:
+          $ref: state.history.name
+      dataset_id:
+        $ref: state.selection.dataset_id

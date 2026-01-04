@@ -1,6 +1,6 @@
 import json
-from .client import http
 
+from .client import http
 
 MIN = 0.0000001
 MAX = 999999999
@@ -10,26 +10,26 @@ TOP_P = 0.8
 
 
 async def completions_post(payload):
-    base_url = payload["aiBaseUrl"].rstrip("/")
+    base_url = payload["ai_base_url"].rstrip("/")
     url = f"{base_url}/chat/completions"
 
     body = {
-        "model": payload["aiModel"],
+        "model": payload["ai_model"],
         "messages": payload["messages"],
         "max_tokens": normalize_parameter(
-            payload.get("aiMaxTokens"),
+            payload.get("ai_maxTokens"),
             1,
             MAX,
             MAX_TOKENS,
         ),
         "temperature": normalize_parameter(
-            payload.get("aiTemperature"),
+            payload.get("ai_temperature"),
             0,
             MAX,
             TEMPERATURE,
         ),
         "top_p": normalize_parameter(
-            payload.get("aiTopP"),
+            payload.get("ai_top_p"),
             MIN,
             1,
             TOP_P,
@@ -55,7 +55,7 @@ async def completions_post(payload):
 
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {payload['aiApiKey']}",
+        "Authorization": f"Bearer {payload['ai_api_key']}",
     }
 
     return await http.request(

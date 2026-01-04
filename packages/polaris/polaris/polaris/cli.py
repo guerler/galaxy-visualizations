@@ -2,38 +2,51 @@ import argparse
 import asyncio
 import os
 import pathlib
-import polaris
+
 import yaml
 
+import polaris
+
 env = {
-    "GALAXY_KEY": "0d913a5539f108e4a7d695d434828708",
-    "GALAXY_ROOT": "http://127.0.0.1:8080/",
+    "AI_API_KEY": "None",
+    "AI_BASE_URL": "http://localhost:11434/v1",
+    "AI_MODEL": "qwen3:8b",
+    "GALAXY_KEY": None,
+    "GALAXY_ROOT": "http://localhost:8080/",
 }
 
 for key in env:
     env[key] = os.environ.get(key) or env[key]
 
+if env["GALAXY_KEY"] is None:
+    raise Exception("GALAXY_KEY missing in environment.")
+
 config = {
-    "aiBaseUrl": "http://localhost:11434/v1",
-    "aiApiKey": "unknown",
-    "aiModel": "unknown",
-    "galaxyRoot": env["GALAXY_ROOT"],
-    "galaxyKey": env["GALAXY_KEY"],
+    "ai_api_key": env["AI_API_KEY"],
+    "ai_base_url": env["AI_BASE_URL"],
+    "ai_model": env["AI_MODEL"],
+    "galaxy_root": env["GALAXY_ROOT"],
+    "galaxy_key": env["GALAXY_KEY"],
+    "galaxy_openapi": "./openapi.json",
 }
 
-MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
-PROMPT_DEFAULT = "How can I help you?";
+MESSAGE_INITIAL = "Hi, I can a pick a tool for you."
+MESSAGE_USER = "Open the aminos history"
+PROMPT_DEFAULT = "Choose and parameterize one of the provided tools. YOU MUST choose a tool!"
+
 
 def load_agent(path):
     p = pathlib.Path(path)
     with p.open("r") as f:
         return yaml.safe_load(f)
 
+
 async def main_async():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     run = sub.add_parser("run")
     run.add_argument("--agent", required=True)
+    run.add_argument("--query", required=False, default=MESSAGE_USER)
     sub.add_parser("test")
     args = parser.parse_args()
     if args.cmd == "run":
@@ -42,11 +55,14 @@ async def main_async():
             "transcripts": [
                 {"content": PROMPT_DEFAULT, "role": "system"},
                 {"content": MESSAGE_INITIAL, "role": "assistant"},
-                {"content": "Pick genetics.", "role": "user"}]
+                {"content": args.query, "role": "user"},
+            ]
         }
-        await polaris.run(agent, inputs, config)
+        reply = await polaris.run(agent, inputs, config)
+        print(reply["last"])
     else:
         print("Unknown command:", args.cmd)
+
 
 def main():
     asyncio.run(main_async())

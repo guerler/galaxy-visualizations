@@ -1,3 +1,7 @@
+from .expressions import EXPR_OPS
+from .refs import get_path
+
+
 class Runner:
     def __init__(self, graph, registry):
         self.graph = graph
@@ -12,185 +16,154 @@ class Runner:
         if node_id:
             while node_id and safety < 500:
                 safety += 1
-                node = self.graph["nodes"][node_id]
-                res = await self.execute_node(node_id, node)
-                node_id = self.resolve_next(node, res)
-                output = res
+                if node_id in self.graph.get("nodes", {}):
+                    node = self.graph["nodes"][node_id]
+                    res, ctx = await self.run_node(node_id, node)
+                    node_id = self.resolve_next(node, res, ctx)
+                    output = res
+                else:
+                    output = {"ok": False, "error": {"code": "unknown_node", "message": str(node_id)}}
+                    node_id = None
         else:
-            output = {
-                "ok": False,
-                "error": {
-                    "code": "missing_start",
-                    "message": "Graph has no start node"
-                }
-            }
+            output = {"ok": False, "error": {"code": "missing_start", "message": "Graph has no start node"}}
         return {"state": self.state, "last": output}
 
-    async def execute_node(self, node_id, node):
+    async def run_node(self, node_id, node):
         ctx = {
             "inputs": self.state.get("inputs"),
             "state": self.state,
             "nodeId": node_id,
             "graphId": self.graph.get("id"),
-            "graph": self.graph
+            "graph": self.graph,
         }
         res = None
-        if node["type"] == "planner":
-            planned = await self.registry.plan(ctx, {
-                "node": node,
-                "prompt": node.get("prompt", ""),
-                "tools": node.get("tools", []),
-                "outputSchema": node.get("output_schema")
-            })
-            self.apply_emit(node.get("emit"), planned)
+        if node.get("type") == "planner":
+            planned = await self.registry.plan(
+                ctx,
+                {
+                    "node": node,
+                    "prompt": node.get("prompt", ""),
+                    "tools": node.get("tools", []),
+                    "outputSchema": node.get("output_schema"),
+                },
+            )
+            ctx["result"] = planned
+            self.apply_emit(node.get("emit"), {"result": planned}, ctx)
             res = {"ok": True, "result": planned}
-        elif node["type"] == "executor":
-            resolved_input = self.resolve_templates(node.get("run", {}).get("input"))
-            op = node.get("run", {}).get("op")
-            if op == "api.call":
-                called = await self.registry.call_api(ctx, {
-                    "target": node["run"]["target"],
-                    "input": resolved_input
-                })
-                if called.get("ok") is True:
-                    self.apply_emit(node.get("emit"), called)
-                res = called
-            elif op == "state.select":
-                selected = self.run_state_select(resolved_input)
-                if selected.get("ok") is True:
-                    self.apply_emit(node.get("emit"), selected)
-                res = selected
-            elif op == "state.lookup":
-                input_val = resolved_input
-                source = input_val.get("from")
-                if not isinstance(source, list):
-                    raise Exception("state.lookup: source is not an array")
-                match = None
-                for item in source:
-                    if item.get(input_val.get("match", {}).get("field")) == input_val.get("match", {}).get("equals"):
-                        match = item
-                        break
-                if not match:
-                    raise Exception("state.lookup: no match")
-                select = input_val.get("select")
-                if select not in match:
-                    raise Exception("state.lookup: select field not found")
-                res = {"ok": True, "result": match[select]}
-                self.apply_emit(node.get("emit"), res)
-            else:
-                raise Exception(f"Unknown executor op: {op}")
-        elif node["type"] == "control":
-            decided = self.eval_branch(node.get("condition"))
-            res = {"ok": True, "result": decided}
-        elif node["type"] == "terminal":
-            if node.get("emit"):
-                v = self.resolve_input_template(node["emit"])
-                self.state["output"] = v
-            else:
-                self.state["output"] = self.state.get("output")
-            res = {"ok": True, "result": self.state.get("output")}
         else:
-            res = {
-                "ok": False,
-                "error": {
-                    "code": "unknown_node_type",
-                    "message": str(node.get("type"))
-                }
-            }
-        return res
+            if node.get("type") == "executor":
+                run_spec = node.get("run", {})
+                resolved_input = self.resolve_templates(run_spec.get("input"), ctx)
+                ctx["run"] = {"input": resolved_input}
+                op = run_spec.get("op")
+                if op == "api.call":
+                    called = await self.registry.call_api(
+                        ctx, {"target": run_spec.get("target"), "input": resolved_input}
+                    )
+                    res = called
+                    if called.get("ok") is True:
+                        ctx["result"] = called.get("result")
+                        self.apply_emit(node.get("emit"), called, ctx)
+                    else:
+                        return called, ctx
+                else:
+                    res = {"ok": False, "error": {"code": "unknown_executor_op", "message": str(op)}}
+            else:
+                if node.get("type") == "control":
+                    decided = self.eval_branch(node.get("condition"), ctx)
+                    ctx["result"] = decided
+                    res = {"ok": True, "result": decided}
+                else:
+                    if node.get("type") == "terminal":
+                        if node.get("output") is not None:
+                            self.state["output"] = self.resolve_templates(node.get("output"), ctx)
+                        res = {"ok": True, "result": self.state.get("output")}
+                    else:
+                        res = {"ok": False, "error": {"code": "unknown_node_type", "message": str(node.get("type"))}}
+        return res, ctx
 
-    def run_state_select(self, input_val):
-        source = input_val.get("from")
-        if not isinstance(source, list):
-            raise Exception("state.select: source is not an array")
-        items = source
-        filt = input_val.get("filter")
-        if filt:
-            items = [i for i in items if i.get(filt.get("field")) == filt.get("equals")]
-        index = input_val.get("index", 0)
-        if index >= len(items):
-            raise Exception("state.select: index out of bounds")
-        item = items[index]
-        field = input_val.get("field")
-        if not field or field not in item:
-            raise Exception("state.select: field not found")
-        return {"ok": True, "result": item[field]}
-
-    def resolve_next(self, node, res):
-        next_val = None
-        if node["type"] == "control":
-            next_val = res.get("result", {}).get("next")
-        elif isinstance(node.get("next"), str):
-            next_val = self.interpolate_next(node["next"], res.get("result"))
-        elif node.get("on"):
-            if res.get("ok") is True and node["on"].get("ok"):
-                next_val = node["on"]["ok"]
-            elif res.get("ok") is False and node["on"].get("error"):
-                next_val = node["on"]["error"]
-        return next_val
-
-    def apply_emit(self, emit, payload):
+    def apply_emit(self, emit, payload, ctx):
         if emit and payload:
             for dest, src in emit.items():
                 key = dest[6:] if dest.startswith("state.") else dest
-                if isinstance(src, str):
-                    if src.startswith("${") and src.endswith("}"):
-                        self.state[key] = self.get_path(src[2:-1])
-                    elif src in (".", "$self"):
-                        self.state[key] = payload
-                    else:
-                        self.state[key] = payload.get(src)
+                if isinstance(src, dict):
+                    self.state[key] = self.resolve_templates(src, ctx)
                 else:
-                    self.state[key] = src
+                    if isinstance(src, str):
+                        self.state[key] = payload.get(src)
+                    else:
+                        self.state[key] = src
 
-    def resolve_templates(self, value):
-        if isinstance(value, str):
-            return self.resolve_input_template(value)
-        if isinstance(value, list):
-            return [self.resolve_templates(v) for v in value]
-        if isinstance(value, dict):
-            return {k: self.resolve_templates(v) for k, v in value.items()}
-        return value
-
-    def resolve_input_template(self, tpl):
-        if tpl is None:
-            return tpl
-        if isinstance(tpl, list):
-            return [self.resolve_input_template(x) for x in tpl]
-        if isinstance(tpl, dict):
-            return {k: self.resolve_input_template(v) for k, v in tpl.items()}
-        if isinstance(tpl, str) and tpl.startswith("${") and tpl.endswith("}"):
-            return self.get_path(tpl[2:-1])
-        return tpl
-
-    def interpolate_next(self, next_val, planned):
-        if next_val.startswith("${") and next_val.endswith("}"):
-            key = next_val[2:-1]
-            return str(planned.get(key)) if planned and key in planned else None
-        return next_val
-
-    def eval_branch(self, condition):
+    def eval_branch(self, condition, ctx):
         next_val = None
         if condition and condition.get("op") == "control.branch":
             for c in condition.get("cases", []):
-                path = c.get("when", {}).get("path")
-                equals = c.get("when", {}).get("equals")
-                if isinstance(path, str):
-                    v = self.get_path(path)
-                    if v == equals:
-                        next_val = str(c.get("next"))
+                when = c.get("when", {})
+                if isinstance(when, dict):
+                    ok = True
+                    for k, expected in when.items():
+                        actual = get_path(k, ctx, self.state)
+                        if actual == expected:
+                            ok = ok and True
+                        else:
+                            ok = False
+                    if ok:
+                        next_val = c.get("next")
                         break
-            if not next_val:
-                default = condition.get("default")
-                next_val = str(default) if default else None
-        return {"next": next_val}
+            if next_val is None:
+                next_val = condition.get("default")
+        return {"next": str(next_val) if next_val is not None else None}
 
-    def get_path(self, path):
-        parts = path.replace("state.", "").split(".")
-        cur = self.state
-        for p in parts:
-            if isinstance(cur, dict) and p in cur:
-                cur = cur[p]
+    def eval_expr(self, expr, ctx):
+        op = expr.get("op")
+        fn = EXPR_OPS.get(op)
+        if fn:
+            return fn(expr, ctx, self.resolve_templates)
+        else:
+            raise Exception(f"unknown expr op: {op}")
+
+    def resolve_next(self, node, res, ctx):
+        next_val = None
+        if res and res.get("ok") is False:
+            if node.get("on") and node["on"].get("error"):
+                next_val = node["on"]["error"]
             else:
-                return None
-        return cur
+                next_val = None
+        else:
+            if node.get("type") == "control":
+                next_val = res.get("result", {}).get("next") if res else None
+            else:
+                nv = node.get("next")
+                if isinstance(nv, dict):
+                    ctx["result"] = res.get("result") if res else None
+                    next_val = self.resolve_templates(nv, ctx)
+                else:
+                    if isinstance(nv, str):
+                        next_val = nv
+                    else:
+                        if node.get("on"):
+                            if res and res.get("ok") is True:
+                                if node["on"].get("ok"):
+                                    next_val = node["on"]["ok"]
+                                else:
+                                    next_val = None
+                            else:
+                                next_val = None
+                        else:
+                            next_val = None
+        return str(next_val) if next_val is not None else None
+
+    def resolve_templates(self, value, ctx):
+        if isinstance(value, dict):
+            if "$ref" in value:
+                return get_path(value["$ref"], ctx, self.state)
+            else:
+                if "$expr" in value:
+                    return self.eval_expr(value["$expr"], ctx)
+                else:
+                    return {k: self.resolve_templates(v, ctx) for k, v in value.items()}
+        else:
+            if isinstance(value, list):
+                return [self.resolve_templates(v, ctx) for v in value]
+            else:
+                return value
