@@ -9,7 +9,6 @@ import { viteConfigCharts } from "./vite.config.charts";
 export default defineConfig({
     ...viteConfigCharts,
     plugins: [
-        vue(),
         tailwindcss(),
         viteStaticCopy({
             targets: [
@@ -17,8 +16,18 @@ export default defineConfig({
                     src: "node_modules/pyodide/*",
                     dest: "pyodide",
                 },
+                {
+                    src: "temp/pyodide/*.whl",
+                    dest: "pyodide",
+                },
+                {
+                    src: "polaris/dist/polaris-*.whl",
+                    dest: "pyodide",
+                    overwrite: true,
+                },
             ],
         }),
+        vue(),
     ],
     test: {
         environment: "happy-dom",
