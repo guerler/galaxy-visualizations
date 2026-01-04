@@ -1,21 +1,12 @@
 import json
-import math
-import aiohttp
+from client import http
 
 
+MIN = 0.0000001
+MAX = 999999999
 MAX_TOKENS = 16384
 TEMPERATURE = 0.3
 TOP_P = 0.8
-
-
-def normalize_parameter(value, min_val, max_val, fallback):
-    if value is None:
-        return fallback
-    if value < min_val:
-        return min_val
-    if value > max_val:
-        return max_val
-    return value
 
 
 async def completions_post(payload):
@@ -28,18 +19,18 @@ async def completions_post(payload):
         "max_tokens": normalize_parameter(
             payload.get("aiMaxTokens"),
             1,
-            math.inf,
+            MAX,
             MAX_TOKENS,
         ),
         "temperature": normalize_parameter(
             payload.get("aiTemperature"),
             0,
-            math.inf,
+            MAX,
             TEMPERATURE,
         ),
         "top_p": normalize_parameter(
             payload.get("aiTopP"),
-            float.fromhex("0x1p-52"),  # Number.EPSILON equivalent
+            MIN,
             1,
             TOP_P,
         ),
@@ -67,9 +58,12 @@ async def completions_post(payload):
         "Authorization": f"Bearer {payload['aiApiKey']}",
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=body) as response:
-            return await response.json()
+    return await http.request(
+        method="POST",
+        url=url,
+        headers=headers,
+        body=body,
+    )
 
 
 def get_tool_call(name, tool_calls):
@@ -90,3 +84,16 @@ def get_tool_call(name, tool_calls):
                         continue
 
     return result if found else None
+
+
+def normalize_parameter(value, min_val, max_val, fallback):
+    if value is None:
+        return fallback
+    if value < min_val:
+        return min_val
+    if value > max_val:
+        return max_val
+    return value
+
+
+__all__ = ["completions_post", "get_tool_call"]

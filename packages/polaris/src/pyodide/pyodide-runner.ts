@@ -2,7 +2,8 @@ import DEFAULT_AGENT from "@/agents/default.yml";
 
 export async function runAgent(id: string, pyodide: any, transcripts: any) {
     const agent = DEFAULT_AGENT;
-
+    const code = ["import polaris", "polaris.hello_world('hi here we are')"];
+    const raw = await pyodide.runPythonAsync(code);
     return agent;
 }
 
