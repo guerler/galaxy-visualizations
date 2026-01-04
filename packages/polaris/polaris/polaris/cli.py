@@ -1,9 +1,9 @@
 import argparse
 import asyncio
 import os
+import pathlib
+import polaris
 import yaml
-from pathlib import Path
-from .cli_run import run_agent
 
 env = {
     "GALAXY_KEY": "0d913a5539f108e4a7d695d434828708",
@@ -25,7 +25,7 @@ MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
 PROMPT_DEFAULT = "How can I help you?";
 
 def load_agent(path):
-    p = Path(path)
+    p = pathlib.Path(path)
     with p.open("r") as f:
         return yaml.safe_load(f)
 
@@ -38,10 +38,13 @@ async def main_async():
     args = parser.parse_args()
     if args.cmd == "run":
         agent = load_agent(args.agent)
-        await run_agent(agent, config, [
-            {"content": PROMPT_DEFAULT, "role": "system"},
-            {"content": MESSAGE_INITIAL, "role": "assistant"},
-            {"content": "Pick genetics.", "role": "user"}])
+        inputs = {
+            "transcripts": [
+                {"content": PROMPT_DEFAULT, "role": "system"},
+                {"content": MESSAGE_INITIAL, "role": "assistant"},
+                {"content": "Pick genetics.", "role": "user"}]
+        }
+        await polaris.run(agent, inputs, config)
     else:
         print("Unknown command:", args.cmd)
 
