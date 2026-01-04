@@ -14,7 +14,7 @@ import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 
 import { PyodideManager } from "@/pyodide/pyodide-manager";
-import { runAgent } from "./pyodide/pyodide-runner";
+import { polarisRun } from "./pyodide-runner";
 
 // Props
 const props = defineProps<{
@@ -47,11 +47,11 @@ const PLUGIN_NAME = "polaris";
 
 // Ai provider
 const config = {
-    aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
-    aiApiKey: props.specs.ai_api_key || "unknown",
-    aiModel: props.specs.ai_model || "unknown",
-    galaxyRoot: props.root,
-    galaxyKey: "0d913a5539f108e4a7d695d434828708",
+    ai_base_url: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
+    ai_api_key: props.specs.ai_api_key,
+    ai_model: props.specs.ai_model,
+    galaxy_root: props.root,
+    galaxy_key: null,
 };
 
 // Load pyodide
@@ -109,7 +109,7 @@ async function processUserRequest() {
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
                 emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const reply = await runAgent("default", config, pyodide, transcripts);
+                const reply = await polarisRun("default", config, pyodide, transcripts);
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {

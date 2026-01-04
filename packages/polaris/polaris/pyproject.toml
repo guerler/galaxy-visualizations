@@ -21,16 +21,16 @@ classifiers = [
 polaris = "polaris.cli:main"
 
 [project.optional-dependencies]
-dev = ["black","ruff","mypy","pytest"]
+dev = ["black", "ruff", "mypy", "pytest", "pytest-asyncio"]
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ["py37"]
 
 [tool.ruff]
 select = ["E","F","I"]
 ignore = []
-line-length = 88
+line-length = 120
 
 [tool.mypy]
 python_version = "3.7"

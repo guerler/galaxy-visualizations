@@ -9,14 +9,25 @@ class HttpClient:
 def is_pyodide():
     try:
         import pyodide_js  # noqa: F401
+
         return True
     except Exception:
         return False
 
 
+# parse response without relying on content type
+async def parse_response(response):
+    text = await response.text()
+    try:
+        return json.loads(text)
+    except Exception:
+        return text
+
+
 # ----------------------------
 # Browser / Pyodide client
 # ----------------------------
+
 
 class BrowserHttpClient(HttpClient):
     def __init__(self):
@@ -27,32 +38,30 @@ class BrowserHttpClient(HttpClient):
         self._to_js = to_js
 
     async def request(self, method, url, headers=None, body=None):
+        headers = headers or {}
         options = {
             "method": method.upper(),
-            "headers": headers or {},
+            "headers": headers,
         }
         if body is not None:
             options["body"] = json.dumps(body)
-
+            headers.setdefault("Content-Type", "application/json")
         response = await self._fetch(url, self._to_js(options))
         if not response.ok:
             text = await response.text()
             raise Exception(f"HTTP {response.status}: {text}")
-
-        text = await response.text()
-        try:
-            return json.loads(text)
-        except Exception:
-            return text
+        return await parse_response(response)
 
 
 # ----------------------------
 # Server / Backend client
 # ----------------------------
 
+
 class ServerHttpClient(HttpClient):
     def __init__(self):
         import aiohttp
+
         self._aiohttp = aiohttp
 
     async def request(self, method, url, headers=None, body=None):
@@ -62,7 +71,6 @@ class ServerHttpClient(HttpClient):
                 data = json.dumps(body)
                 headers = headers or {}
                 headers.setdefault("Content-Type", "application/json")
-
             async with session.request(
                 method=method.upper(),
                 url=url,
@@ -72,12 +80,7 @@ class ServerHttpClient(HttpClient):
                 if response.status >= 400:
                     text = await response.text()
                     raise Exception(f"HTTP {response.status}: {text}")
-
-                text = await response.text()
-                try:
-                    return json.loads(text)
-                except Exception:
-                    return text
+                return await parse_response(response)
 
 
 # ----------------------------
