@@ -13,9 +13,6 @@ import type { ConsoleMessageType } from "@/types";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 
-import { AgentRunner } from "@/modules/agent-runner";
-import { ClientRegistry } from "./modules/client-registry";
-
 import { PyodideManager } from "@/pyodide/pyodide-manager";
 import { runAgent } from "./pyodide/pyodide-runner";
 
@@ -38,7 +35,7 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-    (event: "update", config: EmitUpdateType): void;
+    (event: "update", state: EmitUpdateType): void;
 }>();
 
 // Constants
@@ -47,6 +44,13 @@ const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "orchestra";
+
+// Ai provider
+const config = {
+    aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
+    aiApiKey: props.specs.ai_api_key || "unknown",
+    aiModel: props.specs.ai_model || "unknown",
+}
 
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
@@ -62,21 +66,6 @@ const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
 const isLoadingPyodide = ref<boolean>(true);
 
-/*/ Create orchestra
-const registry = new ClientRegistry({
-    aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
-    aiApiKey: props.specs.ai_api_key || "unknown",
-    aiModel: props.specs.ai_model || "unknown",
-});
-
-const graph = yaml.parse(AGENT_YML);
-if (!graph || typeof graph !== "object") {
-    throw new Error("Invalid agent yml");
-}
-
-const agentRunner = new AgentRunner(graph, registry);
-*/
-
 // Inject Prompt
 async function loadPrompt() {
     const transcripts = [...props.transcripts];
@@ -85,6 +74,7 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
+        transcripts.push({ content: "Pick genetics.", role: "user" });
         emit("update", { transcripts });
     }
 }
@@ -95,7 +85,6 @@ async function loadPyodide() {
         const pyodideMessageIndex = consoleMessages.value.length;
         consoleMessages.value.push({ content: "Loading Pyodide...", icon: ArrowPathIcon, spin: true });
         await pyodide.initialize();
-        //datasetContent.value = await pyodide.fsFetch(datasetUrl, "dataset.csv");
         consoleMessages.value[pyodideMessageIndex] = { content: "Pyodide ready.", icon: CheckIcon };
         isLoadingPyodide.value = false;
         processUserRequest();
@@ -118,7 +107,7 @@ async function processUserRequest() {
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
                 emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const result = await runAgent("default", pyodide, transcripts);
+                const result = await runAgent("default", config, pyodide, transcripts);
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
                 console.log(result);
                 /*if (result?.state?.output) {

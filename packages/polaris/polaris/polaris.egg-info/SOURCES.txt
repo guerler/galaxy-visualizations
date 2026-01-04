@@ -1,9 +1,10 @@
 README.md
 setup.py
 polaris/__init__.py
-polaris/agent_runner.py
-polaris/client_registry.py
+polaris/client.py
 polaris/completions.py
+polaris/registry.py
+polaris/runner.py
 polaris.egg-info/PKG-INFO
 polaris.egg-info/SOURCES.txt
 polaris.egg-info/dependency_links.txt
