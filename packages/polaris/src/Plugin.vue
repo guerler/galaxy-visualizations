@@ -51,9 +51,10 @@ const PLUGIN_NAME = "orchestra";
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
 const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
+const pyodideIndexUrl = `${props.root}${pyodideBaseUrl}static/pyodide`;
 const pyodide = new PyodideManager({
-    indexURL: `${props.root}${pyodideBaseUrl}static/pyodide`,
-    packages: ["polaris-0.0.0-py3-none-any.whl"],
+    indexURL: pyodideIndexUrl,
+    extraPackages: [`${pyodideIndexUrl}/polaris-0.0.0-py3-none-any.whl`],
 });
 
 // References
