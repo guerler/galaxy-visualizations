@@ -1,5 +1,5 @@
 README.md
-setup.py
+pyproject.toml
 polaris/__init__.py
 polaris/client.py
 polaris/completions.py
@@ -8,4 +8,6 @@ polaris/runner.py
 polaris.egg-info/PKG-INFO
 polaris.egg-info/SOURCES.txt
 polaris.egg-info/dependency_links.txt
+polaris.egg-info/entry_points.txt
+polaris.egg-info/requires.txt
 polaris.egg-info/top_level.txt
