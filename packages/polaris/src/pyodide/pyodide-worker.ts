@@ -29,7 +29,12 @@ self.onmessage = async (e) => {
             }
             for (const whl of payload.extraPackages || []) {
                 await pyodide.runPythonAsync(
-                    parseCode(["import micropip", `await micropip.install("${whl}")`, `print("Installed ${whl}.")`]),
+                    parseCode([
+                        `print("Loading ${whl}")`,
+                        "import micropip",
+                        `await micropip.install("${whl}")`,
+                        `print("Loaded ${whl}")`,
+                    ]),
                 );
             }
             self.postMessage({ type: "ready" });
