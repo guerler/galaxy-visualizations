@@ -1,5 +1,5 @@
 import json
-from client import http
+from .client import http
 
 
 MIN = 0.0000001

@@ -62,12 +62,19 @@ export function getPackageFileNames(pyodideDir, packageNames) {
         }
         return null;
     }
+    function normalize(name) {
+        return name.toLowerCase().replace(/_/g, "-");
+    }
+    function getEntry(name) {
+        return packages[normalize(name)] || null;
+    }
     function walk(name) {
-        if (visited.has(name)) {
+        const key = normalize(name);
+        if (visited.has(key)) {
             return;
         } else {
-            visited.add(name);
-            const entry = getEntry(name);
+            visited.add(key);
+            const entry = getEntry(key);
             if (!entry) {
                 throw new Error(`Package not found in pyodide-lock.json: ${name}`);
             } else {
