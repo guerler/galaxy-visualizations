@@ -6,20 +6,15 @@ function toDict(payload: any) {
 
 export async function runAgent(id: string, config: any, pyodide: any, transcripts: any) {
     const agent = DEFAULT_AGENT;
-    const payload = {
-        graph: agent,
-        inputs: {
-            transcripts,
-        },
-    };
+    console.log(config)
+    console.log(transcripts);
+    const inputs = { transcripts };
     const raw = await pyodide.runPythonAsync([
         "import json",
         "from polaris import Registry, Runner",
-        `payload = ${toDict(payload)}`,
-        `config = ${toDict(config)}`,
-        "registry = Registry(config)",
-        "runner = Runner(payload['graph'], registry)",
-        "result = await runner.run(payload['inputs'])",
+        `registry = Registry(${toDict(config)})`,
+        `runner = Runner(${toDict(agent)}, registry)`,
+        `result = await runner.run(${toDict(inputs)})`,
         "json.dumps(result)",
     ]);
     if (typeof raw !== "string") {

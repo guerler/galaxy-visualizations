@@ -5,10 +5,14 @@ from pathlib import Path
 from .cli_run import run_agent
 
 config = {
-    "aiBaseUrl": "http://localhost:11434/v1/",
+    "aiBaseUrl": "http://localhost:11434/v1",
     "aiApiKey": "unknown",
     "aiModel": "unknown",
+    "galaxyRoot": "http://127.0.0.1:8080/",
 }
+
+MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
+PROMPT_DEFAULT = "How can I help you?";
 
 def load_agent(path):
     p = Path(path)
@@ -24,7 +28,10 @@ async def main_async():
     args = parser.parse_args()
     if args.cmd == "run":
         agent = load_agent(args.agent)
-        await run_agent(agent, config, [{"content": "Pick aminos.", "role": "user"}])
+        await run_agent(agent, config, [
+            {"content": PROMPT_DEFAULT, "role": "system"},
+            {"content": MESSAGE_INITIAL, "role": "assistant"},
+            {"content": "Pick genetics.", "role": "user"}])
     else:
         print("Unknown command:", args.cmd)
 

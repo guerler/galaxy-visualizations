@@ -43,7 +43,7 @@ const MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
 const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
 const PROMPT_DEFAULT = "How can I help you?";
-const PLUGIN_NAME = "orchestra";
+const PLUGIN_NAME = "polaris";
 
 // Ai provider
 const config = {
