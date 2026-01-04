@@ -1,15 +1,24 @@
 import argparse
 import asyncio
+import os
 import yaml
 from pathlib import Path
 from .cli_run import run_agent
+
+env = {
+    "GALAXY_KEY": "0d913a5539f108e4a7d695d434828708",
+    "GALAXY_ROOT": "http://127.0.0.1:8080/",
+}
+
+for key in env:
+    env[key] = os.environ.get(key) or env[key]
 
 config = {
     "aiBaseUrl": "http://localhost:11434/v1",
     "aiApiKey": "unknown",
     "aiModel": "unknown",
-    "galaxyRoot": "http://127.0.0.1:8080/",
-    "galaxyKey": "0d913a5539f108e4a7d695d434828708",
+    "galaxyRoot": env["GALAXY_ROOT"],
+    "galaxyKey": env["GALAXY_KEY"],
 }
 
 MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
