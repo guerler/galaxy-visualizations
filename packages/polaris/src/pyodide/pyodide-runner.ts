@@ -1,4 +1,4 @@
-import DEFAULT_AGENT from "@/agents/default.yml";
+import DEFAULT_AGENT from "/polaris/agents/default.yml";
 
 export async function runAgent(id: string, config: any, pyodide: any, transcripts: any) {
     const agent = DEFAULT_AGENT;
