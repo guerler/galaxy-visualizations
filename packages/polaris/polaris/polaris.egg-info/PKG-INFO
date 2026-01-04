@@ -22,4 +22,4 @@ Dynamic: requires-python
 Dynamic: summary
 
 # polaris
-YML-agent runner
+Polaris Agent Runner

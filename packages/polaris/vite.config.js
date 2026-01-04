@@ -17,6 +17,10 @@ export default defineConfig({
                     src: "node_modules/pyodide/*",
                     dest: "pyodide",
                 },
+                {
+                    src: "polaris/dist/polaris-*.whl",
+                    dest: "pyodide",
+                }
             ],
         }),
         vue(),
