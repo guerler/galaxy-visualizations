@@ -1,4 +1,4 @@
-from .registry import package.Registry
-from .runner import package.Runner
+from .registry import core.Registry
+from .runner import core.Runner
 
 __all__ = ["Registry", "Runner"]
