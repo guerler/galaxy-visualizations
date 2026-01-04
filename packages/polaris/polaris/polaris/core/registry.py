@@ -8,6 +8,7 @@ from .client import http
 class Registry:
     def __init__(self, ai_config):
         self.ai_config = ai_config
+        self.galaxy_root = ai_config.get("galaxyRoot")
         self.capabilities = ["llm", "galaxy.read"]
         self.api_targets = {
             "galaxy.history.list": self._history_list,
@@ -38,7 +39,7 @@ class Registry:
                 "function": {"name": tool_name},
             },
         })
-
+        print(reply)
         arguments = get_tool_call(
             tool_name,
             reply.get("choices", [{}])[0]
@@ -169,14 +170,14 @@ class Registry:
         params = f"?limit={limit}" if limit else ""
         return await http.request(
             "GET",
-            f"/api/histories{params}",
+            f"{self.galaxy_root}api/histories{params}",
         )
 
     async def _history_contents(self, input):
         history_id = input["history_id"]
         return await http.request(
             "GET",
-            f"/api/histories/{history_id}/contents",
+            f"{self.galaxy_root}api/histories/{history_id}/contents",
         )
 
     async def _dataset_show(self, input):
@@ -185,5 +186,5 @@ class Registry:
             raise Exception("dataset_id missing")
         return await http.request(
             "GET",
-            f"/api/datasets/{dataset_id}",
+            f"{self.galaxy_root}api/datasets/{dataset_id}",
         )
