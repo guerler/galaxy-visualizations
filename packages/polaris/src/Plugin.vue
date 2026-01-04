@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import yaml from "yaml";
-import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
+import type { TranscriptMessageType, EmitUpdateType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import { AcademicCapIcon, ArrowPathIcon, CheckIcon, ClockIcon, ExclamationTriangleIcon, SparklesIcon } from "@heroicons/vue/24/outline";
 import type { ConsoleMessageType } from "@/types";
@@ -11,8 +10,7 @@ import { AgentRunner } from "@/modules/agent-runner";
 import { ClientRegistry } from "./modules/client-registry";
 
 import { PyodideManager } from "@/pyodide/pyodide-manager";
-
-import AGENT_YML from "@/agent.yml?raw";
+import { runAgent } from "./pyodide/pyodide-runner";
 
 // Props
 const props = defineProps<{
@@ -33,7 +31,7 @@ const props = defineProps<{
 
 // Emits
 const emit = defineEmits<{
-    (event: "update", newSettings: InputValuesType): void;
+    (event: "update", config: EmitUpdateType): void;
 }>();
 
 // Constants
@@ -53,7 +51,7 @@ const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
 const isLoadingPyodide = ref<boolean>(true);
 
-// Create orchestra
+/*/ Create orchestra
 const registry = new ClientRegistry({
     aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
     aiApiKey: props.specs.ai_api_key || "unknown",
@@ -66,6 +64,7 @@ if (!graph || typeof graph !== "object") {
 }
 
 const agentRunner = new AgentRunner(graph, registry);
+*/
 
 // Inject Prompt
 async function loadPrompt() {
@@ -108,20 +107,15 @@ async function processUserRequest() {
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
                 emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const result = await agentRunner.run({
-                    transcripts,
-                    context: {
-                        datasetId: props.datasetId,
-                    },
-                });
+                const result = await runAgent("default", pyodide, transcripts);
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
                 console.log(result);
-                if (result?.state?.output) {
+                /*if (result?.state?.output) {
                     consoleMessages.value.push({
                         content: JSON.stringify(result.state.output, null, 2),
                         icon: AcademicCapIcon,
                     });
-                }
+                }*/
             } catch (e) {
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });

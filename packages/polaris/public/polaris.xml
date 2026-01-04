@@ -1,15 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE visualization SYSTEM "../../visualization.dtd">
 <visualization name="Polaris" embeddable="true">
-    <description></description>
-    <data_sources>
-        <data_source>
-            <model_class>HistoryDatasetAssociation</model_class>
-            <test test_attr="ext">yml</test>
-        </data_source>
-    </data_sources>
+    <description>Run YAML-Agents in Polaris format</description>
     <params>
-        <param required="true">dataset_id</param>
+        <param required="false">dataset_id</param>
     </params>
     <entry_point src="dist/index.js" css="dist/index.css" />
     <specs>
@@ -25,6 +19,22 @@
             <chat>true</chat>
         </ui>
     </specs>
+    <settings>
+        <input>
+            <label>Agent</label>
+            <help>Pick an agent.</help>
+            <name>agent</name>
+            <type>select</type>
+            <filterable>true</filterable>
+            <value>find_dataset_agent</value>
+            <data>
+                <data>
+                    <label>Find Dataset Agent</label>
+                    <value>find_dataset_agent</value>
+                </data>
+            </data>
+        </input>
+    </settings>
     <help format="markdown"><![CDATA[
 ]]></help>
 </visualization>

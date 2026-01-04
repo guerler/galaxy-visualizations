@@ -51,7 +51,7 @@ async function main() {
      * and passing in any necessary props such as credentials.
      */
     createApp({
-        render: () => h(App, { collapse: false, container: container, credentials: process.env.credentials }),
+        render: () => h(App, { collapse: false, container: container, credentials: process.env.credentials, tab: "chat" }),
     }).mount(`#${container}`);
 }
 
