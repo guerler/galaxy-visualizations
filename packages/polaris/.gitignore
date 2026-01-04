@@ -21,3 +21,6 @@ static
 temp
 yarn-debug.log*
 yarn-error.log*
+
+polaris/build
+polaris/polaris.egg-info
