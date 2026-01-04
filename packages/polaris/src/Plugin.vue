@@ -50,6 +50,7 @@ const config = {
     aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
     aiApiKey: props.specs.ai_api_key || "unknown",
     aiModel: props.specs.ai_model || "unknown",
+    galaxyRoot: props.root,
 };
 
 // Load pyodide
