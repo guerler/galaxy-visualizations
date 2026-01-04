@@ -1,5 +1,6 @@
 export interface PyodideManagerOptions {
     indexURL: string;
+    packages?: string[];
 }
 
 export class PyodideManager {
@@ -33,7 +34,7 @@ export class PyodideManager {
         });
         this.worker.postMessage({
             type: "initialize",
-            payload: { indexURL: options.indexURL },
+            payload: { indexURL: options.indexURL, packages: options.packages },
         });
     }
 

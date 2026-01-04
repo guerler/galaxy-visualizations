@@ -7,22 +7,6 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* Copy directory. */
-function copyDir(src, dest) {
-    fs.mkdirSync(dest, { recursive: true });
-    const entries = fs.readdirSync(src, { withFileTypes: true });
-    for (const entry of entries) {
-        const srcPath = path.join(src, entry.name);
-        const destPath = path.join(dest, entry.name);
-        if (entry.isDirectory()) {
-            copyDir(srcPath, destPath);
-        } else if (entry.isFile()) {
-            fs.mkdirSync(path.dirname(destPath), { recursive: true });
-            fs.copyFileSync(srcPath, destPath);
-        }
-    }
-}
-
 /* Download Pyodide package artifacts from the CDN and store them locally. */
 export function downloadFiles(pyodideDir, fileNames, version) {
     const baseUrl = `https://cdn.jsdelivr.net/pyodide/v${version}/full/`;
@@ -121,18 +105,14 @@ export function getPackageNames(repoRoot) {
 /** Installs pyodide and packages */
 function main() {
     const repoRoot = __dirname;
-    const nodeModulesPyodide = path.join(repoRoot, "node_modules", "pyodide");
     const destDir = path.join(repoRoot, "static", "pyodide");
+    const nodePath = path.join(repoRoot, "node_modules", "pyodide");
     const tempDir = path.join(repoRoot, "temp", "pyodide");
-    console.log("Copying node_modules/pyodide to temp/pyodide.");
-    copyDir(nodeModulesPyodide, tempDir);
     const version = getInstalledVersion(repoRoot);
     console.log(`Installed version: ${version}.`);
     const installPackages = getPackageNames(repoRoot);
-    const dependencies = getPackageFileNames(tempDir, installPackages);
+    const dependencies = getPackageFileNames(nodePath, installPackages);
     downloadFiles(tempDir, dependencies, version);
-    console.log("Copying temp/pyodide to static/pyodide.");
-    copyDir(tempDir, destDir);
     console.log("Done.");
 }
 

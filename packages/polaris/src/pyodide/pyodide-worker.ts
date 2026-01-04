@@ -15,7 +15,16 @@ self.onmessage = async (e) => {
     if (type === "initialize") {
         try {
             pyodide = await loadPyodide({ indexURL: payload.indexURL });
-            await pyodide.loadPackage(parsePackages());
+            let installPackages = parsePackages();
+            if (payload.packages) {
+                installPackages = [...installPackages, ...payload.packages]
+            }
+            //await pyodide.loadPackage(["./polaris-0.0.0-py3-none-any.whl"]);
+            await pyodide.loadPackage("micropip");
+            pyodide.runPythonAsync(`
+                import micropip
+                micropip.install("poldsaris-0.0.0-py3-none-any.whl")
+            `);
             self.postMessage({ type: "ready" });
         } catch (err) {
             self.postMessage({ type: "error", error: String(err) });
