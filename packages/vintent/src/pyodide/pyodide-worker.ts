@@ -4,7 +4,15 @@ import PYODIDE_REQUIREMENTS from "../../pyodide.requirements.txt?raw";
 let pyodide: any = null;
 let running = false;
 
-function parsePackages() {
+function parseCode(code: string | string[]): string {
+    if (Array.isArray(code)) {
+        return code.join("\n");
+    } else {
+        return code;
+    }
+}
+
+function parsePackages(): string[] {
     return PYODIDE_REQUIREMENTS.split("\n")
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
@@ -15,7 +23,20 @@ self.onmessage = async (e) => {
     if (type === "initialize") {
         try {
             pyodide = await loadPyodide({ indexURL: payload.indexURL });
-            await pyodide.loadPackage(parsePackages());
+            const pyodidePackages = parsePackages();
+            if (pyodidePackages) {
+                await pyodide.loadPackage(pyodidePackages);
+            }
+            for (const whl of payload.extraPackages || []) {
+                await pyodide.runPythonAsync(
+                    parseCode([
+                        `print("Loading ${whl}")`,
+                        "import micropip",
+                        `await micropip.install("${whl}")`,
+                        `print("Loaded ${whl}")`,
+                    ]),
+                );
+            }
             self.postMessage({ type: "ready" });
         } catch (err) {
             self.postMessage({ type: "error", error: String(err) });
@@ -39,7 +60,7 @@ self.onmessage = async (e) => {
         if (type === "runPythonAsync") {
             running = true;
             try {
-                const result = await pyodide.runPythonAsync(payload.code);
+                const result = await pyodide.runPythonAsync(parseCode(payload.code));
                 self.postMessage({ id, result });
             } catch (err) {
                 self.postMessage({ id, error: String(err) });
