@@ -9,6 +9,7 @@ class Registry:
     def __init__(self, ai_config):
         self.ai_config = ai_config
         self.galaxy_root = ai_config.get("galaxyRoot")
+        self.galaxy_key = ai_config.get("galaxyKey")
         self.capabilities = ["llm", "galaxy.read"]
         self.api_targets = {
             "galaxy.history.list": self._history_list,
@@ -172,14 +173,14 @@ class Registry:
         params = f"?limit={limit}" if limit else ""
         return await http.request(
             "GET",
-            f"{self.galaxy_root}api/histories{params}",
+            f"{self.galaxy_root}api/histories?key={self.galaxy_key}",
         )
 
     async def _history_contents(self, input):
         history_id = input["history_id"]
         return await http.request(
             "GET",
-            f"{self.galaxy_root}api/histories/{history_id}/contents",
+            f"{self.galaxy_root}api/histories/{history_id}/contents?key={self.galaxy_key}",
         )
 
     async def _dataset_show(self, input):
@@ -188,5 +189,5 @@ class Registry:
             raise Exception("dataset_id missing")
         return await http.request(
             "GET",
-            f"{self.galaxy_root}api/datasets/{dataset_id}",
+            f"{self.galaxy_root}api/datasets/{dataset_id}?key={self.galaxy_key}",
         )

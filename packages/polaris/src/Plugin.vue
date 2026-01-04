@@ -51,6 +51,7 @@ const config = {
     aiApiKey: props.specs.ai_api_key || "unknown",
     aiModel: props.specs.ai_model || "unknown",
     galaxyRoot: props.root,
+    galaxyKey: "0d913a5539f108e4a7d695d434828708",
 };
 
 // Load pyodide

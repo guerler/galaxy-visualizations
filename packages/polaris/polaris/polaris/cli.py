@@ -9,6 +9,7 @@ config = {
     "aiApiKey": "unknown",
     "aiModel": "unknown",
     "galaxyRoot": "http://127.0.0.1:8080/",
+    "galaxyKey": "0d913a5539f108e4a7d695d434828708",
 }
 
 MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
