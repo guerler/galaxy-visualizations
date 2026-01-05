@@ -9,7 +9,6 @@ import {
     ExclamationTriangleIcon,
     SparklesIcon,
 } from "@heroicons/vue/24/outline";
-import { Orchestra } from "@/modules/orchestra";
 import { PyodideManager } from "@/pyodide/pyodide-manager";
 import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
@@ -84,7 +83,7 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
-        transcripts.push({ content: "Plot hist of Age.", role: "user" });
+        transcripts.push({ content: "Plot a correlation heatmap.", role: "user" });
         emit("update", { transcripts });
     }
 }
