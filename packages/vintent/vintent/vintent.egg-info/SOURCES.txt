@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+vintent/__init__.py
+vintent/cli.py
+vintent.egg-info/PKG-INFO
+vintent.egg-info/SOURCES.txt
+vintent.egg-info/dependency_links.txt
+vintent.egg-info/entry_points.txt
+vintent.egg-info/requires.txt
+vintent.egg-info/top_level.txt
+vintent/core/client.py
+vintent/core/completions.py
+vintent/core/runtime.py

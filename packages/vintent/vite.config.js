@@ -20,6 +20,11 @@ export default defineConfig({
                     src: "temp/pyodide/*.whl",
                     dest: "pyodide",
                 },
+                {
+                    src: "vintent/dist/vintent-*.whl",
+                    dest: "pyodide",
+                    overwrite: true,
+                },
             ],
         }),
         vue(),
@@ -33,3 +38,6 @@ export default defineConfig({
         format: "es",
     },
 });
+
+
+
