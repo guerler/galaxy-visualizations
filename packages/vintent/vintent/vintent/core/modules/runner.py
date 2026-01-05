@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 
 from ..completions import completions_post, get_tool_call
+from .analysis import runAnalysis
 from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
 from .shells import shells
@@ -86,6 +87,10 @@ class Runner:
 
                             # STEP 4: Compile specification
                             effective_values = values
+                            if shell.analysis:
+                                effective_values = await runAnalysis(shell.analysis["id"], file_name)
+
+                            # STEP 5: Compile via shell
                             spec = shell.compile(params, effective_values, "vega-lite")
                             wdgs.append(spec)
                             return wdgs

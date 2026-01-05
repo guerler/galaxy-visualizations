@@ -1,5 +1,7 @@
+from typing import Dict, List
+
 import pandas as pd
-from typing import List, Dict
+
 
 def run(dataset_path: str) -> List[Dict[str, object]]:
     df = pd.read_csv(dataset_path)
@@ -26,14 +28,18 @@ def run(dataset_path: str) -> List[Dict[str, object]]:
 
     rows = []
     for xi, yi in zip(x, yhat):
-        rows.append({
-            "x": float(xi),
-            "yhat": float(yi),
-        })
+        rows.append(
+            {
+                "x": float(xi),
+                "yhat": float(yi),
+            }
+        )
 
-    rows.append({
-        "slope": float(slope),
-        "intercept": float(intercept),
-        "r2": float(r2),
-    })
+    rows.append(
+        {
+            "slope": float(slope),
+            "intercept": float(intercept),
+            "r2": float(r2),
+        }
+    )
     return rows

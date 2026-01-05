@@ -1,5 +1,7 @@
+from typing import Dict, List
+
 import pandas as pd
-from typing import List, Dict
+
 
 def run(dataset_path: str) -> List[Dict[str, object]]:
     df = pd.read_csv(dataset_path)

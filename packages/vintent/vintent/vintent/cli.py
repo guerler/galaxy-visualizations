@@ -27,7 +27,7 @@ config = {
 }
 
 MESSAGE_INITIAL = "Hi, I can a pick a tool for you."
-MESSAGE_USER = "Open the aminos history"
+MESSAGE_USER = "Create a correlation plot"
 PROMPT_DEFAULT = "Choose and parameterize one of the provided tools. YOU MUST choose a tool!"
 
 
@@ -42,7 +42,7 @@ async def main_async():
             "transcripts": [
                 {"content": PROMPT_DEFAULT, "role": "system"},
                 {"content": MESSAGE_INITIAL, "role": "assistant"},
-                {"content": args.query, "role": "user"},
+                {"content": args.query or MESSAGE_USER, "role": "user"},
             ]
         }
         reply = await vintent.run("../test-data/dataset.csv", inputs, config)

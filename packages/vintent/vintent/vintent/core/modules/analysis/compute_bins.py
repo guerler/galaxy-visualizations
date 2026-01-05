@@ -1,6 +1,8 @@
-import pandas as pd
+from typing import Dict, List
+
 import numpy as np
-from typing import List, Dict
+import pandas as pd
+
 
 def run(dataset_path: str) -> List[Dict[str, object]]:
     df = pd.read_csv(dataset_path)
@@ -13,9 +15,11 @@ def run(dataset_path: str) -> List[Dict[str, object]]:
 
     rows = []
     for i in range(len(hist)):
-        rows.append({
-            "bin_start": float(edges[i]),
-            "bin_end": float(edges[i + 1]),
-            "count": int(hist[i]),
-        })
+        rows.append(
+            {
+                "bin_start": float(edges[i]),
+                "bin_end": float(edges[i + 1]),
+                "count": int(hist[i]),
+            }
+        )
     return rows
