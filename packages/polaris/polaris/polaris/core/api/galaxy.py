@@ -1,7 +1,7 @@
 from ..client import http
 from .api import API_METHODS, ApiOp, ApiProvider, ApiTarget
 from .generic import openapi_get
-from .openapi_catalog import OpenApiCatalog
+from .openapi import OpenApiCatalog
 
 ALLOWED_METHODS = [API_METHODS.GET]
 PROVIDER_NAME = "galaxy"

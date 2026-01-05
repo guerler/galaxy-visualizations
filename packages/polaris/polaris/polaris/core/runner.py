@@ -1,6 +1,7 @@
 from .expressions import EXPR_OPS
 from .refs import get_path
 
+MAX_NODES = 1000
 
 class Runner:
     def __init__(self, graph, registry):
@@ -14,7 +15,7 @@ class Runner:
         safety = 0
         output = None
         if node_id:
-            while node_id and safety < 500:
+            while node_id and safety < MAX_NODES:
                 safety += 1
                 if node_id in self.graph.get("nodes", {}):
                     node = self.graph["nodes"][node_id]
