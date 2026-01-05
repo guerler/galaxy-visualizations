@@ -2,6 +2,7 @@ import json
 
 from jsonschema import Draft7Validator
 
+from .agents import Agents
 from .api.api import API_METHODS
 from .api.catalog import load_providers
 from .completions import completions_post, get_tool_call
@@ -14,6 +15,7 @@ class Registry:
     def __init__(self, config):
         self.config = config
         self.capabilities = ["llm", "galaxy.read"]
+        self.agents = Agents()
         self.api_targets = {}
         self.api_ops = {}
 
