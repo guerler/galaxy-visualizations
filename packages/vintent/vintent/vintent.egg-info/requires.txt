@@ -1,9 +1,0 @@
-jsonschema
-pyyaml
-
-[dev]
-black
-ruff
-mypy
-pytest
-pytest-asyncio
