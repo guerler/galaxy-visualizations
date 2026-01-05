@@ -2,6 +2,13 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
 
+class API_METHODS:
+    GET = "get"
+    POST = "post"
+    PUT = "put"
+    DELETE = "delete"
+
+
 @dataclass
 class ApiOp:
     target: str

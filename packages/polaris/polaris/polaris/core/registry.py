@@ -1,5 +1,6 @@
 from jsonschema import Draft7Validator
 
+from .api.api import API_METHODS
 from .api.catalog import load_providers
 from .completions import completions_post, get_tool_call
 
@@ -99,12 +100,12 @@ class Registry:
                 },
             }
         method = op.meta.get("method")
-        if not method or method != "get":
+        if not method or method.lower() != API_METHODS.GET:
             return {
                 "ok": False,
                 "error": {
                     "code": "method_not_allowed",
-                    "method": op.meta.get("method"),
+                    "method": method,
                 },
             }
         if op.capability and op.capability not in self.capabilities:
