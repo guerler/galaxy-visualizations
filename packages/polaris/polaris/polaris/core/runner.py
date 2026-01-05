@@ -61,12 +61,12 @@ class Runner:
         elif node.get("type") == "planner":
             planned = await self.registry.plan(
                 ctx,
-                {
-                    "node": node,
-                    "prompt": node.get("prompt", ""),
-                    "tools": node.get("tools", []),
-                    "outputSchema": node.get("output_schema"),
-                },
+                dict(
+                    node=node,
+                    prompt=node.get("prompt", ""),
+                    tools=node.get("tools", []),
+                    output_schema=node.get("output_schema"),
+                ),
             )
             ctx["result"] = planned
             self.apply_emit(node.get("emit"), {"result": planned}, ctx)

@@ -141,7 +141,7 @@ class Registry:
         )
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(self.sanitize(ctx["inputs"].get("transcripts")))
-        tools = self.build_route_tool(ctx, spec["node"], spec.get("outputSchema"))
+        tools = self.build_route_tool(ctx, spec["node"], spec.get("output_schema"))
         tool_name = tools[0]["function"]["name"]
         reply = await completions_post(
             {
@@ -167,8 +167,8 @@ class Registry:
                 f"finish_reason={choice.get('finish_reason')}; "
                 f"message={message}"
             )
-        if spec.get("outputSchema"):
-            validator = Draft7Validator(spec["outputSchema"])
+        if spec.get("output_schema"):
+            validator = Draft7Validator(spec["output_schema"])
             errors = list(validator.iter_errors(arguments))
             if errors:
                 raise Exception("planner output schema violation: " + "; ".join(e.message for e in errors))
