@@ -52,9 +52,29 @@ def expr_lookup(expr, ctx, resolve):
     raise Exception("lookup found no match")
 
 
+def expr_count_where(expr, ctx, resolve):
+    items = resolve(expr.get("from"), ctx)
+    field = expr.get("field")
+    equals = resolve(expr.get("equals"), ctx)
+    if not isinstance(items, list):
+        return 0
+    return sum(1 for item in items if item.get(field) == equals)
+
+
+def expr_any(expr, ctx, resolve):
+    items = resolve(expr.get("from"), ctx)
+    field = expr.get("field")
+    equals = resolve(expr.get("equals"), ctx)
+    if not isinstance(items, list):
+        return False
+    return any(item.get(field) == equals for item in items)
+
+
 EXPR_OPS = {
+    "any": expr_any,
     "concat": expr_concat,
     "coalesce": expr_coalesce,
+    "count_where": expr_count_where,
     "get": expr_get,
     "len": expr_len,
     "eq": expr_eq,

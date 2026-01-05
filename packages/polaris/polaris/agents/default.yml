@@ -18,8 +18,12 @@ state:
     type: object
   contents:
     type: array
-  inventory_summary:
-    type: object
+  dataset_count:
+    type: integer
+  has_errors:
+    type: boolean
+  summary:
+    type: string
 
 nodes:
 
@@ -80,43 +84,52 @@ nodes:
         id:
           $ref: run.input.history_id
       state.contents: result
+    next: compute_dataset_count
+
+  compute_dataset_count:
+    type: compute
+    emit:
+      state.dataset_count:
+        $expr:
+          op: len
+          arg:
+            $ref: state.contents
+    next: compute_error_flag
+
+  compute_error_flag:
+    type: compute
+    emit:
+      state.has_errors:
+        $expr:
+          op: any
+          from:
+            $ref: state.contents
+          field: state
+          equals: error
     next: summarize_contents
 
   summarize_contents:
     type: reasoning
     prompt: |
-      You are given the contents of a Galaxy history.
+      Write a concise human-readable summary of a Galaxy history.
 
-      You MUST return a JSON object with EXACTLY these fields:
+      Facts you can rely on:
+      - dataset_count: {{dataset_count}}
+      - has_errors: {{has_errors}}
 
-      - dataset_count: integer
-      - has_errors: boolean
-      - summary: string
-
-      Rules:
-      - dataset_count must be the number of items in contents
-      - has_errors must be true if ANY dataset appears to be in an error state
-      - summary must be a concise human-readable description
-      - Do not include any other fields
-      - Do not return null
-      - Do not explain your reasoning
+      Explain the overall contents in natural language.
+      Do not restate numbers mechanically.
     input:
       history:
         $ref: state.history
       contents:
         $ref: state.contents
-    output_schema:
-      type: object
-      required: [dataset_count, has_errors, summary]
-      properties:
-        dataset_count:
-          type: integer
-        has_errors:
-          type: boolean
-        summary:
-          type: string
+      dataset_count:
+        $ref: state.dataset_count
+      has_errors:
+        $ref: state.has_errors
     emit:
-      state.inventory_summary:
+      state.summary:
         $ref: result
     next: done
 
@@ -128,7 +141,9 @@ nodes:
           $ref: state.history.id
         name:
           $ref: state.history.name
-      datasets:
-        $ref: state.contents
-      inventory:
-        $ref: state.inventory_summary
+      dataset_count:
+        $ref: state.dataset_count
+      has_errors:
+        $ref: state.has_errors
+      summary:
+        $ref: state.summary

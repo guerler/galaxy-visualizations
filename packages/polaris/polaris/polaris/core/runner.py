@@ -39,7 +39,11 @@ class Runner:
             "graph": self.graph,
         }
         res = None
-        if node.get("type") == "control":
+        if node.get("type") == "compute":
+            ctx["result"] = None
+            self.apply_emit(node.get("emit"), {"result": None}, ctx)
+            res = {"ok": True, "result": None}
+        elif node.get("type") == "control":
             decided = self.eval_branch(node.get("condition"), ctx)
             ctx["result"] = decided
             res = {"ok": True, "result": decided}
@@ -76,7 +80,6 @@ class Runner:
             result = await self.registry.reason(
                 prompt=node.get("prompt", ""),
                 input=resolved_input,
-                output_schema=node.get("output_schema"),
             )
             ctx["result"] = result
             self.apply_emit(node.get("emit"), {"result": result}, ctx)
