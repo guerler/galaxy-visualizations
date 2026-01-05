@@ -3,6 +3,7 @@ from .refs import get_path
 
 MAX_NODES = 1000
 
+
 class Runner:
     def __init__(self, graph, registry):
         self.graph = graph
@@ -38,7 +39,26 @@ class Runner:
             "graph": self.graph,
         }
         res = None
-        if node.get("type") == "planner":
+        if node.get("type") == "control":
+            decided = self.eval_branch(node.get("condition"), ctx)
+            ctx["result"] = decided
+            res = {"ok": True, "result": decided}
+        elif node.get("type") == "executor":
+            run_spec = node.get("run", {})
+            resolved_input = self.resolve_templates(run_spec.get("input"), ctx)
+            ctx["run"] = {"input": resolved_input}
+            op = run_spec.get("op")
+            if op == "api.call":
+                called = await self.registry.call_api(ctx, {"target": run_spec.get("target"), "input": resolved_input})
+                res = called
+                if called.get("ok") is True:
+                    ctx["result"] = called.get("result")
+                    self.apply_emit(node.get("emit"), called, ctx)
+                else:
+                    return called, ctx
+            else:
+                res = {"ok": False, "error": {"code": "unknown_executor_op", "message": str(op)}}
+        elif node.get("type") == "planner":
             planned = await self.registry.plan(
                 ctx,
                 {
@@ -51,36 +71,22 @@ class Runner:
             ctx["result"] = planned
             self.apply_emit(node.get("emit"), {"result": planned}, ctx)
             res = {"ok": True, "result": planned}
+        elif node.get("type") == "reasoning":
+            resolved_input = self.resolve_templates(node.get("input", {}), ctx)
+            result = await self.registry.reason(
+                prompt=node.get("prompt", ""),
+                input=resolved_input,
+                output_schema=node.get("output_schema"),
+            )
+            ctx["result"] = result
+            self.apply_emit(node.get("emit"), {"result": result}, ctx)
+            res = {"ok": True, "result": result}
+        elif node.get("type") == "terminal":
+            if node.get("output") is not None:
+                self.state["output"] = self.resolve_templates(node.get("output"), ctx)
+            res = {"ok": True, "result": self.state.get("output")}
         else:
-            if node.get("type") == "executor":
-                run_spec = node.get("run", {})
-                resolved_input = self.resolve_templates(run_spec.get("input"), ctx)
-                ctx["run"] = {"input": resolved_input}
-                op = run_spec.get("op")
-                if op == "api.call":
-                    called = await self.registry.call_api(
-                        ctx, {"target": run_spec.get("target"), "input": resolved_input}
-                    )
-                    res = called
-                    if called.get("ok") is True:
-                        ctx["result"] = called.get("result")
-                        self.apply_emit(node.get("emit"), called, ctx)
-                    else:
-                        return called, ctx
-                else:
-                    res = {"ok": False, "error": {"code": "unknown_executor_op", "message": str(op)}}
-            else:
-                if node.get("type") == "control":
-                    decided = self.eval_branch(node.get("condition"), ctx)
-                    ctx["result"] = decided
-                    res = {"ok": True, "result": decided}
-                else:
-                    if node.get("type") == "terminal":
-                        if node.get("output") is not None:
-                            self.state["output"] = self.resolve_templates(node.get("output"), ctx)
-                        res = {"ok": True, "result": self.state.get("output")}
-                    else:
-                        res = {"ok": False, "error": {"code": "unknown_node_type", "message": str(node.get("type"))}}
+            res = {"ok": False, "error": {"code": "unknown_node_type", "message": str(node.get("type"))}}
         return res, ctx
 
     def apply_emit(self, emit, payload, ctx):
