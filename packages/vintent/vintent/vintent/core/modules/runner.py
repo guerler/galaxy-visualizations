@@ -22,12 +22,13 @@ class Runner:
 
     async def run(
         self,
+        file_name: str,
         transcripts: List[TranscriptMessageType],
     ) -> List[Any]:
         """Process transcripts and CSV data to generate visualizations."""
         wdgs: List[Any] = []
 
-        with open("../test-data/dataset.csv") as f:
+        with open(file_name) as f:
             csv_text = f.read()
 
         # Parse dataset

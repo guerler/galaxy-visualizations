@@ -16,6 +16,8 @@ import Dashboard from "@/components/Dashboard.vue";
 import Tabular from "@/components/Tabular.vue";
 import type { ConsoleMessageType } from "@/types";
 
+import { vintentRun } from "./pyodide-runner";
+
 // Props
 const props = defineProps<{
     datasetId: string;
@@ -68,11 +70,11 @@ const isProcessingRequest = ref<boolean>(false);
 const widgets = ref<any>([]);
 
 // Create orchestra
-const orchestra = new Orchestra({
-    aiBaseUrl: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
-    aiApiKey: props.specs.ai_api_key || "unknown",
-    aiModel: props.specs.ai_model || "unknown",
-});
+const config = {
+    ai_base_url: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
+    ai_api_key: props.specs.ai_api_key || "unknown",
+    ai_model: props.specs.ai_model || "unknown",
+}
 
 // Inject Prompt
 async function loadPrompt() {
@@ -82,6 +84,7 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
+        transcripts.push({ content: "Plot hist of Age.", role: "user" });
         emit("update", { transcripts });
     }
 }
@@ -113,7 +116,10 @@ async function processUserRequest() {
             const transcripts = [...props.transcripts];
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
-                const newWidgets = await orchestra.process(transcripts, pyodide, datasetContent.value);
+                transcripts.push({ content: "Processing...", role: "assistant", variant: "info" });
+                const reply = await vintentRun(config, pyodide, transcripts);
+                console.debug("[vintent]", reply);
+                const newWidgets = reply;
                 if (newWidgets.length > 0) {
                     widgets.value.push(...newWidgets);
                     consoleMessages.value.push({ content: MESSAGE_SUCCESS, icon: CheckIcon });

@@ -1,7 +1,7 @@
 from .modules.runner import Runner
 
 
-async def run(inputs, config):
+async def run(file_name, inputs, config):
     runner = Runner(config)
-    reply = await runner.run(inputs["transcripts"])
+    reply = await runner.run(file_name, inputs["transcripts"])
     return reply
