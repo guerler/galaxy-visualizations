@@ -5,7 +5,6 @@ class OpenApiCatalog:
         self.placeholder = placeholder
         self.prefixture = prefixture
         self.spec = spec
-
         for path, ops in spec.get("paths", {}).items():
             if not path.startswith(tuple(prefixes)):
                 continue
@@ -14,6 +13,7 @@ class OpenApiCatalog:
                     continue
                 name = self._name_from_path(path) + f".{method}"
                 self.index[name] = (path, ops[method], method)
+        print(f"[polaris] OpenApiCatalog entries: {len(self.index.keys())}.")
 
     def _name_from_path(self, path):
         parts = path.strip("/").split("/")

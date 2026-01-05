@@ -1,28 +1,25 @@
 version: 1
-id: history_inventory
+id: default
 kind: agent_pipeline
-description: Produce a structured inventory of a Galaxy history
-
+description: Client-side demo agent executing read-only Galaxy API calls
 start: api_histories
-
 inputs:
   transcripts:
     type: transcript_stream
   context:
     type: object
-
 state:
   histories:
     type: array
+  selection:
+    type: object
   history:
     type: object
   contents:
     type: array
-  inventory_summary:
+  dataset:
     type: object
-
 nodes:
-
   api_histories:
     type: executor
     run:
@@ -33,11 +30,10 @@ nodes:
     emit:
       state.histories: result
     next: pick_history
-
   pick_history:
     type: planner
     prompt: |
-      Select a history to inspect.
+      Select a history from the list.
     enum_from:
       state: histories
       field: name
@@ -51,14 +47,13 @@ nodes:
         history_name:
           type: string
     emit:
-      state.history:
-        name:
+      state.selection:
+        history_name:
           $ref: result.history_name
         next:
           $ref: result.next
     next:
-      $ref: state.history.next
-
+      $ref: state.selection.next
   api_contents:
     type: executor
     run:
@@ -73,53 +68,51 @@ nodes:
             match:
               field: name
               equals:
-                $ref: state.history.name
+                $ref: state.selection.history_name
             select: id
     emit:
       state.history:
+        name:
+          $ref: state.selection.history_name
         id:
           $ref: run.input.history_id
       state.contents: result
-    next: summarize_contents
-
-  summarize_contents:
-    type: reasoning
+    next: pick_dataset
+  pick_dataset:
+    type: planner
     prompt: |
-      You are given the contents of a Galaxy history.
-
-      You MUST return a JSON object with EXACTLY these fields:
-
-      - dataset_count: integer
-      - has_errors: boolean
-      - summary: string
-
-      Rules:
-      - dataset_count must be the number of items in contents
-      - has_errors must be true if ANY dataset appears to be in an error state
-      - summary must be a concise human-readable description
-      - Do not include any other fields
-      - Do not return null
-      - Do not explain your reasoning
-    input:
-      history:
-        $ref: state.history
-      contents:
-        $ref: state.contents
+      Select a dataset from the list.
+    enum_from:
+      state: contents
+      field: id
     output_schema:
       type: object
-      required: [dataset_count, has_errors, summary]
+      required: [next, dataset_id]
       properties:
-        dataset_count:
-          type: integer
-        has_errors:
-          type: boolean
-        summary:
+        next:
+          type: string
+          enum: [api_dataset]
+        dataset_id:
           type: string
     emit:
-      state.inventory_summary:
-        $ref: result
+      state.selection:
+        dataset_id:
+          $ref: result.dataset_id
+        next:
+          $ref: result.next
+    next:
+      $ref: state.selection.next
+  api_dataset:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.datasets.show.get
+      input:
+        dataset_id:
+          $ref: state.selection.dataset_id
+    emit:
+      state.dataset: result
     next: done
-
   done:
     type: terminal
     output:
@@ -128,7 +121,5 @@ nodes:
           $ref: state.history.id
         name:
           $ref: state.history.name
-      datasets:
-        $ref: state.contents
-      inventory:
-        $ref: state.inventory_summary
+      dataset_id:
+        $ref: state.selection.dataset_id

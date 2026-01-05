@@ -1,3 +1,5 @@
+import json
+
 from jsonschema import Draft7Validator
 
 from .api.api import API_METHODS
@@ -171,6 +173,40 @@ class Registry:
             if errors:
                 raise Exception("planner output schema violation: " + "; ".join(e.message for e in errors))
         return arguments
+
+    # ----------------------------
+    # Reason
+    # ----------------------------
+    async def reason(self, prompt, input, output_schema):
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    prompt
+                    + "\n\n"
+                    + "You MUST respond with a valid JSON object ONLY.\n"
+                    + "Do not include explanations, markdown, or extra text.\n"
+                    + "The JSON MUST conform exactly to the provided schema."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(input),
+            },
+        ]
+        reply = await completions_post(
+            {
+                **self.config,
+                "messages": messages,
+            }
+        )
+        content = reply["choices"][0]["message"]["content"]
+        parsed = json.loads(content)
+        validator = Draft7Validator(output_schema)
+        errors = list(validator.iter_errors(parsed))
+        if errors:
+            raise Exception("reasoning output schema violation")
+        return parsed
 
     # ----------------------------
     # Sanitization
