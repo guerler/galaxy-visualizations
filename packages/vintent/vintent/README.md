@@ -1,2 +1,2 @@
-# polaris
-Polaris Agent Runner
+# vintent
+Visualization Intent (VIntent)
