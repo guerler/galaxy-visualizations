@@ -27,7 +27,6 @@ config = {
     "ai_model": env["AI_MODEL"],
     "galaxy_root": env["GALAXY_ROOT"],
     "galaxy_key": env["GALAXY_KEY"],
-    "galaxy_openapi": "./openapi.json",
 }
 
 MESSAGE_INITIAL = "Hi, I can a pick a tool for you."
