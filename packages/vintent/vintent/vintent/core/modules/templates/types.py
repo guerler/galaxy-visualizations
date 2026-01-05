@@ -1,6 +1,6 @@
 from __future__ import annotations
-from typing import TypedDict, Literal, Optional, List, Dict, Any, Protocol, Union
-from dataclasses import dataclass, field
+
+from typing import Any, Dict, List, Literal, Optional, Protocol, TypedDict, Union
 
 # Type definitions
 FieldType = Literal["nominal", "ordinal", "quantitative", "temporal", "any"]
@@ -40,7 +40,7 @@ class ValidationError(TypedDict, total=False):
         "not_enough_fields",
         "not_enough_quantitative_fields",
         "unknown_field",
-        "unknown_shell"
+        "unknown_shell",
     ]
     details: Dict[str, Any]
 
@@ -60,24 +60,21 @@ class ValidationResult(TypedDict):
 class ShellType(Protocol):
     # identity
     name: str
-    
+
     # planning / orchestration contracts
     analysis: Optional[AnalysisType]
     description: Optional[str]
     signatures: List[List[FieldType]]
     required: EncodingMapType
     optional: Union[EncodingMapType, Literal["any"], None]
-    
+
     # semantic declaration
     rowSemantics: Literal["rowwise", "aggregate"]
-    
+
     # behavior
-    def validate(self, params: ShellParamsType, profile: DatasetProfile) -> ValidationResult:
-        ...
-    
-    def compile(self, params: ShellParamsType, values: List[Dict[str, Any]], 
-                renderer: RendererType) -> Any:
-        ...
+    def validate(self, params: ShellParamsType, profile: DatasetProfile) -> ValidationResult: ...
+
+    def compile(self, params: ShellParamsType, values: List[Dict[str, Any]], renderer: RendererType) -> Any: ...
 
 
 # Constants

@@ -1,18 +1,15 @@
-import json
-from typing import List, Dict, Any, Optional
-from .csv.profiler import profile_csv, DatasetProfile
+from typing import Any, Dict, List, Optional
+
+from ..completions import completions_post, get_tool_call
+from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
 from .shells import shells
 from .tools import build_choose_shell_tool, build_fill_shell_params_tool
-from ..completions import completions_post, get_tool_call
 
 # Assuming these are defined somewhere in your codebase
 # If not, you'll need to import or define them
 TranscriptMessageType = Dict[str, Any]
-TRANSCRIPT_VARIANT = {
-    "INFO": "info",
-    "DATA": "data"
-}
+TRANSCRIPT_VARIANT = {"INFO": "info", "DATA": "data"}
 CompletionsReply = Dict[str, Any]
 CompletionsMessage = Dict[str, str]
 
@@ -22,73 +19,70 @@ class Runner:
         self.ai_base_url = config["ai_base_url"]
         self.ai_api_key = config["ai_api_key"]
         self.ai_model = config["ai_model"]
-    
+
     async def run(
-        self, 
-        transcripts: List[TranscriptMessageType], 
+        self,
+        transcripts: List[TranscriptMessageType],
     ) -> List[Any]:
         """Process transcripts and CSV data to generate visualizations."""
         wdgs: List[Any] = []
-        
+
         with open("../test-data/dataset.csv") as f:
             csv_text = f.read()
 
         # Parse dataset
         profile: DatasetProfile = profile_csv(csv_text)
         values = values_from_csv(csv_text)
-        
+
         # STEP 1: Choose shell
-        choose_reply = await self._completions(
-            transcripts, 
-            [build_choose_shell_tool(profile)]
-        )
-        
+        choose_reply = await self._completions(transcripts, [build_choose_shell_tool(profile)])
+
         if choose_reply:
             choose_shell = get_tool_call(
-                "choose_shell", 
-                choose_reply.get("choices", [{}])[0].get("message", {}).get("tool_calls")
+                "choose_shell", choose_reply.get("choices", [{}])[0].get("message", {}).get("tool_calls")
             )
-            
+
             if choose_shell and choose_shell.get("shellId"):
                 shell_id = choose_shell["shellId"]
                 shell = shells.get(shell_id)
-                
+
                 if shell:
                     # Log intent
-                    transcripts.append({
-                        "role": "assistant",
-                        "content": f"I will produce a {shell.name}.",
-                        "variant": TRANSCRIPT_VARIANT["INFO"]
-                    })
-                    transcripts.append({
-                        "role": "assistant",
-                        "content": f"Calling choose_shell_tool with: {shell_id}",
-                        "variant": TRANSCRIPT_VARIANT["DATA"]
-                    })
-                    
+                    transcripts.append(
+                        {
+                            "role": "assistant",
+                            "content": f"I will produce a {shell.name}.",
+                            "variant": TRANSCRIPT_VARIANT["INFO"],
+                        }
+                    )
+                    transcripts.append(
+                        {
+                            "role": "assistant",
+                            "content": f"Calling choose_shell_tool with: {shell_id}",
+                            "variant": TRANSCRIPT_VARIANT["DATA"],
+                        }
+                    )
+
                     # STEP 2: Fill parameters
                     params: Dict[str, Any] = {}
-                    param_reply = await self._completions(
-                        transcripts, 
-                        [build_fill_shell_params_tool(shell, profile)]
-                    )
-                    
+                    param_reply = await self._completions(transcripts, [build_fill_shell_params_tool(shell, profile)])
+
                     if param_reply:
                         filled = get_tool_call(
-                            "fill_shell_params", 
-                            param_reply.get("choices", [{}])[0].get("message", {}).get("tool_calls")
+                            "fill_shell_params",
+                            param_reply.get("choices", [{}])[0].get("message", {}).get("tool_calls"),
                         )
-                        
+
                         if filled:
                             params.update(filled)
-                        
+
                         # STEP 3: Shell validation
                         validation = shell.validate(params, profile)
-                        
+
                         if validation["ok"]:
                             for warning in validation["warnings"]:
                                 print(f"[orchestra] {warning.get('code')} {warning.get('details')}")
-                            
+
                             # STEP 4: Compile specification
                             effective_values = values
                             spec = shell.compile(params, effective_values, "vega-lite")
@@ -105,37 +99,32 @@ class Runner:
                 raise Exception("LLM did not select a visualization shell")
         else:
             raise Exception("No response from AI provider")
-    
+
     async def _completions(
-        self, 
-        transcripts: List[TranscriptMessageType], 
-        tools: List[Dict[str, Any]]
+        self, transcripts: List[TranscriptMessageType], tools: List[Dict[str, Any]]
     ) -> Optional[CompletionsReply]:
         """Make a completion request to the AI provider."""
-        return await completions_post({
-            "ai_base_url": self.ai_base_url,
-            "ai_api_key": self.ai_api_key,
-            "ai_model": self.ai_model,
-            "messages": _sanitize_transcripts(transcripts),
-            "tools": tools
-        })
+        return await completions_post(
+            {
+                "ai_base_url": self.ai_base_url,
+                "ai_api_key": self.ai_api_key,
+                "ai_model": self.ai_model,
+                "messages": _sanitize_transcripts(transcripts),
+                "tools": tools,
+            }
+        )
 
 
 def _sanitize_transcripts(transcripts: List[TranscriptMessageType]) -> List[CompletionsMessage]:
     """Filter and sanitize transcripts for AI consumption."""
     sanitized: List[CompletionsMessage] = []
-    
+
     for t in transcripts:
         content = t.get("content")
         variant = t.get("variant")
-        
+
         # Check if content is valid and variant is DATA (or no variant)
-        if (isinstance(content, str) and 
-            len(content) > 0 and 
-            (not variant or variant == TRANSCRIPT_VARIANT["DATA"])):
-            sanitized.append({
-                "role": t.get("role", ""),
-                "content": content
-            })
-    
+        if isinstance(content, str) and len(content) > 0 and (not variant or variant == TRANSCRIPT_VARIANT["DATA"]):
+            sanitized.append({"role": t.get("role", ""), "content": content})
+
     return sanitized
