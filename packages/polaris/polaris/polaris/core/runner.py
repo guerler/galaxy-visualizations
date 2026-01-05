@@ -60,6 +60,12 @@ class Runner:
                     self.apply_emit(node.get("emit"), called, ctx)
                 else:
                     return called, ctx
+            elif op == "system.wait":
+                seconds = resolved_input.get("seconds", 0)
+                await sleep(seconds)
+                ctx["result"] = None
+                self.apply_emit(node.get("emit"), {"result": None}, ctx)
+                res = {"ok": True, "result": None}
             else:
                 res = {"ok": False, "error": {"code": "unknown_executor_op", "message": str(op)}}
         elif node.get("type") == "planner":
