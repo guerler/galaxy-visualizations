@@ -5,7 +5,7 @@ import { buildChooseShellTool, buildFillShellParamsTool } from "@/modules/tools"
 import { shells } from "@/modules/shells";
 import { profileCsv } from "@/modules/csv/profiler";
 import { valuesFromCsv } from "@/modules/csv/values";
-import { runAnalysis } from "@/pyodide/pyodide-runner";
+import { runAnalysis } from "@/pyodide-runner";
 
 export class Orchestra {
     private aiBaseUrl: string;
