@@ -59,10 +59,10 @@ export class Orchestra {
                             }
                             // STEP 4: Analysis (if shell requires it)
                             let effectiveValues = values;
-                            if (shell.analysis?.language === "python") {
+                            /*if (shell.analysis?.language === "python") {
                                 effectiveValues = await runAnalysis(pyodide, shell.analysis.id);
                                 console.debug("[orchestra]", effectiveValues);
-                            }
+                            }*/
                             // STEP 5: Compile via shell
                             const spec = shell.compile(params, effectiveValues, "vega-lite");
                             wdgs.push(spec);

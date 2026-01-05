@@ -1,3 +1,5 @@
+jsonschema
+micropip
 numpy
 pandas
 scipy
