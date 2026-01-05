@@ -18,12 +18,15 @@ class GalaxyApi(ApiProvider):
         self.openapi = None
 
     async def init(self):
-        spec = await http.request("GET", f"{self.galaxy_root}openapi.json")
-        self.openapi = OpenApiCatalog(
-            spec=spec,
-            prefixes=PREFIXES,
-            methods=ALLOWED_METHODS,
-        )
+        try:
+            spec = await http.request("GET", f"{self.galaxy_root}openapi.json")
+            self.openapi = OpenApiCatalog(
+                spec=spec,
+                prefixes=PREFIXES,
+                methods=ALLOWED_METHODS,
+            )
+        except Exception as e:
+            raise Exception(f"Failed to process OpenAPI schema: {e}.")
         return self
 
     def target(self):
