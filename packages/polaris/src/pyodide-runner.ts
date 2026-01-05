@@ -1,19 +1,24 @@
 import DEFAULT_AGENT from "/polaris/agents/default.yml";
 
+const AGENTS = {
+    default: DEFAULT_AGENT,
+};
+
 function toDict(payload: any) {
     return `json.loads(${JSON.stringify(JSON.stringify(payload))})`;
 }
 
-export async function polarisRun(id: string, config: any, pyodide: any, transcripts: any) {
-    const agent = DEFAULT_AGENT;
+export async function polarisRun(name: string, config: any, pyodide: any, transcripts: any) {
+    const agents = AGENTS;
     const inputs = { transcripts };
     const raw = await pyodide.runPythonAsync([
         "import json",
         "from polaris import run",
-        `agent = ${toDict(agent)}`,
+        `name = ${JSON.stringify(name)}`,
+        `agents = ${toDict(agents)}`,
         `inputs = ${toDict(inputs)}`,
         `config = ${toDict(config)}`,
-        "result = await run(agent, inputs, config)",
+        "result = await run(name, agents, inputs, config)",
         "json.dumps(result)",
     ]);
     if (typeof raw !== "string") {

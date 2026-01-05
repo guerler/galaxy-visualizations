@@ -34,10 +34,14 @@ MESSAGE_USER = "Open the aminos history"
 PROMPT_DEFAULT = "Choose and parameterize one of the provided tools. YOU MUST choose a tool!"
 
 
-def load_agent(path):
-    p = pathlib.Path(path)
-    with p.open("r") as f:
-        return yaml.safe_load(f)
+def load_agents_from_dir(path):
+    agents = {}
+    base = pathlib.Path(path)
+    for p in base.glob("*.yml"):
+        agent_id = p.stem
+        with p.open("r") as f:
+            agents[agent_id] = yaml.safe_load(f)
+    return agents
 
 
 async def main_async():
@@ -46,10 +50,9 @@ async def main_async():
     run = sub.add_parser("run")
     run.add_argument("--agent", required=True)
     run.add_argument("--query", required=False, default=MESSAGE_USER)
-    sub.add_parser("test")
     args = parser.parse_args()
     if args.cmd == "run":
-        agent = load_agent(args.agent)
+        agents = load_agents_from_dir("./agents")
         inputs = {
             "transcripts": [
                 {"content": PROMPT_DEFAULT, "role": "system"},
@@ -57,8 +60,9 @@ async def main_async():
                 {"content": args.query, "role": "user"},
             ]
         }
-        reply = await polaris.run(agent, inputs, config)
+        reply = await polaris.run(args.agent, agents, inputs, config)
         print(reply["last"])
+
     else:
         print("Unknown command:", args.cmd)
 

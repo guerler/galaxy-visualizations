@@ -1,3 +1,5 @@
+from time import sleep
+
 from .expressions import EXPR_OPS
 from .refs import get_path
 
@@ -60,6 +62,19 @@ class Runner:
                     self.apply_emit(node.get("emit"), called, ctx)
                 else:
                     return called, ctx
+            elif op == "system.agent.call":
+                agent_id = run_spec.get("agent_id")
+                if not agent_id:
+                    return {"ok": False, "error": {"code": "missing_agent"}}, ctx
+                subagent = self.registry.agents.resolve_agent(agent_id)
+                sub_inputs = resolved_input or {}
+                sub_runner = Runner(subagent, self.registry)
+                sub_result = await sub_runner.run(sub_inputs)
+                if not sub_result or "last" not in sub_result:
+                    return {"ok": False, "error": {"code": "subagent_failed"}}, ctx
+                ctx["result"] = sub_result["last"]["result"]
+                self.apply_emit(node.get("emit"), {"result": ctx["result"]}, ctx)
+                res = {"ok": True, "result": ctx["result"]}
             elif op == "system.wait":
                 seconds = resolved_input.get("seconds", 0)
                 await sleep(seconds)
