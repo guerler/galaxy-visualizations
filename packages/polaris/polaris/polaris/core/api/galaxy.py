@@ -1,11 +1,11 @@
 from ..client import http
-from .api import ApiOp, ApiProvider, ApiTarget
+from .api import API_METHODS, ApiOp, ApiProvider, ApiTarget
 from .generic import openapi_get
 from .openapi_catalog import OpenApiCatalog
 
+ALLOWED_METHODS = [API_METHODS.GET]
 PROVIDER_NAME = "galaxy"
 PREFIXES = ["/api/histories", "/api/datasets"]
-METHODS = ["get"]
 
 
 class GalaxyApi(ApiProvider):
@@ -22,7 +22,7 @@ class GalaxyApi(ApiProvider):
         self.openapi = OpenApiCatalog(
             spec=spec,
             prefixes=PREFIXES,
-            methods=METHODS,
+            methods=ALLOWED_METHODS,
         )
         return self
 
