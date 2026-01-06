@@ -37,7 +37,6 @@ LanguageType = Literal["python"]
 RendererType = Literal["vega-lite"]
 ShellParamsType = Dict[str, Any]
 
-TRANSCRIPT_VARIANT = {"DATA": "data", "INFO": "info"}
 TranscriptMessageType = Dict[str, Any]
 
 

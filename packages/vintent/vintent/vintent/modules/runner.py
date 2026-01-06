@@ -5,7 +5,7 @@ from vintent.core.completions import completions_post, get_tool_call
 from .analysis import run_analysis
 from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
-from .schemas import TRANSCRIPT_VARIANT, CompletionsMessage, CompletionsReply, TranscriptMessageType
+from .schemas import CompletionsMessage, CompletionsReply, TranscriptMessageType
 from .shells import SHELLS
 from .tools import build_choose_shell_tool, build_fill_shell_params_tool
 
@@ -44,19 +44,11 @@ class Runner:
                 shell = SHELLS.get(shell_id)
 
                 if shell:
-                    # Log intent
-                    transcripts.append(
-                        {
-                            "role": "assistant",
-                            "content": f"I will produce a {shell.name}.",
-                            "variant": TRANSCRIPT_VARIANT["INFO"],
-                        }
-                    )
+                    # Communicate decision
                     transcripts.append(
                         {
                             "role": "assistant",
                             "content": f"Calling choose_shell_tool with: {shell_id}",
-                            "variant": TRANSCRIPT_VARIANT["DATA"],
                         }
                     )
 
@@ -119,13 +111,8 @@ class Runner:
 def _sanitize_transcripts(transcripts: List[TranscriptMessageType]) -> List[CompletionsMessage]:
     """Filter and sanitize transcripts for AI consumption."""
     sanitized: List[CompletionsMessage] = []
-
     for t in transcripts:
         content = t.get("content")
-        variant = t.get("variant")
-
-        # Check if content is valid and variant is DATA (or no variant)
-        if isinstance(content, str) and len(content) > 0 and (not variant or variant == TRANSCRIPT_VARIANT["DATA"]):
+        if isinstance(content, str) and len(content) > 0:
             sanitized.append({"role": t.get("role", ""), "content": content})
-
     return sanitized
