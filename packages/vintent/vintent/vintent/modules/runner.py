@@ -83,7 +83,7 @@ class Runner:
                             # STEP 4: Compile specification
                             effective_values = values
                             if shell.analysis:
-                                effective_values = await runAnalysis(shell.analysis["id"], file_name)
+                                effective_values = runAnalysis(shell.analysis["id"], file_name)
 
                             # STEP 5: Compile via shell
                             spec = shell.compile(params, effective_values, "vega-lite")
