@@ -2,18 +2,7 @@ import csv
 import io
 from datetime import datetime
 from typing import Dict, Literal, Set, TypedDict
-
-FieldType = Literal["nominal", "ordinal", "quantitative", "temporal"]
-
-
-class FieldInfo(TypedDict):
-    type: FieldType
-    cardinality: int
-
-
-class DatasetProfile(TypedDict):
-    fields: Dict[str, FieldInfo]
-    rowCount: int
+from ..schemas import FieldType, FieldInfo, DatasetProfile
 
 
 def profile_csv(csv_text: str) -> DatasetProfile:

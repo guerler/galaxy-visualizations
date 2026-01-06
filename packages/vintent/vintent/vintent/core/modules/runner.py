@@ -6,13 +6,7 @@ from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
 from .shells import shells
 from .tools import build_choose_shell_tool, build_fill_shell_params_tool
-
-# Assuming these are defined somewhere in your codebase
-# If not, you'll need to import or define them
-TranscriptMessageType = Dict[str, Any]
-TRANSCRIPT_VARIANT = {"INFO": "info", "DATA": "data"}
-CompletionsReply = Dict[str, Any]
-CompletionsMessage = Dict[str, str]
+from .schemas import TranscriptMessageType, TRANSCRIPT_VARIANT, CompletionsReply, CompletionsMessage
 
 
 class Runner:

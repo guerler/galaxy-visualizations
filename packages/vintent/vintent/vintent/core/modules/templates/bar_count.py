@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Literal, Optional, Union
 
-from .types import (
+from ..schemas import (
     VEGA_LITE_SCHEMA,
     AnalysisType,
     DatasetProfile,

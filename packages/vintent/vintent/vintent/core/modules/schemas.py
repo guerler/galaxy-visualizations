@@ -7,6 +7,17 @@ FieldType = Literal["nominal", "ordinal", "quantitative", "temporal", "any"]
 LanguageType = Literal["python"]
 RendererType = Literal["vega-lite"]
 
+# Assuming these are defined somewhere in your codebase
+# If not, you'll need to import or define them
+TranscriptMessageType = Dict[str, Any]
+TRANSCRIPT_VARIANT = {"INFO": "info", "DATA": "data"}
+CompletionsReply = Dict[str, Any]
+CompletionsMessage = Dict[str, str]
+
+class FieldInfo(TypedDict):
+    type: FieldType
+    cardinality: int
+
 
 class DatasetProfile(TypedDict):
     fields: Dict[str, Dict[str, Any]]
