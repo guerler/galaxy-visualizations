@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from ..completions import completions_post, get_tool_call
+from vintent.core.completions import completions_post, get_tool_call
 from .analysis import runAnalysis
 from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
