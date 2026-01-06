@@ -7,8 +7,8 @@ export async function runVintent(pyodide: any, config: any, transcripts: any, da
     const raw = await pyodide.runPythonAsync([
         "import json",
         "from vintent import run",
-        `inputs = ${toDict(inputs)}`,
         `config = ${toDict(config)}`,
+        `inputs = ${toDict(inputs)}`,
         `result = await run(config, inputs, '${dataset_name}')`,
         "json.dumps(result)",
     ]);

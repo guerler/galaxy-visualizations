@@ -44,7 +44,6 @@ const DATASET_NAME = "dataset.csv";
 const MESSAGE_INITIAL = "Hi, I will create plots for you.";
 const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
-const PROMPT_DATASET = `The content of '${DATASET_NAME}' follows.`;
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "vintent";
 const TEST_DATA = "test-data/dataset.csv";
@@ -84,7 +83,7 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
-        transcripts.push({ content: "Plot a correlation heatmap.", role: "user" });
+        transcripts.push({ content: "Plot a scatter of age and blood pressure.", role: "user" });
         emit("update", { transcripts });
     }
 }
@@ -104,7 +103,7 @@ async function loadPyodide() {
 
 // Get system prompt
 function systemPrompt() {
-    return `${props.specs?.ai_prompt || PROMPT_DEFAULT}\n\n${PROMPT_DATASET}\n${datasetContent.value}`;
+    return `${props.specs?.ai_prompt || PROMPT_DEFAULT}`;
 }
 
 // Process user request
@@ -118,7 +117,7 @@ async function processUserRequest() {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
                 transcripts.push({ content: "Processing...", role: "assistant", variant: "info" });
                 const reply = await runVintent(pyodide, config, transcripts, DATASET_NAME);
-                console.debug("[vintent]", reply);
+                console.debug("[vintent]", transcripts);
                 const newWidgets = reply;
                 if (newWidgets.length > 0) {
                     widgets.value.push(...newWidgets);
