@@ -60,7 +60,7 @@ async def main_async():
                 {"content": args.query, "role": "user"},
             ]
         }
-        reply = await polaris.run(args.agent, agents, inputs, config)
+        reply = await polaris.run(config, inputs, args.agent, agents)
         print(reply["last"])
 
     else:

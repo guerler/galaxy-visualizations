@@ -1,8 +1,8 @@
-from .registry import Registry
-from .runner import Runner
+from polaris.core.registry import Registry
+from polaris.core.runner import Runner
 
 
-async def run(name, agents, inputs, config):
+async def run(config, inputs, name, agents):
     registry = Registry(config)
     await registry.init()
     registry.agents.register_agents(agents)
