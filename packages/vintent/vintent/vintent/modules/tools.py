@@ -72,7 +72,6 @@ def build_fill_shell_params_tool(shell: Dict[str, Any], profile: DatasetProfile)
         return [name for name, meta in profile["fields"].items() if meta["type"] == expected_type]
 
     # Process required encodings
-    print(shell)
     for encoding, spec in (shell.required or {}).items():
         if is_encoding_spec(spec):
             # Skip if it's an aggregate string (e.g., "count")

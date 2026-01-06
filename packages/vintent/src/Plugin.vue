@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { InputValuesType, TranscriptMessageType } from "galaxy-charts";
+import { TRANSCRIPT_VARIANT, type InputValuesType, type TranscriptMessageType } from "galaxy-charts";
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import {
     AcademicCapIcon,
@@ -106,6 +106,11 @@ function systemPrompt() {
     return `${props.specs?.ai_prompt || PROMPT_DEFAULT}`;
 }
 
+// Sanitize transcripts
+function sanitzeTranscripts(transcripts: TranscriptMessageType[]) {
+    return transcripts.filter((t) => t.content && (!t.variant || t.variant === TRANSCRIPT_VARIANT.DATA));
+}
+
 // Process user request
 async function processUserRequest() {
     if (props.transcripts.length > 0 && !isLoadingPyodide.value) {
@@ -115,15 +120,16 @@ async function processUserRequest() {
             const transcripts = [...props.transcripts];
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
-                transcripts.push({ content: "Processing...", role: "assistant", variant: "info" });
-                const reply = await runVintent(pyodide, config, transcripts, DATASET_NAME);
-                console.debug("[vintent]", transcripts);
-                const newWidgets = reply;
+                const sanitized = sanitzeTranscripts(transcripts);
+                const newWidgets = await runVintent(pyodide, config, sanitized, DATASET_NAME);
+                console.debug("[vintent]", sanitized);
                 if (newWidgets.length > 0) {
                     widgets.value.push(...newWidgets);
                     consoleMessages.value.push({ content: MESSAGE_SUCCESS, icon: CheckIcon });
+                    transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant" });
                 } else {
                     consoleMessages.value.push({ content: MESSAGE_FAILED, icon: ExclamationTriangleIcon });
+                    transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
                 }
             } catch (e) {
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });

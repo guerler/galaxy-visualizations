@@ -70,7 +70,7 @@ class Runner:
 
                         if validation["ok"]:
                             for warning in validation["warnings"]:
-                                print(f"[orchestra] {warning.get('code')} {warning.get('details')}")
+                                print(f"[vintent] {warning.get('code')} {warning.get('details')}")
 
                             # STEP 4: Compile specification
                             effective_values = values
@@ -82,7 +82,7 @@ class Runner:
                             wdgs.append(spec)
                             return wdgs
                         else:
-                            print(f"[orchestra] {params} {validation}")
+                            print(f"[vintent] {params} {validation}")
                             raise Exception("Invalid visualization parameters")
                     else:
                         raise Exception("No response when filling shell parameters")
