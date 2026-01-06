@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from .csv.profiler import DatasetProfile  # Assuming you have this import
 
 # Import shells from your shells module
-from .shells import shells
+from .shells import SHELLS
 
 
 def build_choose_shell_tool(profile: DatasetProfile) -> Dict[str, Any]:
@@ -13,7 +13,7 @@ def build_choose_shell_tool(profile: DatasetProfile) -> Dict[str, Any]:
     compatible_shells = []
 
     # Filter shells based on field type compatibility
-    for shell_id, shell in shells.items():
+    for shell_id, shell in SHELLS.items():
         # Check if any signature matches the available field types
         signature_matches = False
         for sig in shell.signatures:
