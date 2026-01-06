@@ -58,8 +58,6 @@ def profile_csv(csv_text: str) -> DatasetProfile:
         elif len(observed_types) == 1 and "date" in observed_types:
             field_type = "temporal"
         else:
-            # Note: Python version only distinguishes nominal vs others
-            # You might want to add ordinal detection logic here
             field_type = "nominal"
 
         fields[header] = {"type": field_type, "cardinality": cardinality}

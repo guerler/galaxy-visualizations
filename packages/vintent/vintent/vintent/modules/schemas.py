@@ -14,7 +14,7 @@ CompletionsReply = Dict[str, Any]
 
 
 class DatasetProfile(TypedDict):
-    fields: Dict[str, Dict[str, Any]]
+    fields: Dict[str, FieldInfo]
     rowCount: int
 
 

@@ -1,6 +1,6 @@
-from .correlation_matrix import run as correlation_matrix
 from .cardinality_report import run as cardinality_report
 from .compute_bins import run as compute_bins
+from .correlation_matrix import run as correlation_matrix
 from .group_aggregate import run as group_aggregate
 from .linear_regression import run as linear_regression
 from .missing_value_report import run as missing_value_report
@@ -21,6 +21,7 @@ ANALYSES = {
     "select_numeric_columns": select_numeric_columns,
     "summary_statistics": summary_statistics,
 }
+
 
 def run_analysis(analysis_id: str, dataset_path: str):
     analysis = ANALYSES.get(analysis_id)
