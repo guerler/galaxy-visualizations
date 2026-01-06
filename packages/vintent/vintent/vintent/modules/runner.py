@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Optional
 
 from vintent.core.completions import completions_post, get_tool_call
 
-from .analysis import runAnalysis
+from .analysis import run_analysis
 from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
 from .schemas import TRANSCRIPT_VARIANT, CompletionsMessage, CompletionsReply, TranscriptMessageType
@@ -83,7 +83,7 @@ class Runner:
                             # STEP 4: Compile specification
                             effective_values = values
                             if shell.analysis:
-                                effective_values = runAnalysis(shell.analysis["id"], file_name)
+                                effective_values = run_analysis(shell.analysis["id"], file_name)
 
                             # STEP 5: Compile via shell
                             spec = shell.compile(params, effective_values, "vega-lite")

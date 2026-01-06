@@ -10,8 +10,8 @@ from .select_numeric_columns import run as select_numeric_columns
 from .summary_statistics import run as summary_statistics
 
 ANALYSES = {
-    "correlation_matrix": correlation_matrix,
     "cardinality_report": cardinality_report,
+    "correlation_matrix": correlation_matrix,
     "compute_bins": compute_bins,
     "group_aggregate": group_aggregate,
     "linear_regression": linear_regression,
@@ -22,7 +22,7 @@ ANALYSES = {
     "summary_statistics": summary_statistics,
 }
 
-def runAnalysis(analysis_id: str, dataset_path="dataset.csv"):
+def run_analysis(analysis_id: str, dataset_path: str):
     analysis = ANALYSES.get(analysis_id)
     if analysis:
         try:
