@@ -15,7 +15,7 @@ import Dashboard from "@/components/Dashboard.vue";
 import Tabular from "@/components/Tabular.vue";
 import type { ConsoleMessageType } from "@/types";
 
-import { vintentRun } from "./pyodide-runner";
+import { runVintent } from "./pyodide-runner";
 
 // Props
 const props = defineProps<{
@@ -40,10 +40,11 @@ const emit = defineEmits<{
 }>();
 
 // Constants
+const DATASET_NAME = "dataset.csv";
 const MESSAGE_INITIAL = "Hi, I will create plots for you.";
 const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
-const PROMPT_DATASET = "The content of 'dataset.csv' follows.";
+const PROMPT_DATASET = `The content of '${DATASET_NAME}' follows.`;
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "vintent";
 const TEST_DATA = "test-data/dataset.csv";
@@ -73,7 +74,7 @@ const config = {
     ai_base_url: props.specs.ai_api_base_url || `${props.root}api/ai/plugins/${PLUGIN_NAME}`,
     ai_api_key: props.specs.ai_api_key || "unknown",
     ai_model: props.specs.ai_model || "unknown",
-}
+};
 
 // Inject Prompt
 async function loadPrompt() {
@@ -94,7 +95,7 @@ async function loadPyodide() {
         const pyodideMessageIndex = consoleMessages.value.length;
         consoleMessages.value.push({ content: "Loading Pyodide...", icon: ArrowPathIcon, spin: true });
         await pyodide.initialize();
-        datasetContent.value = await pyodide.fsFetch(datasetUrl, "dataset.csv");
+        datasetContent.value = await pyodide.fsFetch(datasetUrl, DATASET_NAME);
         consoleMessages.value[pyodideMessageIndex] = { content: "Pyodide ready.", icon: CheckIcon };
         isLoadingPyodide.value = false;
         processUserRequest();
@@ -116,7 +117,7 @@ async function processUserRequest() {
             try {
                 consoleMessages.value.push({ content: "Processing user request...", icon: ClockIcon });
                 transcripts.push({ content: "Processing...", role: "assistant", variant: "info" });
-                const reply = await vintentRun(config, pyodide, transcripts);
+                const reply = await runVintent(pyodide, config, transcripts, DATASET_NAME);
                 console.debug("[vintent]", reply);
                 const newWidgets = reply;
                 if (newWidgets.length > 0) {

@@ -45,7 +45,7 @@ async def main_async():
                 {"content": args.query or MESSAGE_USER, "role": "user"},
             ]
         }
-        reply = await vintent.run("../test-data/dataset.csv", inputs, config)
+        reply = await vintent.run(config, inputs, "../test-data/dataset.csv")
         print(reply)
     else:
         print("Unknown command:", args.cmd)
