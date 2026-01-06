@@ -4,6 +4,10 @@ import os
 
 import vintent
 
+# Get the package root directory
+package_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 env = {
     "AI_API_KEY": "None",
     "AI_BASE_URL": "http://localhost:11434/v1",
@@ -45,7 +49,8 @@ async def main_async():
                 {"content": args.query or MESSAGE_USER, "role": "user"},
             ]
         }
-        reply = await vintent.run(config, inputs, "../test-data/dataset.csv")
+        dataset_path = os.path.join(package_root, "../test-data", "dataset.csv")
+        reply = await vintent.run(config, inputs, dataset_path)
         print(reply)
     else:
         print("Unknown command:", args.cmd)
