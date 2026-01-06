@@ -1,4 +1,4 @@
-from .modules.runner import Runner
+from vintent.modules.runner import Runner
 
 
 async def run(file_name, inputs, config):

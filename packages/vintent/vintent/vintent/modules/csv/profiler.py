@@ -2,7 +2,7 @@ import csv
 import io
 from datetime import datetime
 from typing import Dict, Literal, Set, TypedDict
-from vintent.core.modules.schemas import FieldType, FieldInfo, DatasetProfile
+from vintent.modules.schemas import FieldType, FieldInfo, DatasetProfile
 
 
 def profile_csv(csv_text: str) -> DatasetProfile:
