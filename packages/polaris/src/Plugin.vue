@@ -14,7 +14,7 @@ import Console from "@/components/Console.vue";
 import Dashboard from "@/components/Dashboard.vue";
 
 import { PyodideManager } from "@/pyodide/pyodide-manager";
-import { polarisRun } from "./pyodide-runner";
+import { runPolaris } from "./pyodide-runner";
 
 // Props
 const props = defineProps<{
@@ -109,7 +109,7 @@ async function processUserRequest() {
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
                 emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const reply = await polarisRun("default", config, pyodide, transcripts);
+                const reply = await runPolaris(pyodide, config, transcripts, "default");
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {
