@@ -1,12 +1,13 @@
 from typing import Any, Dict, List, Optional
 
 from vintent.core.completions import completions_post, get_tool_call
+
 from .analysis import runAnalysis
 from .csv.profiler import DatasetProfile, profile_csv
 from .csv.values import values_from_csv
+from .schemas import TRANSCRIPT_VARIANT, CompletionsMessage, CompletionsReply, TranscriptMessageType
 from .shells import shells
 from .tools import build_choose_shell_tool, build_fill_shell_params_tool
-from .schemas import TranscriptMessageType, TRANSCRIPT_VARIANT, CompletionsReply, CompletionsMessage
 
 
 class Runner:
