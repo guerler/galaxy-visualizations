@@ -7,7 +7,7 @@
         "static"
     ],
     "scripts": {
-        "dev": "vite",
+        "dev": "npm run build && vite",
         "build": "npm run build:pyodide && npm run build:polaris && vite build",
         "build:pyodide": "node pyodide.install.js",
         "build:polaris": "cd polaris && python -m build --wheel",
