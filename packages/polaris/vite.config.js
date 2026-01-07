@@ -16,10 +16,17 @@ export default defineConfig({
                 {
                     src: "node_modules/pyodide/*",
                     dest: "pyodide",
+                    overwrite: true,
                 },
                 {
                     src: "temp/pyodide/*.whl",
                     dest: "pyodide",
+                    overwrite: true,
+                },
+                {
+                    src: "src/pyodide/pyodide-worker.js",
+                    dest: "pyodide",
+                    overwrite: true,
                 },
                 {
                     src: "polaris/dist/polaris-*.whl",
