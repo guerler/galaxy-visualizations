@@ -1,18 +1,22 @@
+import PYODIDE_REQUIREMENTS from "../../pyodide.requirements.txt?raw";
+
 export interface PyodideManagerOptions {
     indexURL: string;
     extraPackages?: string[];
 }
 
 export class PyodideManager {
-    private worker: Worker;
-    private ready: Promise<void>;
-    private pending: Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>;
     private destroyed: boolean;
+    private packages: string[];
+    private pending: Map<string, { resolve: (v: any) => void; reject: (e: any) => void }>;
+    private ready: Promise<void>;
+    private worker: Worker;
 
     constructor(options: PyodideManagerOptions) {
-        this.pending = new Map();
         this.destroyed = false;
-        this.worker = new Worker(new URL("./pyodide-worker.ts", import.meta.url), {
+        this.packages = this.parsePackages();
+        this.pending = new Map();
+        this.worker = new Worker(`${options.indexURL}/pyodide-worker.js`, {
             type: "module",
         });
         this.ready = new Promise((resolve, reject) => {
@@ -34,7 +38,7 @@ export class PyodideManager {
         });
         this.worker.postMessage({
             type: "initialize",
-            payload: { indexURL: options.indexURL, extraPackages: options.extraPackages },
+            payload: { indexURL: options.indexURL, extraPackages: options.extraPackages, packages: this.packages },
         });
     }
 
@@ -80,6 +84,12 @@ export class PyodideManager {
         } else {
             throw new Error("Pyodide destroyed");
         }
+    }
+
+    parsePackages() {
+        return PYODIDE_REQUIREMENTS.split("\n")
+            .map((v) => v.trim())
+            .filter((v) => v.length > 0);
     }
 
     async runPythonAsync(code: string): Promise<any> {
