@@ -10,6 +10,7 @@ TOP_P = 0.8
 
 
 async def completions_post(payload):
+    api_key = payload['ai_api_key']
     base_url = payload["ai_base_url"].rstrip("/")
     url = f"{base_url}/chat/completions"
 
@@ -47,16 +48,17 @@ async def completions_post(payload):
         first_tool = tools[0]
         tool_name = first_tool.get("function", {}).get("name")
         if not tool_name:
-            raise Exception("Tool provided without function name")
+            raise Exception("Tool provided without function name.")
         body["tool_choice"] = {
             "type": "function",
             "function": {"name": tool_name},
         }
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {payload['ai_api_key']}",
-    }
+    headers = dict()
+    headers["Content-Type"] = "application/json"
+    if api_key is not None:
+        headers["Authorization"] = f"Bearer {api_key}"
+        headers["x-api-key"] = api_key
 
     return await http.request(
         method="POST",
