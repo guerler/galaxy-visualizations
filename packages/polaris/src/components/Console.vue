@@ -13,6 +13,14 @@ const collapse = ref<boolean>(true);
 const hasMessages = computed(() => props.messages.length > 0);
 const lastMessage = computed(() => hasMessages && props.messages[props.messages.length - 1]);
 const visibleMessages = computed(() => (collapse.value ? [lastMessage.value] : props.messages));
+
+function truncateContent(content: string): string {
+    if (collapse.value && content.length > MAX_LENGTH) {
+        return content.substring(0, MAX_LENGTH) + "...";
+    } else {
+        return content;
+    }
+}
 </script>
 
 <template>
@@ -20,7 +28,7 @@ const visibleMessages = computed(() => (collapse.value ? [lastMessage.value] : p
         <div class="flex-1 overflow-auto">
             <div v-for="msg of visibleMessages">
                 <Component :is="msg.icon" class="size-3 inline mr-1" :class="{ 'animate-spin': msg.spin }" />
-                <span>{{ msg.content.substring(0, MAX_LENGTH) }}</span>
+                <span>{{ truncateContent(msg.content) }}</span>
             </div>
         </div>
         <button
