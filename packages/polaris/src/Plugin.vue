@@ -54,7 +54,7 @@ const config = {
 
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
-const pyodideBaseUrl = isDev ? "" : `static/plugin/visualizations/${PLUGIN_NAME}/`;
+const pyodideBaseUrl = isDev ? "" : `static/plugins/visualizations/${PLUGIN_NAME}/`;
 const pyodideIndexUrl = `${props.root}${pyodideBaseUrl}static/pyodide`;
 const pyodide = new PyodideManager({
     indexURL: pyodideIndexUrl,
