@@ -7,14 +7,8 @@
     </params>
     <entry_point src="dist/index.js" css="dist/index.css" />
     <specs>
-        <ai_api_key>unknown</ai_api_key>
-        <ai_api_base_url>http://localhost:11434/v1/</ai_api_base_url>
-        <ai_max_tokens>32000</ai_max_tokens>
-        <ai_model>unknown</ai_model>
         <ai_prompt><![CDATA[
         ]]></ai_prompt>
-        <ai_temperature>0.3</ai_temperature>
-        <ai_top_p>0.9</ai_top_p>
         <ui>
             <chat>true</chat>
         </ui>
