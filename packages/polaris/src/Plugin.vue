@@ -50,6 +50,7 @@ const config = {
     ai_base_url: props.specs.ai_api_base_url || `${props.root}api/plugins/${PLUGIN_NAME}`,
     ai_api_key: props.specs.ai_api_key,
     ai_model: props.specs.ai_model,
+    galaxy_root: props.root,
 };
 
 // Load pyodide
@@ -112,7 +113,7 @@ async function processUserRequest() {
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {
                     consoleMessages.value.push({
-                        content: JSON.stringify(reply.last.result, null, 2).substring(0, 250),
+                        content: JSON.stringify(reply.last.result, null, 2),
                         icon: AcademicCapIcon,
                     });
                 }
