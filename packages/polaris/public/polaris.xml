@@ -5,9 +5,10 @@
     <params>
         <param required="false">dataset_id</param>
     </params>
-    <entry_point src="dist/index.js" css="dist/index.css" />
+    <entry_point src="index.js" css="index.css" />
     <specs>
         <ai_prompt><![CDATA[
+            Select tools.
         ]]></ai_prompt>
         <ui>
             <chat>true</chat>
