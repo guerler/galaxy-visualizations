@@ -9,7 +9,7 @@ import polaris
 
 env = {
     "AI_API_KEY": None,
-    #"AI_BASE_URL": "http://localhost:11434/v1",
+    # "AI_BASE_URL": "http://localhost:11434/v1",
     "AI_BASE_URL": "http://localhost:8080/api/plugins/vintent",
     "AI_MODEL": None,
     "GALAXY_KEY": None,

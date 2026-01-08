@@ -10,12 +10,13 @@ TOP_P = 0.8
 
 
 async def completions_post(payload):
-    api_key = payload['ai_api_key']
-    base_url = payload["ai_base_url"].rstrip("/")
+    api_key = payload.get("ai_api_key")
+    base_url = payload.get("ai_base_url")
+    base_url = base_url.rstrip("/") if base_url else ""
     url = f"{base_url}/chat/completions"
 
     body = {
-        "model": payload["ai_model"],
+        "model": payload.get("ai_model"),
         "messages": payload["messages"],
         "max_tokens": normalize_parameter(
             payload.get("ai_maxTokens"),
