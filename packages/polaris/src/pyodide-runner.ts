@@ -14,10 +14,10 @@ export async function runPolaris(pyodide: any, config: any, transcripts: any, na
     const raw = await pyodide.runPythonAsync([
         "import json",
         "from polaris import run",
-        `name = ${JSON.stringify(name)}`,
         `agents = ${toDict(agents)}`,
-        `inputs = ${toDict(inputs)}`,
         `config = ${toDict(config)}`,
+        `inputs = ${toDict(inputs)}`,
+        `name = ${JSON.stringify(name)}`,
         "result = await run(config, inputs, name, agents)",
         "json.dumps(result)",
     ]);

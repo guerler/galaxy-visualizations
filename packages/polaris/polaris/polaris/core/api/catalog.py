@@ -7,5 +7,7 @@ async def load_providers(config):
     if config.get("galaxy_root"):
         provider = await GalaxyApi(config).init()
         providers.append(provider)
+    else:
+        raise Exception("Missing configuration: galaxy_root.")
 
     return providers

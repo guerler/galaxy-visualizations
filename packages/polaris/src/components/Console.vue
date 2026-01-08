@@ -3,6 +3,8 @@ import { computed, ref } from "vue";
 import type { ConsoleMessageType } from "@/types";
 import { ChevronDoubleDownIcon, ChevronDoubleUpIcon } from "@heroicons/vue/24/outline";
 
+const MAX_LENGTH = 5000;
+
 const props = defineProps<{
     messages: ConsoleMessageType[];
 }>();
@@ -18,7 +20,7 @@ const visibleMessages = computed(() => (collapse.value ? [lastMessage.value] : p
         <div class="flex-1 overflow-auto">
             <div v-for="msg of visibleMessages">
                 <Component :is="msg.icon" class="size-3 inline mr-1" :class="{ 'animate-spin': msg.spin }" />
-                <span>{{ msg.content }}</span>
+                <span>{{ msg.content.substring(0, MAX_LENGTH) }}</span>
             </div>
         </div>
         <button
