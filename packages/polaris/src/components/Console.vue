@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 import type { ConsoleMessageType } from "@/types";
 import { ChevronDoubleDownIcon, ChevronDoubleUpIcon } from "@heroicons/vue/24/outline";
 
-const MAX_LENGTH = 5000;
+const MAX_LENGTH = 1000;
 
 const props = defineProps<{
     messages: ConsoleMessageType[];
