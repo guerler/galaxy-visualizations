@@ -7,7 +7,8 @@ from .openapi import OpenApiCatalog
 
 ALLOWED_METHODS = [API_METHODS.GET]
 PROVIDER_NAME = "galaxy"
-PREFIXES = ["/api/histories", "/api/datasets"]
+PREFIXES = ["/api/histories", "/api/datasets", "/api/jobs", "/api/tools", "/api/workflows"]
+DUMP_ENDPOINTS_PATH = None  # Set to a file path to dump discovered endpoints
 
 
 class GalaxyApi(ApiProvider):
@@ -26,6 +27,7 @@ class GalaxyApi(ApiProvider):
                 spec=spec,
                 prefixes=PREFIXES,
                 methods=ALLOWED_METHODS,
+                dump_path=DUMP_ENDPOINTS_PATH,
             )
         except Exception as e:
             raise ProviderError(f"Failed to process OpenAPI schema: {e}") from e

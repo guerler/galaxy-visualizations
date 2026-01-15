@@ -1,7 +1,9 @@
 import HISTORY_EXPLORER from "/polaris/agents/history_explorer.yml";
+import REPORT_GENERATOR from "/polaris/agents/report_generator.yml";
 
 const AGENTS = {
     history_explorer: HISTORY_EXPLORER,
+    report_generator: REPORT_GENERATOR,
 };
 
 function toDict(payload: any) {
