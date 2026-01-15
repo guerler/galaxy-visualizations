@@ -151,24 +151,51 @@ prepare_data:
 
 ## Recommended Polaris Enhancements
 
-### Priority 1: Loop Support
+### Priority 1: Loop Support ✅ IMPLEMENTED
 Essential for any agent that needs to process collections of items individually.
+- Sequential execution with configurable delay between iterations
+- `$append` emit directive for collecting results
+- Loop context variables: `loop.<as_var>`, `loop.index`, `loop.first`, `loop.last`
 
-### Priority 2: Error Handling
+### Priority 2: Map/Filter Expression ($map)
+**Critical finding**: Galaxy job details are too verbose (~7KB per job). Looping over 50 jobs
+produces 365K tokens, exceeding LLM context limits. Need a `$map` expression to extract
+only relevant fields before passing to reasoning nodes.
+
+**Desired capability**:
+```yaml
+$expr:
+  op: map
+  from:
+    $ref: state.job_details
+  select:
+    tool_id: item.tool_id
+    tool_version: item.tool_version
+    state: item.state
+    create_time: item.create_time
+```
+
+### Priority 3: Error Handling
 Allow agents to continue gracefully when optional data sources fail.
 
-### Priority 3: Parallel Execution
+### Priority 4: Parallel Execution
 Significant performance improvement for multi-fetch agents.
 
-### Priority 4: Conditional Branching
+### Priority 5: Conditional Branching
 Enable smarter, more adaptive agent flows.
 
 ## Conclusion
 
-The Report Generator agent is functional but limited by Polaris's current sequential, non-iterative execution model. The most impactful enhancement would be loop support, followed by error handling. With these two features, the agent could:
+**Update**: Loop support has been implemented, but we discovered a new critical limitation:
+API responses are too verbose for LLM context windows.
 
-1. Fetch detailed parameters for every job (loop)
-2. Handle missing citations gracefully (error handling)
-3. Produce much more detailed and accurate methods sections
+With loop support in place, the next most impactful enhancement is a `$map` expression to
+filter API response fields. This would allow:
 
-The current implementation works but relies heavily on the LLM's ability to work with incomplete summary data rather than precise per-job details.
+1. Fetch detailed parameters for every job (loop ✅)
+2. Extract only relevant fields before sending to LLM ($map - needed)
+3. Handle missing citations gracefully (error handling - future)
+
+The current implementation uses job summaries instead of full details as a workaround.
+Once `$map` is implemented, we can re-enable the loop to fetch detailed job parameters
+while keeping token counts manageable.
