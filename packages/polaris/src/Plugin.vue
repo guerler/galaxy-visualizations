@@ -66,6 +66,7 @@ function getConfig() {
         ai_base_url: props.specs.ai_api_base_url || `${props.root}api/plugins/${PLUGIN_NAME}`,
         ai_api_key: props.specs.ai_api_key,
         ai_model: props.specs.ai_model,
+        galaxy_root: props.root,
     };
 }
 
