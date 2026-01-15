@@ -224,6 +224,7 @@ class LoopHandler:
         # Get loop configuration
         as_var = node.get("as", "item")
         delay = node.get("delay", 0)
+        on_error = node.get("on_error", "continue")  # "continue" or "stop"
         execute_spec = node.get("execute", {})
         emit_spec = node.get("emit", {})
 
@@ -254,6 +255,9 @@ class LoopHandler:
                 errors.append(
                     {"index": index, "item": item, "error": iteration_result.get("error")}
                 )
+                # Stop on first error if on_error is "stop"
+                if on_error == "stop":
+                    break
 
             # Delay between iterations (skip delay after last item)
             if delay > 0 and index < len(items) - 1:
@@ -265,7 +269,8 @@ class LoopHandler:
         # Set final result
         ctx["result"] = results
 
-        if errors:
+        # Return ok: true if we have results, even with some errors (when on_error: continue)
+        if errors and on_error == "stop":
             return {
                 "ok": False,
                 "error": {
@@ -276,7 +281,15 @@ class LoopHandler:
                 "partial_results": results,
             }
 
-        return {"ok": True, "result": results}
+        # With on_error: continue, return success with warnings if we have any results
+        result: Result = {"ok": True, "result": results}
+        if errors:
+            result["warnings"] = {
+                "code": ErrorCode.LOOP_ITERATION_FAILED,
+                "message": f"{len(errors)} iteration(s) skipped",
+                "skipped_count": len(errors),
+            }
+        return result
 
     async def _execute_iteration(
         self,
@@ -315,6 +328,9 @@ class LoopHandler:
         """Apply emit rules for a single loop iteration."""
         if not emit_spec:
             return
+
+        # Make iteration result available in context for template resolution
+        ctx["result"] = iteration_result.get("result")
 
         for dest, src in emit_spec.items():
             key = dest[6:] if dest.startswith("state.") else dest

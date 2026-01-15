@@ -336,8 +336,8 @@ class TestLoopHandler:
         assert result["result"] == []
 
     @pytest.mark.asyncio
-    async def test_loop_iteration_failure_reports_errors(self, mock_context):
-        """Test loop collects and reports iteration failures."""
+    async def test_loop_iteration_failure_continues_by_default(self, mock_context):
+        """Test loop continues on error by default and returns warnings."""
         handler = LoopHandler()
         runner = MockLoopRunner()
         registry = MockRegistry()
@@ -353,9 +353,35 @@ class TestLoopHandler:
 
         result = await handler.execute(node, mock_context, registry, runner)
 
+        # Default on_error: continue - returns ok with warnings
+        assert result["ok"] is True
+        assert result["result"] == []
+        assert result["warnings"]["code"] == ErrorCode.LOOP_ITERATION_FAILED
+        assert result["warnings"]["skipped_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_loop_iteration_failure_stops_when_configured(self, mock_context):
+        """Test loop stops on first error when on_error: stop."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+        registry.call_api_result = {
+            "ok": False,
+            "error": {"code": "API_ERROR", "message": "Failed"},
+        }
+        node = {
+            "type": "loop",
+            "over": [{"id": 1}, {"id": 2}, {"id": 3}],
+            "on_error": "stop",
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
         assert result["ok"] is False
         assert result["error"]["code"] == ErrorCode.LOOP_ITERATION_FAILED
-        assert len(result["error"]["details"]) == 2
+        # Should stop after first error
+        assert len(result["error"]["details"]) == 1
 
     @pytest.mark.asyncio
     async def test_loop_cleans_up_context(self, mock_context):
@@ -372,6 +398,54 @@ class TestLoopHandler:
         await handler.execute(node, mock_context, registry, runner)
 
         assert "loop" not in mock_context
+
+    @pytest.mark.asyncio
+    async def test_loop_emit_field_selection(self, mock_context):
+        """Test loop emit with field selection from result."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        # API returns full objects but we only want specific fields
+        api_results = [
+            {"id": "a", "name": "First", "details": {"large": "data"}, "extra": 123},
+            {"id": "b", "name": "Second", "details": {"large": "data"}, "extra": 456},
+        ]
+        call_count = [0]
+
+        async def mock_call_api(ctx, spec):
+            result = api_results[call_count[0]]
+            call_count[0] += 1
+            return {"ok": True, "result": result}
+
+        registry.call_api = mock_call_api
+
+        node = {
+            "type": "loop",
+            "over": [{"item_id": "a"}, {"item_id": "b"}],
+            "as": "item",
+            "execute": {
+                "op": Operation.API_CALL,
+                "target": "test.endpoint",
+            },
+            "emit": {
+                "state.selected": {
+                    "$append": {
+                        "id": {"$ref": "result.id"},
+                        "name": {"$ref": "result.name"},
+                    }
+                }
+            },
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        assert result["ok"] is True
+        # Verify only selected fields were captured
+        assert runner.state["selected"] == [
+            {"id": "a", "name": "First"},
+            {"id": "b", "name": "Second"},
+        ]
 
 
 class MockLoopRunner:
@@ -400,6 +474,14 @@ class MockLoopRunner:
                     return obj
                 elif parts[0] == "loop":
                     obj = ctx.get("loop", {})
+                    for part in parts[1:]:
+                        if isinstance(obj, dict):
+                            obj = obj.get(part)
+                        else:
+                            return None
+                    return obj
+                elif parts[0] == "result":
+                    obj = ctx.get("result", {})
                     for part in parts[1:]:
                         if isinstance(obj, dict):
                             obj = obj.get(part)

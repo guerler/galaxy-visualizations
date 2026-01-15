@@ -18,7 +18,9 @@ state:
     type: object
   contents:
     type: array
-  jobs:
+  dataset_details:
+    type: array
+  job_details:
     type: array
   citations:
     type: array
@@ -84,8 +86,7 @@ nodes:
       state.selected_history: result
     next: fetch_contents
 
-  # Step 4: Fetch the history contents to get dataset information
-  # Note: Limiting to 20 items to stay within LLM context limits
+  # Step 4: Fetch the history contents to get dataset list
   fetch_contents:
     type: executor
     run:
@@ -94,27 +95,62 @@ nodes:
       input:
         history_id:
           $ref: state.selected_history.id
-        limit: 20
+        limit: 15
     emit:
       state.contents: result
-    next: fetch_jobs
+    next: fetch_dataset_details
 
-  # Step 5: Fetch jobs associated with this history
-  # Note: Using job summaries for now - full details are too verbose for LLM context
-  fetch_jobs:
-    type: executor
-    run:
+  # Step 5: Loop through datasets to get details including creating_job
+  fetch_dataset_details:
+    type: loop
+    over:
+      $ref: state.contents
+    as: dataset
+    delay: 0.1
+    execute:
       op: api.call
-      target: galaxy.jobs.get
+      target: galaxy.datasets.show.get
       input:
-        history_id:
-          $ref: state.selected_history.id
-        limit: 10
+        dataset_id:
+          $ref: loop.dataset.id
     emit:
-      state.jobs: result
+      state.dataset_details:
+        $append:
+          id:
+            $ref: result.id
+          name:
+            $ref: result.name
+          creating_job:
+            $ref: result.creating_job
+    next: fetch_job_details
+
+  # Step 6: Loop through dataset details to fetch job info via creating_job
+  fetch_job_details:
+    type: loop
+    over:
+      $ref: state.dataset_details
+    as: ds
+    delay: 0.1
+    execute:
+      op: api.call
+      target: galaxy.jobs.show.get
+      input:
+        job_id:
+          $ref: loop.ds.creating_job
+    emit:
+      state.job_details:
+        $append:
+          tool_id:
+            $ref: result.tool_id
+          tool_version:
+            $ref: result.tool_version
+          state:
+            $ref: result.state
+          create_time:
+            $ref: result.create_time
     next: fetch_citations
 
-  # Step 5: Fetch citations for tools used in this history
+  # Step 7: Fetch citations for tools used in this history
   fetch_citations:
     type: executor
     run:
@@ -127,51 +163,45 @@ nodes:
       state.citations: result
     next: analyze_workflow
 
-  # Step 6: Use AI to understand the analysis workflow
+  # Step 8: Use AI to understand the analysis workflow
   analyze_workflow:
     type: reasoning
     prompt: |
-      Analyze the jobs and datasets in this Galaxy history.
+      Analyze the jobs in this Galaxy history.
 
-      IMPORTANT: Only describe tools that are ACTUALLY present in the jobs list.
-      Do NOT make up or hallucinate tool names. If only data upload jobs are present,
-      say so clearly.
+      IMPORTANT: Only describe tools that are ACTUALLY present in the job_details list.
+      Do NOT make up or hallucinate tool names.
 
       Look at the "tool_id" field in each job to identify the actual tools used.
-      Internal Galaxy tools start with "__" (like __DATA_FETCH__, __SET_METADATA__).
+      Internal Galaxy tools start with "__" (like __DATA_FETCH__, __SET_METADATA__) - these are for data uploads, not analysis.
 
       Summarize:
-      1. What tools were actually run (based on tool_id field)
-      2. What types of files are in the history (based on contents)
-      3. The apparent purpose of this history
+      1. List the analysis tools that were run (exclude internal tools starting with "__")
+      2. Describe the data processing workflow based on the tools used
+      3. Note any tool versions if available
     input:
       history_name:
         $ref: state.selected_history.name
-      contents:
-        $ref: state.contents
-      jobs:
-        $ref: state.jobs
+      job_details:
+        $ref: state.job_details
     emit:
       state.workflow_analysis:
         $ref: result
     next: generate_methods
 
-  # Step 7: Generate the report
+  # Step 9: Generate the report
   generate_methods:
     type: reasoning
     prompt: |
-      Write a report summarizing this Galaxy history based on the analysis provided.
+      Write a brief report summarizing this Galaxy history analysis.
 
-      CRITICAL RULES:
-      - Only mention tools that were ACTUALLY used (from the workflow_analysis)
-      - Do NOT invent or hallucinate tool names, versions, or citations
-      - If no analysis tools were run (only data uploads), say "This history contains uploaded data files but no analysis jobs have been run yet."
-      - Be honest about what was done vs what was not done
+      RULES:
+      - Only mention tools from the workflow_analysis
+      - Do NOT invent or hallucinate tool names
+      - If workflow_analysis shows only internal tools (__DATA_FETCH__, etc.) with no analysis tools, say "This history contains uploaded data but no analysis has been performed yet."
+      - If analysis tools were used, describe what they do in plain language
 
-      If analysis tools were used:
-      - Describe the workflow in logical order
-      - Include actual tool names from the data
-      - Include version numbers only if they appear in the data
+      Format as a short paragraph describing the analysis performed.
     input:
       history_name:
         $ref: state.selected_history.name
