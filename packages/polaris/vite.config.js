@@ -3,6 +3,7 @@ import { viteStaticCopy } from "vite-plugin-static-copy";
 
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
+import yaml from "@rollup/plugin-yaml";
 
 import { viteConfigCharts } from "./vite.config.charts";
 
@@ -33,7 +34,7 @@ const staticCopyPlugin = viteStaticCopy({
 
 export default defineConfig(({ command }) => ({
     ...viteConfigCharts,
-    plugins: [tailwindcss(), ...(command === "build" ? [staticCopyPlugin] : []), vue()],
+    plugins: [tailwindcss(), ...(command === "build" ? [staticCopyPlugin] : []), vue(), yaml()],
     test: {
         environment: "happy-dom",
         globals: true,
