@@ -43,11 +43,11 @@ const emit = defineEmits<{
 }>();
 
 // Constants
-const MESSAGE_INITIAL = "Hi, I can a pick a tool for you.";
+const MESSAGE_INITIAL = "Hi!";
 const MESSAGE_FAILED = "I failed to complete your request.";
 const MESSAGE_SUCCESS = "Successfully produced output.";
-const PROMPT_DEFAULT = "How can I help you?";
-const PLUGIN_NAME = "polaris";
+const PROMPT_DEFAULT = "Answer!";
+const PLUGIN_NAME = "vintent";
 
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
@@ -82,7 +82,6 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
-        transcripts.push({ content: "Pick genetics.", role: "user" });
         emit("update", { transcripts });
     }
 }
@@ -120,12 +119,18 @@ async function processUserRequest() {
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {
                     const result = reply.last.result;
-                    // Set report content if available
-                    if (result.report) {
-                        reportContent.value = result.report;
-                    } else if (result.summary) {
-                        reportContent.value = result.summary;
+                    // Build report content from available fields
+                    const parts: string[] = [];
+                    if (result.workflow_analysis) {
+                        parts.push(result.workflow_analysis);
                     }
+                    if (result.report && result.report !== result.workflow_analysis) {
+                        parts.push("## Summary\n" + result.report);
+                    }
+                    if (result.summary) {
+                        parts.push(result.summary);
+                    }
+                    reportContent.value = parts.join("\n\n---\n\n");
                 }
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
             } catch (e) {

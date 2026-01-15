@@ -179,17 +179,12 @@ nodes:
   done:
     type: terminal
     output:
-      history:
+      selected_history:
         id:
           $ref: state.selected_history.id
         name:
           $ref: state.selected_history.name
-      job_count:
-        $expr:
-          op: len
-          arg:
-            $ref: state.jobs
+      workflow_analysis:
+        $ref: state.workflow_analysis
       report:
         $ref: state.report
-      citations:
-        $ref: state.citations
