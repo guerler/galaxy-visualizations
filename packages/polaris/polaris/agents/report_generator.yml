@@ -1,7 +1,7 @@
 version: 1
 id: report_generator
 kind: agent_pipeline
-description: Generate publication-ready methods sections from Galaxy history analysis
+description: Generate reports from Galaxy history analysis
 
 start: fetch_histories
 
@@ -64,6 +64,7 @@ nodes:
     next: fetch_contents
 
   # Step 3: Fetch the history contents to get dataset information
+  # Note: Limiting to 20 items to stay within LLM context limits
   fetch_contents:
     type: executor
     run:
@@ -80,6 +81,7 @@ nodes:
               equals:
                 $ref: state.selected_history.name
             select: id
+        limit: 20
     emit:
       state.selected_history:
         id:
@@ -98,7 +100,7 @@ nodes:
       input:
         history_id:
           $ref: state.selected_history.id
-        limit: 25
+        limit: 10
     emit:
       state.jobs: result
     next: fetch_citations
@@ -141,11 +143,11 @@ nodes:
         $ref: result
     next: generate_methods
 
-  # Step 7: Generate the publication-ready methods section
+  # Step 7: Generate the report
   generate_methods:
     type: reasoning
     prompt: |
-      Write a publication-ready Methods section for a scientific paper based on this Galaxy analysis.
+      Write a report on this Galaxy analysis.
 
       Guidelines:
       - Use passive voice ("Reads were aligned..." not "We aligned reads...")
@@ -167,8 +169,6 @@ nodes:
         $ref: state.selected_history.name
       workflow_analysis:
         $ref: state.workflow_analysis
-      jobs:
-        $ref: state.jobs
       citations:
         $ref: state.citations
     emit:
@@ -190,7 +190,7 @@ nodes:
           op: len
           arg:
             $ref: state.jobs
-      methods_section:
+      report:
         $ref: state.report
       citations:
         $ref: state.citations
