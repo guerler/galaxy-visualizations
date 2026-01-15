@@ -62,6 +62,7 @@ const pyodide = new PyodideManager({
 const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
 const isLoadingPyodide = ref<boolean>(true);
+const reportContent = ref<string>("");
 
 // Configuration
 function getConfig() {
@@ -118,10 +119,13 @@ async function processUserRequest() {
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: BoltIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {
-                    consoleMessages.value.push({
-                        content: JSON.stringify(reply.last.result, null, 2),
-                        icon: AcademicCapIcon,
-                    });
+                    const result = reply.last.result;
+                    // Set report content if available
+                    if (result.report) {
+                        reportContent.value = result.report;
+                    } else if (result.summary) {
+                        reportContent.value = result.summary;
+                    }
                 }
                 transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
             } catch (e) {
@@ -151,8 +155,8 @@ watch(
 
 <template>
     <div class="flex flex-col h-screen p-1">
-        <div class="flex-1 min-h-0">
-            <Dashboard />
+        <div class="flex-1 min-h-0 overflow-auto">
+            <Dashboard :content="reportContent" />
         </div>
         <Console class="shrink-0 pt-1" :messages="consoleMessages" />
     </div>

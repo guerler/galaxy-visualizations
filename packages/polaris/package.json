@@ -21,6 +21,8 @@
     },
     "devDependencies": {
         "@heroicons/vue": "^2.2.0",
+        "@types/markdown-it": "^14.1.2",
+        "markdown-it": "^14.1.0",
         "@rollup/plugin-yaml": "^4.1.2",
         "@tailwindcss/vite": "^4.1.18",
         "@types/node": "^22.9.0",
