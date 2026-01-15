@@ -122,15 +122,19 @@ nodes:
   analyze_workflow:
     type: reasoning
     prompt: |
-      Analyze the jobs and datasets to understand the analysis workflow that was performed.
+      Analyze the jobs and datasets in this Galaxy history.
 
-      Identify:
-      1. The overall type of analysis (RNA-seq, variant calling, ChIP-seq, etc.)
-      2. The sequence of tools used and their purpose
-      3. Key parameters that would be important to report
-      4. Input data types and output data types
+      IMPORTANT: Only describe tools that are ACTUALLY present in the jobs list.
+      Do NOT make up or hallucinate tool names. If only data upload jobs are present,
+      say so clearly.
 
-      Provide a structured understanding of what was done.
+      Look at the "tool_id" field in each job to identify the actual tools used.
+      Internal Galaxy tools start with "__" (like __DATA_FETCH__, __SET_METADATA__).
+
+      Summarize:
+      1. What tools were actually run (based on tool_id field)
+      2. What types of files are in the history (based on contents)
+      3. The apparent purpose of this history
     input:
       history_name:
         $ref: state.selected_history.name
@@ -147,23 +151,18 @@ nodes:
   generate_methods:
     type: reasoning
     prompt: |
-      Write a report on this Galaxy analysis.
+      Write a report summarizing this Galaxy history based on the analysis provided.
 
-      Guidelines:
-      - Use passive voice ("Reads were aligned..." not "We aligned reads...")
-      - Include tool names and versions when available
+      CRITICAL RULES:
+      - Only mention tools that were ACTUALLY used (from the workflow_analysis)
+      - Do NOT invent or hallucinate tool names, versions, or citations
+      - If no analysis tools were run (only data uploads), say "This history contains uploaded data files but no analysis jobs have been run yet."
+      - Be honest about what was done vs what was not done
+
+      If analysis tools were used:
       - Describe the workflow in logical order
-      - Mention key parameters that affect results
-      - Be concise but complete enough for reproducibility
-      - Format for a typical bioinformatics publication
-
-      Structure the methods section with clear paragraphs for:
-      1. Data preprocessing (if applicable)
-      2. Main analysis steps
-      3. Quality control
-      4. Post-processing or filtering
-
-      Include a "Citations" section at the end with the tool references.
+      - Include actual tool names from the data
+      - Include version numbers only if they appear in the data
     input:
       history_name:
         $ref: state.selected_history.name
