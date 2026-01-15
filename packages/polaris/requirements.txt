@@ -1,2 +1,2 @@
 build
--e ./vintent[dev]
+-e ./polaris
