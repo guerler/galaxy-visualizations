@@ -1,9 +1,9 @@
 version: 1
-id: history_inventory
+id: history_explorer
 kind: agent_pipeline
-description: Produce a structured inventory of a Galaxy history
+description: Browse Galaxy histories and generate an AI-powered summary of contents
 
-start: api_histories
+start: fetch_histories
 
 inputs:
   transcripts:
@@ -14,7 +14,7 @@ inputs:
 state:
   histories:
     type: array
-  history:
+  selected_history:
     type: object
   contents:
     type: array
@@ -26,8 +26,7 @@ state:
     type: string
 
 nodes:
-
-  api_histories:
+  fetch_histories:
     type: executor
     run:
       op: api.call
@@ -36,34 +35,31 @@ nodes:
         limit: 10
     emit:
       state.histories: result
-    next: pick_history
+    next: select_history
 
-  pick_history:
+  select_history:
     type: planner
     prompt: |
-      Select a history to inspect.
+      You are helping a user explore their Galaxy histories.
+      Select one history from the list to inspect based on the conversation context.
+      If the user mentioned a specific history, select that one.
+      Otherwise, select the most recently updated history.
     enum_from:
       state: histories
       field: name
     output_schema:
       type: object
-      required: [next, history_name]
+      required: [history_name]
       properties:
-        next:
-          type: string
-          enum: [api_contents]
         history_name:
           type: string
     emit:
-      state.history:
+      state.selected_history:
         name:
           $ref: result.history_name
-        next:
-          $ref: result.next
-    next:
-      $ref: state.history.next
+    next: fetch_contents
 
-  api_contents:
+  fetch_contents:
     type: executor
     run:
       op: api.call
@@ -77,16 +73,16 @@ nodes:
             match:
               field: name
               equals:
-                $ref: state.history.name
+                $ref: state.selected_history.name
             select: id
     emit:
-      state.history:
+      state.selected_history:
         id:
           $ref: run.input.history_id
       state.contents: result
-    next: compute_dataset_count
+    next: compute_stats
 
-  compute_dataset_count:
+  compute_stats:
     type: compute
     emit:
       state.dataset_count:
@@ -94,11 +90,6 @@ nodes:
           op: len
           arg:
             $ref: state.contents
-    next: compute_error_flag
-
-  compute_error_flag:
-    type: compute
-    emit:
       state.has_errors:
         $expr:
           op: any
@@ -106,22 +97,22 @@ nodes:
             $ref: state.contents
           field: state
           equals: error
-    next: summarize_contents
+    next: generate_summary
 
-  summarize_contents:
+  generate_summary:
     type: reasoning
     prompt: |
-      Write a concise human-readable summary of a Galaxy history.
+      Write a concise, helpful summary of this Galaxy history for the user.
 
-      Facts you can rely on:
-      - dataset_count: {{dataset_count}}
-      - has_errors: {{has_errors}}
+      Describe:
+      - What types of data are present (e.g., FASTQ files, BAM alignments, VCF variants)
+      - The general workflow or analysis that was performed (if apparent)
+      - Any issues that need attention (failed datasets, errors)
 
-      Explain the overall contents in natural language.
-      Do not restate numbers mechanically.
+      Keep it conversational and informative. Do not just list numbers.
     input:
-      history:
-        $ref: state.history
+      history_name:
+        $ref: state.selected_history.name
       contents:
         $ref: state.contents
       dataset_count:
@@ -138,9 +129,9 @@ nodes:
     output:
       history:
         id:
-          $ref: state.history.id
+          $ref: state.selected_history.id
         name:
-          $ref: state.history.name
+          $ref: state.selected_history.name
       dataset_count:
         $ref: state.dataset_count
       has_errors:

@@ -110,7 +110,7 @@ async function processUserRequest() {
             try {
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
                 const config = getConfig();
-                const reply = await runPolaris(pyodide, config, [lastTranscript], "default");
+                const reply = await runPolaris(pyodide, config, [lastTranscript], "history_explorer");
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: BoltIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {

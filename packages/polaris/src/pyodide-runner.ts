@@ -1,7 +1,7 @@
-import DEFAULT_AGENT from "/polaris/agents/default.yml";
+import HISTORY_EXPLORER from "/polaris/agents/history_explorer.yml";
 
 const AGENTS = {
-    default: DEFAULT_AGENT,
+    history_explorer: HISTORY_EXPLORER,
 };
 
 function toDict(payload: any) {
