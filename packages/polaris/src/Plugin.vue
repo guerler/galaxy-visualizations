@@ -21,6 +21,9 @@ import { runPolaris } from "./pyodide-runner";
 const props = defineProps<{
     datasetId: string;
     root: string;
+    settings: {
+        agent: string;
+    };
     specs: {
         ai_api_base_url?: string;
         ai_api_key?: string;
@@ -108,9 +111,10 @@ async function processUserRequest() {
             isProcessingRequest.value = true;
             const transcripts = [...props.transcripts];
             try {
-                consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
+                const agent = props.settings.agent;
+                consoleMessages.value.push({ content: `Running ${agent} agent...`, icon: ClockIcon });
                 const config = getConfig();
-                const reply = await runPolaris(pyodide, config, [lastTranscript], "history_explorer");
+                const reply = await runPolaris(pyodide, config, [lastTranscript], agent);
                 consoleMessages.value.push({ content: "Agent execution finished.", icon: BoltIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {

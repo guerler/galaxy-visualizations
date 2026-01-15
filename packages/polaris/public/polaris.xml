@@ -26,12 +26,15 @@
             <help>Pick an agent.</help>
             <name>agent</name>
             <type>select</type>
-            <filterable>true</filterable>
-            <value>find_dataset_agent</value>
+            <value>report_generator</value>
             <data>
                 <data>
-                    <label>Find Dataset Agent</label>
-                    <value>find_dataset_agent</value>
+                    <label>History Explorer</label>
+                    <value>history_explorer</value>
+                </data>
+                <data>
+                    <label>Report Generator</label>
+                    <value>report_generator</value>
                 </data>
             </data>
         </input>
