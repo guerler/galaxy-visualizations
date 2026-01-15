@@ -119,6 +119,8 @@ nodes:
     as: dataset
     concurrency: 5
     delay: 0.05
+    on:
+      warning: fetch_job_details  # Continue even if some datasets fail
     execute:
       op: api.call
       target: galaxy.datasets.show.get
@@ -142,14 +144,20 @@ nodes:
             $ref: result.genome_build
     next: fetch_job_details
 
-  # Step 6: Loop through dataset details to fetch job info via creating_job
+  # Step 6: Loop through unique jobs (deduplicated by creating_job) to fetch job info
   fetch_job_details:
     type: loop
     over:
-      $ref: state.dataset_details
+      $expr:
+        op: unique
+        from:
+          $ref: state.dataset_details
+        by: creating_job
     as: ds
     concurrency: 5
     delay: 0.05
+    on:
+      warning: fetch_job_parameters  # Continue even if some jobs fail to fetch
     execute:
       op: api.call
       target: galaxy.jobs.show.get
@@ -179,6 +187,8 @@ nodes:
     as: job
     concurrency: 5
     delay: 0.05
+    on:
+      warning: fetch_citations  # Continue even if some parameters fail
     execute:
       op: api.call
       target: galaxy.jobs.show.parameters_display.get

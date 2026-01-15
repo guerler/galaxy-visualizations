@@ -10,10 +10,12 @@ from polaris.modules.expressions import (
     expr_concat,
     expr_count_where,
     expr_eq,
+    expr_filter,
     expr_get,
     expr_len,
     expr_lookup,
     expr_not,
+    expr_unique,
 )
 
 
@@ -238,9 +240,157 @@ class TestExprAny:
         assert result is False
 
 
+class TestExprUnique:
+    def test_unique_by_field(self, resolve_identity):
+        expr = {
+            "from": [
+                {"id": "a", "value": 1},
+                {"id": "b", "value": 2},
+                {"id": "a", "value": 3},  # duplicate id
+                {"id": "c", "value": 4},
+            ],
+            "by": "id",
+        }
+        result = expr_unique(expr, {}, resolve_identity)
+        assert len(result) == 3
+        assert [r["id"] for r in result] == ["a", "b", "c"]
+        # First occurrence is kept
+        assert result[0]["value"] == 1
+
+    def test_unique_preserves_order(self, resolve_identity):
+        expr = {
+            "from": [
+                {"id": "c"},
+                {"id": "a"},
+                {"id": "b"},
+                {"id": "a"},  # duplicate
+            ],
+            "by": "id",
+        }
+        result = expr_unique(expr, {}, resolve_identity)
+        assert [r["id"] for r in result] == ["c", "a", "b"]
+
+    def test_unique_skips_none_values(self, resolve_identity):
+        expr = {
+            "from": [
+                {"id": "a"},
+                {"id": None},
+                {"id": "b"},
+            ],
+            "by": "id",
+        }
+        result = expr_unique(expr, {}, resolve_identity)
+        assert len(result) == 2
+        assert [r["id"] for r in result] == ["a", "b"]
+
+    def test_unique_non_list_returns_empty(self, resolve_identity):
+        expr = {"from": "not a list", "by": "id"}
+        result = expr_unique(expr, {}, resolve_identity)
+        assert result == []
+
+    def test_unique_no_by_field(self, resolve_identity):
+        expr = {"from": [1, 2, 1, 3, 2]}
+        result = expr_unique(expr, {}, resolve_identity)
+        assert result == [1, 2, 3]
+
+
+class TestExprFilter:
+    def test_filter_eq(self, resolve_identity):
+        expr = {
+            "from": [
+                {"status": "ok", "name": "a"},
+                {"status": "error", "name": "b"},
+                {"status": "ok", "name": "c"},
+            ],
+            "where": {"field": "status", "eq": "ok"},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+        assert [r["name"] for r in result] == ["a", "c"]
+
+    def test_filter_ne(self, resolve_identity):
+        expr = {
+            "from": [
+                {"status": "ok", "name": "a"},
+                {"status": "error", "name": "b"},
+                {"status": "ok", "name": "c"},
+            ],
+            "where": {"field": "status", "ne": "error"},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+        assert [r["name"] for r in result] == ["a", "c"]
+
+    def test_filter_starts_with(self, resolve_identity):
+        expr = {
+            "from": [
+                {"tool": "__DATA_FETCH__"},
+                {"tool": "bwa"},
+                {"tool": "__SET_METADATA__"},
+                {"tool": "samtools"},
+            ],
+            "where": {"field": "tool", "starts_with": "__"},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+
+    def test_filter_not_starts_with(self, resolve_identity):
+        expr = {
+            "from": [
+                {"tool": "__DATA_FETCH__"},
+                {"tool": "bwa"},
+                {"tool": "__SET_METADATA__"},
+                {"tool": "samtools"},
+            ],
+            "where": {"field": "tool", "not_starts_with": "__"},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+        assert [r["tool"] for r in result] == ["bwa", "samtools"]
+
+    def test_filter_contains(self, resolve_identity):
+        expr = {
+            "from": [
+                {"name": "test_file.fastq"},
+                {"name": "results.bam"},
+                {"name": "test_output.vcf"},
+            ],
+            "where": {"field": "name", "contains": "test"},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+
+    def test_filter_not_null(self, resolve_identity):
+        expr = {
+            "from": [
+                {"job": "j1"},
+                {"job": None},
+                {"job": "j2"},
+            ],
+            "where": {"field": "job", "not_null": True},
+        }
+        result = expr_filter(expr, {}, resolve_identity)
+        assert len(result) == 2
+        assert [r["job"] for r in result] == ["j1", "j2"]
+
+    def test_filter_non_list_returns_empty(self, resolve_identity):
+        expr = {"from": "not a list", "where": {"field": "x", "eq": "y"}}
+        result = expr_filter(expr, {}, resolve_identity)
+        assert result == []
+
+    def test_filter_no_where_returns_all(self, resolve_identity):
+        items = [{"a": 1}, {"a": 2}]
+        expr = {"from": items}
+        result = expr_filter(expr, {}, resolve_identity)
+        assert result == items
+
+
 class TestExprOpsRegistry:
     def test_all_ops_registered(self):
-        expected_ops = ["any", "concat", "coalesce", "count_where", "get", "len", "eq", "not", "lookup"]
+        expected_ops = [
+            "any", "concat", "coalesce", "count_where", "filter",
+            "get", "len", "eq", "not", "lookup", "unique"
+        ]
         for op in expected_ops:
             assert op in EXPR_OPS, f"Missing operator: {op}"
 

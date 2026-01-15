@@ -264,3 +264,25 @@ class TestResolveNext:
 
         result = runner.resolve_next(node, res, ctx)
         assert result == "branch_target"
+
+    def test_resolve_next_on_warning(self):
+        """Test on.warning handler triggers when result has warnings."""
+        graph = {"start": "a", "nodes": {}}
+        runner = Runner(graph, MockRegistry())
+        node = {"next": "normal_next", "on": {"warning": "partial_handler"}}
+        res = {"ok": True, "warnings": {"failed_count": 2}}
+        ctx = {}
+
+        result = runner.resolve_next(node, res, ctx)
+        assert result == "partial_handler"
+
+    def test_resolve_next_warnings_without_handler(self):
+        """Test warnings without on.warning handler continues normally."""
+        graph = {"start": "a", "nodes": {}}
+        runner = Runner(graph, MockRegistry())
+        node = {"next": "normal_next"}
+        res = {"ok": True, "warnings": {"failed_count": 2}}
+        ctx = {}
+
+        result = runner.resolve_next(node, res, ctx)
+        assert result == "normal_next"

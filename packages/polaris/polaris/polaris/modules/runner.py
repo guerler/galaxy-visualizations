@@ -105,12 +105,19 @@ class Runner:
 
     def resolve_next(self, node: NodeDefinition, res: Result | None, ctx: Context) -> str | None:
         next_val = None
+        on_handlers = node.get("on", {})
+
         if res and res.get("ok") is False:
-            if node.get("on") and node["on"].get("error"):
-                next_val = node["on"]["error"]
+            # Error case - use on.error handler if defined
+            if on_handlers.get("error"):
+                next_val = on_handlers["error"]
             else:
                 next_val = None
+        elif res and res.get("warnings") and on_handlers.get("warning"):
+            # Partial success with warnings - use on.warning handler if defined
+            next_val = on_handlers["warning"]
         else:
+            # Success case
             if node.get("type") == NodeType.CONTROL:
                 next_val = res.get("result", {}).get("next") if res else None
             else:
@@ -118,20 +125,13 @@ class Runner:
                 if isinstance(nv, dict):
                     ctx["result"] = res.get("result") if res else None
                     next_val = self.resolve_templates(nv, ctx)
+                elif isinstance(nv, str):
+                    next_val = nv
+                elif on_handlers.get("ok"):
+                    next_val = on_handlers["ok"]
                 else:
-                    if isinstance(nv, str):
-                        next_val = nv
-                    else:
-                        if node.get("on"):
-                            if res and res.get("ok") is True:
-                                if node["on"].get("ok"):
-                                    next_val = node["on"]["ok"]
-                                else:
-                                    next_val = None
-                            else:
-                                next_val = None
-                        else:
-                            next_val = None
+                    next_val = None
+
         return str(next_val) if next_val is not None else None
 
     def resolve_templates(self, value: Any, ctx: Context) -> Any:

@@ -80,14 +80,88 @@ def expr_any(expr: ExprDict, ctx: Context, resolve: ResolveFunc) -> bool:
     return any(item.get(field) == equals for item in items)
 
 
+def expr_unique(expr: ExprDict, ctx: Context, resolve: ResolveFunc) -> list:
+    """Deduplicate array items by a specified field, preserving order."""
+    items = resolve(expr.get("from"), ctx)
+    by_field = expr.get("by")
+    if not isinstance(items, list):
+        return []
+    if not by_field:
+        # No field specified - dedupe by entire item (for simple values)
+        seen: set = set()
+        result = []
+        for item in items:
+            key = item if not isinstance(item, dict) else id(item)
+            if key not in seen:
+                seen.add(key)
+                result.append(item)
+        return result
+    # Dedupe by specific field
+    seen_values: set = set()
+    result = []
+    for item in items:
+        if isinstance(item, dict):
+            value = item.get(by_field)
+            if value is not None and value not in seen_values:
+                seen_values.add(value)
+                result.append(item)
+    return result
+
+
+def expr_filter(expr: ExprDict, ctx: Context, resolve: ResolveFunc) -> list:
+    """Filter array items by a condition."""
+    items = resolve(expr.get("from"), ctx)
+    if not isinstance(items, list):
+        return []
+
+    where = expr.get("where", {})
+    field = where.get("field")
+
+    if not field:
+        return items
+
+    result = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        value = item.get(field)
+
+        # Check various conditions
+        if "eq" in where:
+            if value == resolve(where.get("eq"), ctx):
+                result.append(item)
+        elif "ne" in where:
+            if value != resolve(where.get("ne"), ctx):
+                result.append(item)
+        elif "starts_with" in where:
+            if isinstance(value, str) and value.startswith(where.get("starts_with")):
+                result.append(item)
+        elif "not_starts_with" in where:
+            if isinstance(value, str) and not value.startswith(where.get("not_starts_with")):
+                result.append(item)
+        elif "contains" in where:
+            if isinstance(value, str) and where.get("contains") in value:
+                result.append(item)
+        elif "not_null" in where and where.get("not_null"):
+            if value is not None:
+                result.append(item)
+        else:
+            # No condition specified, include all
+            result.append(item)
+
+    return result
+
+
 EXPR_OPS = {
     "any": expr_any,
     "concat": expr_concat,
     "coalesce": expr_coalesce,
     "count_where": expr_count_where,
+    "filter": expr_filter,
     "get": expr_get,
     "len": expr_len,
     "eq": expr_eq,
     "not": expr_not,
     "lookup": expr_lookup,
+    "unique": expr_unique,
 }
