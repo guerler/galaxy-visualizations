@@ -1,5 +1,5 @@
-from polaris.core.registry import Registry
-from polaris.core.runner import Runner
+from polaris.modules.registry import Registry
+from polaris.modules.runner import Runner
 
 
 async def run(config, inputs, name, agents):

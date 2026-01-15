@@ -5,7 +5,7 @@ from jsonschema import Draft7Validator
 from .agents import Agents
 from .api.api import API_METHODS
 from .api.catalog import load_providers
-from .completions import completions_post, get_tool_call
+from polaris.core.completions import completions_post, get_tool_call
 
 
 # ----------------------------
@@ -157,17 +157,13 @@ class Registry:
             }
         )
         choice = reply.get("choices", [{}])[0]
-        message = choice.get("message", {})
-        arguments = get_tool_call(
-            tool_name,
-            message.get("tool_calls"),
-        )
+        arguments = get_tool_call(tool_name, reply)
         if not arguments:
             raise Exception(
                 "planner did not produce tool call; "
                 f"model={reply.get('model')}; "
                 f"finish_reason={choice.get('finish_reason')}; "
-                f"message={message}"
+                f"message={choice.get('message')}"
             )
         if spec.get("output_schema"):
             validator = Draft7Validator(spec["output_schema"])

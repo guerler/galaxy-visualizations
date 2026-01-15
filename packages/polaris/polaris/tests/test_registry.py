@@ -1,6 +1,6 @@
 import pytest
 
-from polaris.core.registry import Registry
+from polaris.modules.registry import Registry
 
 
 @pytest.mark.asyncio
@@ -24,7 +24,7 @@ async def test_registry_plan_requires_tool_call(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "polaris.core.registry.completions_post",
+        "polaris.modules.registry.completions_post",
         fake_completions_post,
     )
 

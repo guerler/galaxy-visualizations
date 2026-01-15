@@ -1,4 +1,4 @@
-from ..client import http
+from polaris.core.client import http
 from .api import API_METHODS, ApiOp, ApiProvider, ApiTarget
 from .generic import openapi_get
 from .openapi import OpenApiCatalog

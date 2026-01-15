@@ -1,6 +1,6 @@
 import pytest
 
-from polaris.core.runtime import run
+from polaris.runtime import run
 
 
 @pytest.mark.asyncio
@@ -24,8 +24,16 @@ async def test_run_minimal_agent(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "polaris.core.registry.completions_post",
+        "polaris.modules.registry.completions_post",
         fake_completions_post,
+    )
+
+    async def fake_load_providers(config):
+        return []
+
+    monkeypatch.setattr(
+        "polaris.modules.registry.load_providers",
+        fake_load_providers,
     )
 
     agent = {
@@ -44,8 +52,9 @@ async def test_run_minimal_agent(monkeypatch):
         "ai_model": "test",
         "ai_api_key": "test",
     }
+    agents = {"test_agent": agent}
 
-    result = await run(agent, inputs, config)
+    result = await run(config, inputs, "test_agent", agents)
 
     assert result["last"]["result"]["next"] == "end"
     assert result["last"]["ok"] is True

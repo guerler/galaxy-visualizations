@@ -1,4 +1,4 @@
-from ..client import http
+from polaris.core.client import http
 
 
 async def openapi_get(target, input, meta):
