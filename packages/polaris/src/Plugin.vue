@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref, watch } from "vue";
 import {
     AcademicCapIcon,
     ArrowPathIcon,
+    BoltIcon,
     CheckIcon,
     ClockIcon,
     ExclamationTriangleIcon,
@@ -45,14 +46,6 @@ const MESSAGE_SUCCESS = "Successfully produced output.";
 const PROMPT_DEFAULT = "How can I help you?";
 const PLUGIN_NAME = "polaris";
 
-// Ai provider
-const config = {
-    ai_base_url: props.specs.ai_api_base_url || `${props.root}api/plugins/${PLUGIN_NAME}`,
-    ai_api_key: props.specs.ai_api_key,
-    ai_model: props.specs.ai_model,
-    galaxy_root: props.root,
-};
-
 // Load pyodide
 const isDev = (import.meta as any).env.DEV;
 const pyodideBaseUrl = isDev ? "" : `static/plugins/visualizations/${PLUGIN_NAME}/`;
@@ -66,6 +59,15 @@ const pyodide = new PyodideManager({
 const consoleMessages = ref<ConsoleMessageType[]>([]);
 const isProcessingRequest = ref<boolean>(false);
 const isLoadingPyodide = ref<boolean>(true);
+
+// Configuration
+function getConfig() {
+    return {
+        ai_base_url: props.specs.ai_api_base_url || `${props.root}api/plugins/${PLUGIN_NAME}`,
+        ai_api_key: props.specs.ai_api_key,
+        ai_model: props.specs.ai_model,
+    };
+}
 
 // Inject Prompt
 async function loadPrompt() {
@@ -105,11 +107,10 @@ async function processUserRequest() {
             isProcessingRequest.value = true;
             const transcripts = [...props.transcripts];
             try {
-                transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
-                emit("update", { transcripts });
                 consoleMessages.value.push({ content: "Running agent graph...", icon: ClockIcon });
-                const reply = await runPolaris(pyodide, config, transcripts, "default");
-                consoleMessages.value.push({ content: "Agent execution finished.", icon: SparklesIcon });
+                const config = getConfig();
+                const reply = await runPolaris(pyodide, config, [lastTranscript], "default");
+                consoleMessages.value.push({ content: "Agent execution finished.", icon: BoltIcon });
                 console.debug("[polaris]", reply);
                 if (reply && reply.last && reply.last.result) {
                     consoleMessages.value.push({
@@ -117,6 +118,7 @@ async function processUserRequest() {
                         icon: AcademicCapIcon,
                     });
                 }
+                transcripts.push({ content: MESSAGE_SUCCESS, role: "assistant", variant: "info" });
             } catch (e) {
                 consoleMessages.value.push({ content: String(e), icon: ExclamationTriangleIcon });
                 transcripts.push({ content: MESSAGE_FAILED, role: "assistant" });
@@ -147,6 +149,6 @@ watch(
         <div class="flex-1 min-h-0">
             <Dashboard />
         </div>
-        <Console class="shrink-0" :messages="consoleMessages" />
+        <Console class="shrink-0 pt-1" :messages="consoleMessages" />
     </div>
 </template>
