@@ -146,7 +146,7 @@ watch(
 </script>
 
 <template>
-    <div class="flex flex-col h-screen p-1 bg-gray-700 text-white">
+    <div class="flex flex-col h-screen p-1">
         <div class="flex-1 min-h-0">
             <Dashboard />
         </div>
