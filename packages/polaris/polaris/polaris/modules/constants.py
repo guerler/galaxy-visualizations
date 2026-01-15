@@ -1,0 +1,43 @@
+"""Constants for Polaris agent execution."""
+
+from enum import Enum
+
+
+class NodeType(str, Enum):
+    """Types of nodes in an agent graph."""
+
+    COMPUTE = "compute"
+    CONTROL = "control"
+    EXECUTOR = "executor"
+    PLANNER = "planner"
+    REASONING = "reasoning"
+    TERMINAL = "terminal"
+
+
+class Operation(str, Enum):
+    """Operations that can be executed by executor nodes."""
+
+    API_CALL = "api.call"
+    AGENT_CALL = "system.agent.call"
+    WAIT = "system.wait"
+
+
+class ControlOp(str, Enum):
+    """Control flow operations."""
+
+    BRANCH = "control.branch"
+
+
+class ErrorCode(str, Enum):
+    """Error codes for runner failures."""
+
+    UNKNOWN_NODE = "unknown_node"
+    MISSING_START = "missing_start"
+    MISSING_AGENT = "missing_agent"
+    SUBAGENT_FAILED = "subagent_failed"
+    UNKNOWN_EXECUTOR_OP = "unknown_executor_op"
+    UNKNOWN_NODE_TYPE = "unknown_node_type"
+
+
+# Graph execution limits
+MAX_NODES = 1000

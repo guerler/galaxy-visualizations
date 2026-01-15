@@ -1,4 +1,6 @@
 from polaris.core.client import http
+
+from ..exceptions import ConfigurationError, ProviderError
 from .api import API_METHODS, ApiOp, ApiProvider, ApiTarget
 from .generic import openapi_get
 from .openapi import OpenApiCatalog
@@ -12,7 +14,7 @@ class GalaxyApi(ApiProvider):
     def __init__(self, config):
         self.galaxy_root = config.get("galaxy_root")
         if not self.galaxy_root:
-            raise Exception("galaxy_root missing")
+            raise ConfigurationError("galaxy_root missing")
 
         self.galaxy_key = config.get("galaxy_key")
         self.openapi = None
@@ -26,7 +28,7 @@ class GalaxyApi(ApiProvider):
                 methods=ALLOWED_METHODS,
             )
         except Exception as e:
-            raise Exception(f"Failed to process OpenAPI schema: {e}.")
+            raise ProviderError(f"Failed to process OpenAPI schema: {e}") from e
         return self
 
     def target(self):

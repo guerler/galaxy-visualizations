@@ -1,3 +1,4 @@
+from ..exceptions import ConfigurationError
 from .galaxy import GalaxyApi
 
 
@@ -8,6 +9,6 @@ async def load_providers(config):
         provider = await GalaxyApi(config).init()
         providers.append(provider)
     else:
-        raise Exception("Missing configuration: galaxy_root.")
+        raise ConfigurationError("Missing configuration: galaxy_root")
 
     return providers

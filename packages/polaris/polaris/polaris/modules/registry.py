@@ -2,10 +2,12 @@ import json
 
 from jsonschema import Draft7Validator
 
+from polaris.core.completions import completions_post, get_tool_call
+
 from .agents import Agents
 from .api.api import API_METHODS
 from .api.catalog import load_providers
-from polaris.core.completions import completions_post, get_tool_call
+from .exceptions import NodeExecutionError, PlannerError, RegistryError
 
 
 # ----------------------------
@@ -26,14 +28,14 @@ class Registry:
             target = provider.target()
             target_name = target.name
             if target_name in self.api_targets:
-                raise Exception(f"API target already registered: {target_name}")
+                raise RegistryError(f"API target already registered: {target_name}")
             self.api_targets[target_name] = target
             # register ops
             for name, op in provider.ops().items():
                 if name in self.api_ops:
-                    raise Exception(f"API op already registered: {name}")
+                    raise RegistryError(f"API op already registered: {name}")
                 if op.target not in self.api_targets:
-                    raise Exception(f"API op '{name}' references unknown target '{op.target}'")
+                    raise RegistryError(f"API op '{name}' references unknown target '{op.target}'")
                 self.api_ops[name] = op
 
     # ----------------------------
@@ -55,7 +57,7 @@ class Registry:
         if enum_from and output_schema and isinstance(output_schema.get("required"), list):
             src = ctx["state"].get(enum_from["state"])
             if not isinstance(src, list):
-                raise Exception(f"enum_from source is not an array: {enum_from['state']}")
+                raise PlannerError(f"enum_from source is not an array: {enum_from['state']}")
             values = src
             filt = enum_from.get("filter")
             if filt:
@@ -63,7 +65,7 @@ class Registry:
             enum_values = [v.get(enum_from["field"]) for v in values if isinstance(v.get(enum_from["field"]), str)]
             field = next(k for k in output_schema["required"] if k != "next")
             if not enum_values:
-                raise Exception(f"No valid enum values for field '{field}' from state '{enum_from['state']}'")
+                raise PlannerError(f"No valid enum values for field '{field}' from state '{enum_from['state']}'")
             properties[field] = {
                 "type": "string",
                 "enum": enum_values,
@@ -159,17 +161,21 @@ class Registry:
         choice = reply.get("choices", [{}])[0]
         arguments = get_tool_call(tool_name, reply)
         if not arguments:
-            raise Exception(
-                "planner did not produce tool call; "
-                f"model={reply.get('model')}; "
-                f"finish_reason={choice.get('finish_reason')}; "
-                f"message={choice.get('message')}"
+            raise PlannerError(
+                "Planner did not produce tool call",
+                details={
+                    "model": reply.get("model"),
+                    "finish_reason": choice.get("finish_reason"),
+                    "message": choice.get("message"),
+                },
             )
         if spec.get("output_schema"):
             validator = Draft7Validator(spec["output_schema"])
             errors = list(validator.iter_errors(arguments))
             if errors:
-                raise Exception("planner output schema violation: " + "; ".join(e.message for e in errors))
+                raise PlannerError(
+                    "Planner output schema violation: " + "; ".join(e.message for e in errors)
+                )
         return arguments
 
     # ----------------------------
@@ -200,7 +206,7 @@ class Registry:
         )
         content = reply["choices"][0]["message"]["content"]
         if not content:
-            raise Exception("reasoning node produced empty output")
+            raise NodeExecutionError("Reasoning node produced empty output")
         return content
 
     # ----------------------------

@@ -1,13 +1,12 @@
 import argparse
 import asyncio
-import os
 import pathlib
 
-import yaml
-
-from .config import MESSAGE_INITIAL, PROMPT_DEFAULT, config
+import yaml  # type: ignore[import-untyped]
 
 import polaris
+
+from .config import MESSAGE_INITIAL, PROMPT_DEFAULT, config
 
 
 def load_agents_from_dir(path):

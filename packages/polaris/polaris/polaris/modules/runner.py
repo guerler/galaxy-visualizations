@@ -1,22 +1,32 @@
-from time import sleep
+from typing import TYPE_CHECKING, Any
 
+from .constants import MAX_NODES, ControlOp, ErrorCode, NodeType
+from .exceptions import ExpressionError
 from .expressions import EXPR_OPS
+from .handlers import get_handler
 from .refs import get_path
 
-MAX_NODES = 1000
+if TYPE_CHECKING:
+    from .registry import Registry
+
+# Type aliases
+GraphDefinition = dict[str, Any]
+NodeDefinition = dict[str, Any]
+Context = dict[str, Any]
+Result = dict[str, Any]
 
 
 class Runner:
-    def __init__(self, graph, registry):
+    def __init__(self, graph: GraphDefinition, registry: "Registry") -> None:
         self.graph = graph
         self.registry = registry
-        self.state = {}
+        self.state: dict[str, Any] = {}
 
-    async def run(self, inputs):
+    async def run(self, inputs: dict[str, Any]) -> Result:
         self.state["inputs"] = inputs
         node_id = self.graph.get("start")
         safety = 0
-        output = None
+        output: Result | None = None
         if node_id:
             while node_id and safety < MAX_NODES:
                 safety += 1
@@ -26,13 +36,13 @@ class Runner:
                     node_id = self.resolve_next(node, res, ctx)
                     output = res
                 else:
-                    output = {"ok": False, "error": {"code": "unknown_node", "message": str(node_id)}}
+                    output = {"ok": False, "error": {"code": ErrorCode.UNKNOWN_NODE, "message": str(node_id)}}
                     node_id = None
         else:
-            output = {"ok": False, "error": {"code": "missing_start", "message": "Graph has no start node"}}
+            output = {"ok": False, "error": {"code": ErrorCode.MISSING_START, "message": "Graph has no start node"}}
         return {"state": self.state, "last": output}
 
-    async def run_node(self, node_id, node):
+    async def run_node(self, node_id: str, node: NodeDefinition) -> tuple[Result, Context]:
         ctx = {
             "inputs": self.state.get("inputs"),
             "state": self.state,
@@ -40,80 +50,20 @@ class Runner:
             "graphId": self.graph.get("id"),
             "graph": self.graph,
         }
-        res = None
-        if node.get("type") == "compute":
-            ctx["result"] = None
-            self.apply_emit(node.get("emit"), {"result": None}, ctx)
-            res = {"ok": True, "result": None}
-        elif node.get("type") == "control":
-            decided = self.eval_branch(node.get("condition"), ctx)
-            ctx["result"] = decided
-            res = {"ok": True, "result": decided}
-        elif node.get("type") == "executor":
-            run_spec = node.get("run", {})
-            resolved_input = self.resolve_templates(run_spec.get("input"), ctx)
-            ctx["run"] = {"input": resolved_input}
-            op = run_spec.get("op")
-            if op == "api.call":
-                called = await self.registry.call_api(ctx, {"target": run_spec.get("target"), "input": resolved_input})
-                res = called
-                if called.get("ok") is True:
-                    ctx["result"] = called.get("result")
-                    self.apply_emit(node.get("emit"), called, ctx)
-                else:
-                    return called, ctx
-            elif op == "system.agent.call":
-                agent_id = run_spec.get("agent_id")
-                if not agent_id:
-                    return {"ok": False, "error": {"code": "missing_agent"}}, ctx
-                subagent = self.registry.agents.resolve_agent(agent_id)
-                sub_inputs = resolved_input or {}
-                sub_runner = Runner(subagent, self.registry)
-                sub_result = await sub_runner.run(sub_inputs)
-                if not sub_result or "last" not in sub_result:
-                    return {"ok": False, "error": {"code": "subagent_failed"}}, ctx
-                ctx["result"] = sub_result["last"]["result"]
-                self.apply_emit(node.get("emit"), {"result": ctx["result"]}, ctx)
-                res = {"ok": True, "result": ctx["result"]}
-            elif op == "system.wait":
-                seconds = resolved_input.get("seconds", 0)
-                await sleep(seconds)
-                ctx["result"] = None
-                self.apply_emit(node.get("emit"), {"result": None}, ctx)
-                res = {"ok": True, "result": None}
-            else:
-                res = {"ok": False, "error": {"code": "unknown_executor_op", "message": str(op)}}
-        elif node.get("type") == "planner":
-            planned = await self.registry.plan(
-                ctx,
-                dict(
-                    node=node,
-                    prompt=node.get("prompt", ""),
-                    tools=node.get("tools", []),
-                    output_schema=node.get("output_schema"),
-                ),
-            )
-            ctx["result"] = planned
-            self.apply_emit(node.get("emit"), {"result": planned}, ctx)
-            res = {"ok": True, "result": planned}
-        elif node.get("type") == "reasoning":
-            resolved_input = self.resolve_templates(node.get("input", {}), ctx)
-            result = await self.registry.reason(
-                prompt=node.get("prompt", ""),
-                input=resolved_input,
-            )
-            ctx["result"] = result
-            self.apply_emit(node.get("emit"), {"result": result}, ctx)
-            res = {"ok": True, "result": result}
-        elif node.get("type") == "terminal":
-            if node.get("output") is not None:
-                self.state["output"] = self.resolve_templates(node.get("output"), ctx)
-            res = {"ok": True, "result": self.state.get("output")}
+
+        node_type = node.get("type", "")
+        handler = get_handler(node_type)
+
+        if handler:
+            res = await handler.execute(node, ctx, self.registry, self)
         else:
-            res = {"ok": False, "error": {"code": "unknown_node_type", "message": str(node.get("type"))}}
+            res = {"ok": False, "error": {"code": ErrorCode.UNKNOWN_NODE_TYPE, "message": str(node_type)}}
+
         return res, ctx
 
-    def apply_emit(self, emit, payload, ctx):
+    def apply_emit(
+        self, emit: dict[str, Any] | None, payload: dict[str, Any] | None, ctx: Context
+    ) -> None:
         if emit and payload:
             for dest, src in emit.items():
                 key = dest[6:] if dest.startswith("state.") else dest
@@ -125,9 +75,9 @@ class Runner:
                     else:
                         self.state[key] = src
 
-    def eval_branch(self, condition, ctx):
+    def eval_branch(self, condition: dict[str, Any] | None, ctx: Context) -> dict[str, str | None]:
         next_val = None
-        if condition and condition.get("op") == "control.branch":
+        if condition and condition.get("op") == ControlOp.BRANCH:
             for c in condition.get("cases", []):
                 when = c.get("when", {})
                 if isinstance(when, dict):
@@ -145,15 +95,15 @@ class Runner:
                 next_val = condition.get("default")
         return {"next": str(next_val) if next_val is not None else None}
 
-    def eval_expr(self, expr, ctx):
-        op = expr.get("op")
+    def eval_expr(self, expr: dict[str, Any], ctx: Context) -> Any:
+        op = expr.get("op", "")
         fn = EXPR_OPS.get(op)
         if fn:
             return fn(expr, ctx, self.resolve_templates)
         else:
-            raise Exception(f"unknown expr op: {op}")
+            raise ExpressionError(f"Unknown expression operator: {op}")
 
-    def resolve_next(self, node, res, ctx):
+    def resolve_next(self, node: NodeDefinition, res: Result | None, ctx: Context) -> str | None:
         next_val = None
         if res and res.get("ok") is False:
             if node.get("on") and node["on"].get("error"):
@@ -161,7 +111,7 @@ class Runner:
             else:
                 next_val = None
         else:
-            if node.get("type") == "control":
+            if node.get("type") == NodeType.CONTROL:
                 next_val = res.get("result", {}).get("next") if res else None
             else:
                 nv = node.get("next")
@@ -184,7 +134,7 @@ class Runner:
                             next_val = None
         return str(next_val) if next_val is not None else None
 
-    def resolve_templates(self, value, ctx):
+    def resolve_templates(self, value: Any, ctx: Context) -> Any:
         if isinstance(value, dict):
             if "$ref" in value:
                 return get_path(value["$ref"], ctx, self.state)
