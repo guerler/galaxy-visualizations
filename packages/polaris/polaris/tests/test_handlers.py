@@ -1,5 +1,7 @@
 """Tests for node handlers."""
 
+import asyncio
+
 import pytest
 
 from polaris.modules.constants import ErrorCode, NodeType, Operation
@@ -446,6 +448,136 @@ class TestLoopHandler:
             {"id": "a", "name": "First"},
             {"id": "b", "name": "Second"},
         ]
+
+    @pytest.mark.asyncio
+    async def test_loop_concurrent_execution(self, mock_context):
+        """Test loop executes concurrently when concurrency > 1."""
+        import time
+
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        call_times: list[float] = []
+
+        async def mock_call_api(ctx, spec):
+            call_times.append(time.time())
+            await asyncio.sleep(0.05)  # Simulate API latency
+            return {"ok": True, "result": {"data": "test"}}
+
+        registry.call_api = mock_call_api
+
+        node = {
+            "type": "loop",
+            "over": [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}],
+            "concurrency": 4,  # All at once
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        start = time.time()
+        result = await handler.execute(node, mock_context, registry, runner)
+        elapsed = time.time() - start
+
+        assert result["ok"] is True
+        assert len(result["result"]) == 4
+        # With concurrency=4, all should start nearly simultaneously
+        # Total time should be ~0.05s (one batch) not ~0.2s (sequential)
+        assert elapsed < 0.15  # Allow some overhead
+
+    @pytest.mark.asyncio
+    async def test_loop_concurrent_preserves_order(self, mock_context):
+        """Test concurrent loop preserves result order."""
+        import random
+
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        async def mock_call_api(ctx, spec):
+            # Random delay to simulate variable API response times
+            await asyncio.sleep(random.uniform(0.01, 0.05))
+            # Return the loop index to verify order
+            loop_ctx = ctx.get("loop", {})
+            return {"ok": True, "result": {"index": loop_ctx.get("index")}}
+
+        registry.call_api = mock_call_api
+
+        node = {
+            "type": "loop",
+            "over": [{"id": "a"}, {"id": "b"}, {"id": "c"}, {"id": "d"}, {"id": "e"}],
+            "concurrency": 5,
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        assert result["ok"] is True
+        # Results should be in order despite random completion times
+        indices = [r["index"] for r in result["result"]]
+        assert indices == [0, 1, 2, 3, 4]
+
+    @pytest.mark.asyncio
+    async def test_loop_concurrent_with_semaphore_limit(self, mock_context):
+        """Test concurrent loop respects semaphore limit."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        concurrent_count = [0]
+        max_concurrent = [0]
+
+        async def mock_call_api(ctx, spec):
+            concurrent_count[0] += 1
+            max_concurrent[0] = max(max_concurrent[0], concurrent_count[0])
+            await asyncio.sleep(0.02)
+            concurrent_count[0] -= 1
+            return {"ok": True, "result": {"data": "test"}}
+
+        registry.call_api = mock_call_api
+
+        node = {
+            "type": "loop",
+            "over": [{"id": i} for i in range(10)],
+            "concurrency": 3,  # Limit to 3 concurrent
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        assert result["ok"] is True
+        assert len(result["result"]) == 10
+        # Max concurrent should not exceed semaphore limit
+        assert max_concurrent[0] <= 3
+
+    @pytest.mark.asyncio
+    async def test_loop_concurrent_with_errors(self, mock_context):
+        """Test concurrent loop handles errors correctly."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        async def mock_call_api(ctx, spec):
+            loop_ctx = ctx.get("loop", {})
+            index = loop_ctx.get("index", 0)
+            if index == 2:  # Fail on third item
+                return {"ok": False, "error": {"code": "API_ERROR", "message": "Failed"}}
+            return {"ok": True, "result": {"index": index}}
+
+        registry.call_api = mock_call_api
+
+        node = {
+            "type": "loop",
+            "over": [{"id": i} for i in range(5)],
+            "concurrency": 5,
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        # Default on_error: continue - returns ok with warnings
+        assert result["ok"] is True
+        assert len(result["result"]) == 4  # 5 - 1 error
+        assert result["warnings"]["skipped_count"] == 1
 
 
 class MockLoopRunner:

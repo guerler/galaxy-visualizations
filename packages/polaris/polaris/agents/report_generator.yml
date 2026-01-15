@@ -108,7 +108,8 @@ nodes:
     over:
       $ref: state.contents
     as: dataset
-    delay: 0.1
+    concurrency: 5
+    delay: 0.05
     execute:
       op: api.call
       target: galaxy.datasets.show.get
@@ -138,7 +139,8 @@ nodes:
     over:
       $ref: state.dataset_details
     as: ds
-    delay: 0.1
+    concurrency: 5
+    delay: 0.05
     execute:
       op: api.call
       target: galaxy.jobs.show.get
@@ -166,7 +168,8 @@ nodes:
     over:
       $ref: state.job_details
     as: job
-    delay: 0.1
+    concurrency: 5
+    delay: 0.05
     execute:
       op: api.call
       target: galaxy.jobs.show.parameters_display.get

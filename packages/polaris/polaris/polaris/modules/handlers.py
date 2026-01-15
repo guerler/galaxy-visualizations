@@ -199,7 +199,7 @@ class TerminalHandler:
 
 
 class LoopHandler:
-    """Handler for loop nodes - iterates over a collection sequentially."""
+    """Handler for loop nodes - supports sequential or concurrent execution."""
 
     async def execute(
         self,
@@ -224,13 +224,41 @@ class LoopHandler:
         # Get loop configuration
         as_var = node.get("as", "item")
         delay = node.get("delay", 0)
+        concurrency = node.get("concurrency", 1)  # 1 = sequential, N = concurrent
         on_error = node.get("on_error", "continue")  # "continue" or "stop"
+        when_spec = node.get("when")  # Optional condition to filter iterations
         execute_spec = node.get("execute", {})
         emit_spec = node.get("emit", {})
 
-        # Collect results
+        # Choose execution mode
+        if concurrency > 1 and len(items) > 1:
+            return await self._execute_concurrent(
+                items, as_var, delay, concurrency, on_error, when_spec,
+                execute_spec, emit_spec, ctx, registry, runner
+            )
+        else:
+            return await self._execute_sequential(
+                items, as_var, delay, on_error, when_spec,
+                execute_spec, emit_spec, ctx, registry, runner
+            )
+
+    async def _execute_sequential(
+        self,
+        items: list[Any],
+        as_var: str,
+        delay: float,
+        on_error: str,
+        when_spec: dict[str, Any] | None,
+        execute_spec: dict[str, Any],
+        emit_spec: dict[str, Any],
+        ctx: Context,
+        registry: "Registry",
+        runner: Any,
+    ) -> Result:
+        """Execute loop iterations sequentially."""
         results: list[Any] = []
         errors: list[dict[str, Any]] = []
+        skipped = 0
 
         for index, item in enumerate(items):
             # Set up loop context
@@ -241,6 +269,13 @@ class LoopHandler:
                 "first": index == 0,
                 "last": index == len(items) - 1,
             }
+
+            # Check when condition - skip if false
+            if when_spec is not None:
+                condition = runner.resolve_templates(when_spec, ctx)
+                if not condition:
+                    skipped += 1
+                    continue
 
             # Execute the operation for this iteration
             iteration_result = await self._execute_iteration(
@@ -266,10 +301,97 @@ class LoopHandler:
         # Clean up loop context
         ctx.pop("loop", None)
 
-        # Set final result
+        return self._build_result(results, errors, skipped, on_error, ctx)
+
+    async def _execute_concurrent(
+        self,
+        items: list[Any],
+        as_var: str,
+        delay: float,
+        concurrency: int,
+        on_error: str,
+        execute_spec: dict[str, Any],
+        emit_spec: dict[str, Any],
+        ctx: Context,
+        registry: "Registry",
+        runner: Any,
+    ) -> Result:
+        """Execute loop iterations concurrently with semaphore-based rate limiting."""
+        semaphore = asyncio.Semaphore(concurrency)
+        # Pre-allocate results array to preserve order
+        iteration_results: list[dict[str, Any] | None] = [None] * len(items)
+
+        async def run_iteration(index: int, item: Any) -> None:
+            async with semaphore:
+                # Rate limiting delay (applied before each request)
+                if delay > 0 and index > 0:
+                    await asyncio.sleep(delay)
+
+                # Create isolated context for this iteration
+                iter_ctx: Context = {
+                    "loop": {
+                        as_var: item,
+                        "index": index,
+                        "length": len(items),
+                        "first": index == 0,
+                        "last": index == len(items) - 1,
+                    }
+                }
+
+                # Execute the operation
+                result = await self._execute_iteration(
+                    execute_spec, iter_ctx, registry, runner
+                )
+                iteration_results[index] = {
+                    "item": item,
+                    "result": result,
+                    "ctx": iter_ctx,
+                }
+
+        # Run all iterations concurrently
+        await asyncio.gather(*[
+            run_iteration(i, item) for i, item in enumerate(items)
+        ])
+
+        # Process results in order and apply emit
+        results: list[Any] = []
+        errors: list[dict[str, Any]] = []
+
+        for index, iter_data in enumerate(iteration_results):
+            if iter_data is None:
+                continue
+
+            item = iter_data["item"]
+            iteration_result = iter_data["result"]
+            iter_ctx = iter_data["ctx"]
+
+            if iteration_result.get("ok"):
+                results.append(iteration_result.get("result"))
+                # Apply emit using the iteration's context
+                ctx["loop"] = iter_ctx["loop"]
+                self._apply_loop_emit(emit_spec, iteration_result, ctx, runner)
+            else:
+                errors.append(
+                    {"index": index, "item": item, "error": iteration_result.get("error")}
+                )
+
+        # Clean up loop context
+        ctx.pop("loop", None)
+
+        return self._build_result(results, errors, on_error, ctx)
+
+    def _build_result(
+        self,
+        results: list[Any],
+        errors: list[dict[str, Any]],
+        on_error: str,
+        ctx: Context,
+    ) -> Result:
+        """Build the final result from collected results and errors."""
+        # Set final result in context
         ctx["result"] = results
 
-        # Return ok: true if we have results, even with some errors (when on_error: continue)
+        # Return ok: false only if on_error is "stop" and there were errors
         if errors and on_error == "stop":
             return {
                 "ok": False,
@@ -281,7 +403,7 @@ class LoopHandler:
                 "partial_results": results,
             }
 
-        # With on_error: continue, return success with warnings if we have any results
+        # With on_error: continue, return success with warnings if there were errors
         result: Result = {"ok": True, "result": results}
         if errors:
             result["warnings"] = {
