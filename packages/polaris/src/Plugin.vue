@@ -82,6 +82,7 @@ async function loadPrompt() {
         transcripts.push({ content: systemPrompt(), role: "system" });
         consoleMessages.value.push({ content: "Injected assistant message.", icon: AcademicCapIcon });
         transcripts.push({ content: MESSAGE_INITIAL, role: "assistant" });
+        transcripts.push({ content: "select AMB-3B,1A and hGEC analysis", role: "user" });
         emit("update", { transcripts });
     }
 }
@@ -121,11 +122,22 @@ async function processUserRequest() {
                     const result = reply.last.result;
                     // Build report content from available fields
                     const parts: string[] = [];
+
+                    // Add history header
+                    if (result.selected_history) {
+                        const h = result.selected_history;
+                        let header = `# ${h.name || "History Report"}`;
+                        if (h.annotation) {
+                            header += `\n\n*${h.annotation}*`;
+                        }
+                        parts.push(header);
+                    }
+
                     if (result.workflow_analysis) {
                         parts.push(result.workflow_analysis);
                     }
                     if (result.report && result.report !== result.workflow_analysis) {
-                        parts.push("## Summary\n" + result.report);
+                        parts.push("## Summary\n\n" + result.report);
                     }
                     if (result.summary) {
                         parts.push(result.summary);

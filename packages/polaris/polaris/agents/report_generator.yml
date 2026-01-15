@@ -61,15 +61,14 @@ nodes:
       state.selected_history:
         name:
           $ref: result.history_name
-    next: fetch_contents
+    next: fetch_history_details
 
-  # Step 3: Fetch the history contents to get dataset information
-  # Note: Limiting to 20 items to stay within LLM context limits
-  fetch_contents:
+  # Step 3: Look up history ID and fetch history details
+  fetch_history_details:
     type: executor
     run:
       op: api.call
-      target: galaxy.histories.show.contents.get
+      target: galaxy.histories.show.get
       input:
         history_id:
           $expr:
@@ -81,17 +80,27 @@ nodes:
               equals:
                 $ref: state.selected_history.name
             select: id
+    emit:
+      state.selected_history: result
+    next: fetch_contents
+
+  # Step 4: Fetch the history contents to get dataset information
+  # Note: Limiting to 20 items to stay within LLM context limits
+  fetch_contents:
+    type: executor
+    run:
+      op: api.call
+      target: galaxy.histories.show.contents.get
+      input:
+        history_id:
+          $ref: state.selected_history.id
         limit: 20
     emit:
-      state.selected_history:
-        id:
-          $ref: run.input.history_id
       state.contents: result
     next: fetch_jobs
 
-  # Step 4: Fetch jobs associated with this history
+  # Step 5: Fetch jobs associated with this history
   # Note: Using job summaries for now - full details are too verbose for LLM context
-  # TODO: Add $map expression to extract only relevant fields from job details
   fetch_jobs:
     type: executor
     run:
