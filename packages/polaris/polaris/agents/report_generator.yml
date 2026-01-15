@@ -1,7 +1,7 @@
 version: 1
 id: report_generator
 kind: agent_pipeline
-description: Generate reports from Galaxy history analysis
+description: Generate detailed reports from Galaxy history analysis
 
 start: fetch_histories
 
@@ -21,6 +21,8 @@ state:
   dataset_details:
     type: array
   job_details:
+    type: array
+  job_parameters:
     type: array
   citations:
     type: array
@@ -95,12 +97,12 @@ nodes:
       input:
         history_id:
           $ref: state.selected_history.id
-        limit: 15
+        limit: 30
     emit:
       state.contents: result
     next: fetch_dataset_details
 
-  # Step 5: Loop through datasets to get details including creating_job
+  # Step 5: Loop through datasets to get details including creating_job and file info
   fetch_dataset_details:
     type: loop
     over:
@@ -122,6 +124,12 @@ nodes:
             $ref: result.name
           creating_job:
             $ref: result.creating_job
+          file_ext:
+            $ref: result.file_ext
+          file_size:
+            $ref: result.file_size
+          genome_build:
+            $ref: result.genome_build
     next: fetch_job_details
 
   # Step 6: Loop through dataset details to fetch job info via creating_job
@@ -140,6 +148,8 @@ nodes:
     emit:
       state.job_details:
         $append:
+          job_id:
+            $ref: result.id
           tool_id:
             $ref: result.tool_id
           tool_version:
@@ -148,9 +158,33 @@ nodes:
             $ref: result.state
           create_time:
             $ref: result.create_time
+    next: fetch_job_parameters
+
+  # Step 7: Loop through jobs to fetch tool parameters
+  fetch_job_parameters:
+    type: loop
+    over:
+      $ref: state.job_details
+    as: job
+    delay: 0.1
+    execute:
+      op: api.call
+      target: galaxy.jobs.show.parameters_display.get
+      input:
+        job_id:
+          $ref: loop.job.job_id
+    emit:
+      state.job_parameters:
+        $append:
+          job_id:
+            $ref: loop.job.job_id
+          tool_id:
+            $ref: loop.job.tool_id
+          parameters:
+            $ref: result
     next: fetch_citations
 
-  # Step 7: Fetch citations for tools used in this history
+  # Step 8: Fetch citations for tools used in this history
   fetch_citations:
     type: executor
     run:
@@ -163,45 +197,72 @@ nodes:
       state.citations: result
     next: analyze_workflow
 
-  # Step 8: Use AI to understand the analysis workflow
+  # Step 9: Use AI to understand the analysis workflow
   analyze_workflow:
     type: reasoning
     prompt: |
-      Analyze the jobs in this Galaxy history.
+      Analyze this Galaxy history and create a structured workflow description.
 
-      IMPORTANT: Only describe tools that are ACTUALLY present in the job_details list.
-      Do NOT make up or hallucinate tool names.
+      You have access to:
+      - Dataset details with file formats (file_ext field) and sizes
+      - Job details with tool IDs and versions
+      - Tool parameters showing actual settings used
 
-      Look at the "tool_id" field in each job to identify the actual tools used.
-      Internal Galaxy tools start with "__" (like __DATA_FETCH__, __SET_METADATA__) - these are for data uploads, not analysis.
+      Create a structured analysis:
 
-      Summarize:
-      1. List the analysis tools that were run (exclude internal tools starting with "__")
-      2. Describe the data processing workflow based on the tools used
-      3. Note any tool versions if available
+      1. DATA INPUTS: List input files with their formats (e.g., "paired-end FASTQ files")
+         Look at datasets with file_ext like fastq, fastqsanger, bam, vcf, tabular, etc.
+
+      2. ANALYSIS STEPS: For each analysis tool (exclude "__" internal tools), describe:
+         - Tool name and what it does
+         - Key parameters from job_parameters (look for scientifically relevant settings)
+         - Input/output file types when apparent
+
+      3. OUTPUTS: Describe final output files and their formats
+
+      Focus on the scientific workflow. Exclude internal Galaxy tools starting with "__".
+      Only mention tools that are ACTUALLY in the job_details - do not hallucinate.
     input:
       history_name:
         $ref: state.selected_history.name
+      dataset_details:
+        $ref: state.dataset_details
       job_details:
         $ref: state.job_details
+      job_parameters:
+        $ref: state.job_parameters
     emit:
       state.workflow_analysis:
         $ref: result
     next: generate_methods
 
-  # Step 9: Generate the report
+  # Step 10: Generate the detailed report
   generate_methods:
     type: reasoning
     prompt: |
-      Write a brief report summarizing this Galaxy history analysis.
+      Write a detailed methods section for this Galaxy analysis (~400-500 words).
 
-      RULES:
-      - Only mention tools from the workflow_analysis
-      - Do NOT invent or hallucinate tool names
-      - If workflow_analysis shows only internal tools (__DATA_FETCH__, etc.) with no analysis tools, say "This history contains uploaded data but no analysis has been performed yet."
-      - If analysis tools were used, describe what they do in plain language
+      Structure the report with these sections:
 
-      Format as a short paragraph describing the analysis performed.
+      ## Data Processing Pipeline
+      Describe the overall workflow in narrative form, written in past tense.
+      Mention input data types and the general analysis approach.
+
+      ## Tools and Parameters
+      For each analysis tool used, include:
+      - Tool name and version (e.g., "RNA-STAR v2.7.11a")
+      - Key parameters/settings that affect the analysis
+      - Brief description of what the tool does in the workflow
+
+      ## Data Formats
+      Summarize input file formats and output file formats.
+
+      Guidelines:
+      - Write in past tense, third person (scientific style)
+      - Be specific about tool versions and key parameters
+      - Exclude internal Galaxy tools (__DATA_FETCH__, __SET_METADATA__, etc.)
+      - Only mention tools that appear in the workflow_analysis
+      - Do NOT hallucinate tool names or parameters
     input:
       history_name:
         $ref: state.selected_history.name
