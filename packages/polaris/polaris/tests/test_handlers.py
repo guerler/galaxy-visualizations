@@ -359,7 +359,7 @@ class TestLoopHandler:
         assert result["ok"] is True
         assert result["result"] == []
         assert result["warnings"]["code"] == ErrorCode.LOOP_ITERATION_FAILED
-        assert result["warnings"]["skipped_count"] == 2
+        assert result["warnings"]["failed_count"] == 2
 
     @pytest.mark.asyncio
     async def test_loop_iteration_failure_stops_when_configured(self, mock_context):
@@ -577,7 +577,65 @@ class TestLoopHandler:
         # Default on_error: continue - returns ok with warnings
         assert result["ok"] is True
         assert len(result["result"]) == 4  # 5 - 1 error
-        assert result["warnings"]["skipped_count"] == 1
+        assert result["warnings"]["failed_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_loop_when_condition_filters_iterations(self, mock_context):
+        """Test loop when condition filters iterations."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        node = {
+            "type": "loop",
+            "over": [
+                {"id": 1, "state": "ok"},
+                {"id": 2, "state": "error"},
+                {"id": 3, "state": "ok"},
+                {"id": 4, "state": "pending"},
+                {"id": 5, "state": "ok"},
+            ],
+            "as": "item",
+            "when": {"$ref": "loop.item.state", "$eq": "ok"},
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        assert result["ok"] is True
+        # Only 3 items have state="ok", others should be skipped
+        assert len(result["result"]) == 3
+        # Verify skipped count is tracked
+        assert result["warnings"]["skipped_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_loop_when_condition_concurrent(self, mock_context):
+        """Test loop when condition works with concurrent execution."""
+        handler = LoopHandler()
+        runner = MockLoopRunner()
+        registry = MockRegistry()
+
+        node = {
+            "type": "loop",
+            "over": [
+                {"id": 1, "state": "ok"},
+                {"id": 2, "state": "error"},
+                {"id": 3, "state": "ok"},
+                {"id": 4, "state": "pending"},
+                {"id": 5, "state": "ok"},
+            ],
+            "as": "item",
+            "concurrency": 5,
+            "when": {"$ref": "loop.item.state", "$eq": "ok"},
+            "execute": {"op": Operation.API_CALL, "target": "test.endpoint"},
+        }
+
+        result = await handler.execute(node, mock_context, registry, runner)
+
+        assert result["ok"] is True
+        # Only 3 items have state="ok"
+        assert len(result["result"]) == 3
+        assert result["warnings"]["skipped_count"] == 2
 
 
 class MockLoopRunner:
@@ -593,38 +651,45 @@ class MockLoopRunner:
 
     def resolve_templates(self, value, ctx):
         if isinstance(value, dict):
+            # Handle $eq comparison with $ref
+            if "$ref" in value and "$eq" in value:
+                ref_value = self._resolve_ref(value["$ref"], ctx)
+                return ref_value == value["$eq"]
             if "$ref" in value:
-                ref = value["$ref"]
-                parts = ref.split(".")
-                if parts[0] == "state":
-                    obj = self.state
-                    for part in parts[1:]:
-                        if isinstance(obj, dict):
-                            obj = obj.get(part)
-                        else:
-                            return None
-                    return obj
-                elif parts[0] == "loop":
-                    obj = ctx.get("loop", {})
-                    for part in parts[1:]:
-                        if isinstance(obj, dict):
-                            obj = obj.get(part)
-                        else:
-                            return None
-                    return obj
-                elif parts[0] == "result":
-                    obj = ctx.get("result", {})
-                    for part in parts[1:]:
-                        if isinstance(obj, dict):
-                            obj = obj.get(part)
-                        else:
-                            return None
-                    return obj
-                return None
+                return self._resolve_ref(value["$ref"], ctx)
             return {k: self.resolve_templates(v, ctx) for k, v in value.items()}
         elif isinstance(value, list):
             return [self.resolve_templates(v, ctx) for v in value]
         return value
+
+    def _resolve_ref(self, ref, ctx):
+        """Resolve a $ref path to its value."""
+        parts = ref.split(".")
+        if parts[0] == "state":
+            obj = self.state
+            for part in parts[1:]:
+                if isinstance(obj, dict):
+                    obj = obj.get(part)
+                else:
+                    return None
+            return obj
+        elif parts[0] == "loop":
+            obj = ctx.get("loop", {})
+            for part in parts[1:]:
+                if isinstance(obj, dict):
+                    obj = obj.get(part)
+                else:
+                    return None
+            return obj
+        elif parts[0] == "result":
+            obj = ctx.get("result", {})
+            for part in parts[1:]:
+                if isinstance(obj, dict):
+                    obj = obj.get(part)
+                else:
+                    return None
+            return obj
+        return None
 
 
 class TestGetHandler:

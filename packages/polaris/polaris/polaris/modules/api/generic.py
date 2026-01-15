@@ -5,16 +5,20 @@ from polaris.core.client import http
 
 async def openapi_get(target, input, meta):
     path = meta["path"]
-    query_params = {}
+    query_params = []
 
     for k, v in input.items():
         placeholder = f"{{{k}}}"
         if placeholder in path:
             # Path parameter - substitute in URL
             path = path.replace(placeholder, str(v))
+        elif isinstance(v, list):
+            # Array parameter - add multiple entries with same key
+            for item in v:
+                query_params.append((k, item))
         else:
-            # Query parameter - add to query string
-            query_params[k] = v
+            # Single query parameter
+            query_params.append((k, v))
 
     url = target.build_url(path)
 

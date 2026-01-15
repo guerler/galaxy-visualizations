@@ -88,7 +88,7 @@ nodes:
       state.selected_history: result
     next: fetch_contents
 
-  # Step 4: Fetch the history contents to get dataset list
+  # Step 4: Fetch the history contents to get dataset list (filtered for ok, non-deleted, visible)
   fetch_contents:
     type: executor
     run:
@@ -97,7 +97,16 @@ nodes:
       input:
         history_id:
           $ref: state.selected_history.id
+        v: dev
         limit: 30
+        q:
+          - state-eq
+          - deleted
+          - visible
+        qv:
+          - ok
+          - false
+          - true
     emit:
       state.contents: result
     next: fetch_dataset_details

@@ -310,6 +310,7 @@ class LoopHandler:
         delay: float,
         concurrency: int,
         on_error: str,
+        when_spec: dict[str, Any] | None,
         execute_spec: dict[str, Any],
         emit_spec: dict[str, Any],
         ctx: Context,
@@ -338,6 +339,13 @@ class LoopHandler:
                     }
                 }
 
+                # Check when condition - mark as skipped if false
+                if when_spec is not None:
+                    condition = runner.resolve_templates(when_spec, iter_ctx)
+                    if not condition:
+                        iteration_results[index] = {"skipped": True}
+                        return
+
                 # Execute the operation
                 result = await self._execute_iteration(
                     execute_spec, iter_ctx, registry, runner
@@ -356,9 +364,15 @@ class LoopHandler:
         # Process results in order and apply emit
         results: list[Any] = []
         errors: list[dict[str, Any]] = []
+        skipped = 0
 
         for index, iter_data in enumerate(iteration_results):
             if iter_data is None:
+                continue
+
+            # Handle skipped iterations
+            if iter_data.get("skipped"):
+                skipped += 1
                 continue
 
             item = iter_data["item"]
@@ -378,16 +392,17 @@ class LoopHandler:
         # Clean up loop context
         ctx.pop("loop", None)
 
-        return self._build_result(results, errors, on_error, ctx)
+        return self._build_result(results, errors, skipped, on_error, ctx)
 
     def _build_result(
         self,
         results: list[Any],
         errors: list[dict[str, Any]],
+        skipped: int,
         on_error: str,
         ctx: Context,
     ) -> Result:
-        """Build the final result from collected results and errors."""
+        """Build the final result from collected results, errors, and skipped count."""
         # Set final result in context
         ctx["result"] = results
 
@@ -403,14 +418,23 @@ class LoopHandler:
                 "partial_results": results,
             }
 
-        # With on_error: continue, return success with warnings if there were errors
+        # Build success result
         result: Result = {"ok": True, "result": results}
+
+        # Add warnings for errors (API failures etc.)
         if errors:
             result["warnings"] = {
                 "code": ErrorCode.LOOP_ITERATION_FAILED,
-                "message": f"{len(errors)} iteration(s) skipped",
-                "skipped_count": len(errors),
+                "message": f"{len(errors)} iteration(s) failed",
+                "failed_count": len(errors),
             }
+
+        # Add info about skipped iterations (from when condition)
+        if skipped > 0:
+            if "warnings" not in result:
+                result["warnings"] = {}
+            result["warnings"]["skipped_count"] = skipped
+
         return result
 
     async def _execute_iteration(
