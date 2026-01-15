@@ -9,6 +9,7 @@ class NodeType(str, Enum):
     COMPUTE = "compute"
     CONTROL = "control"
     EXECUTOR = "executor"
+    LOOP = "loop"
     PLANNER = "planner"
     REASONING = "reasoning"
     TERMINAL = "terminal"
@@ -37,6 +38,8 @@ class ErrorCode(str, Enum):
     SUBAGENT_FAILED = "subagent_failed"
     UNKNOWN_EXECUTOR_OP = "unknown_executor_op"
     UNKNOWN_NODE_TYPE = "unknown_node_type"
+    LOOP_INVALID_OVER = "loop_invalid_over"
+    LOOP_ITERATION_FAILED = "loop_iteration_failed"
 
 
 # Graph execution limits

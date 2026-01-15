@@ -5,17 +5,16 @@ def get_path(path, ctx, state):
     cur = None
     if root == "state":
         cur = state
+    elif root == "inputs":
+        cur = state.get("inputs")
+    elif root == "run":
+        cur = ctx.get("run")
+    elif root == "result":
+        cur = ctx.get("result")
+    elif root == "loop":
+        cur = ctx.get("loop")
     else:
-        if root == "inputs":
-            cur = state.get("inputs")
-        else:
-            if root == "run":
-                cur = ctx.get("run")
-            else:
-                if root == "result":
-                    cur = ctx.get("result")
-                else:
-                    cur = None
+        cur = None
     for p in rest:
         if isinstance(cur, dict) and p in cur:
             cur = cur[p]

@@ -20,6 +20,8 @@ state:
     type: array
   jobs:
     type: array
+  job_details:
+    type: array
   citations:
     type: array
   workflow_analysis:
@@ -88,7 +90,6 @@ nodes:
     next: fetch_jobs
 
   # Step 4: Fetch jobs associated with this history
-  # NOTE: This fetches job summaries - detailed parameters would require iterating
   fetch_jobs:
     type: executor
     run:
@@ -97,12 +98,31 @@ nodes:
       input:
         history_id:
           $ref: state.selected_history.id
-        limit: 100
+        limit: 50
     emit:
       state.jobs: result
+    next: fetch_job_details
+
+  # Step 5: Loop through jobs to fetch detailed parameters for each
+  # Uses sequential execution with delay to avoid overloading the server
+  fetch_job_details:
+    type: loop
+    over:
+      $ref: state.jobs
+    as: job
+    delay: 0.2
+    execute:
+      op: api.call
+      target: galaxy.jobs.show.get
+      input:
+        job_id:
+          $ref: loop.job.id
+    emit:
+      state.job_details:
+        $append: result
     next: fetch_citations
 
-  # Step 5: Fetch citations for tools used in this history
+  # Step 6: Fetch citations for tools used in this history
   fetch_citations:
     type: executor
     run:
@@ -115,7 +135,7 @@ nodes:
       state.citations: result
     next: analyze_workflow
 
-  # Step 6: Use AI to understand the analysis workflow
+  # Step 7: Use AI to understand the analysis workflow
   analyze_workflow:
     type: reasoning
     prompt: |
@@ -133,14 +153,14 @@ nodes:
         $ref: state.selected_history.name
       contents:
         $ref: state.contents
-      jobs:
-        $ref: state.jobs
+      job_details:
+        $ref: state.job_details
     emit:
       state.workflow_analysis:
         $ref: result
     next: generate_methods
 
-  # Step 7: Generate the publication-ready methods section
+  # Step 8: Generate the publication-ready methods section
   generate_methods:
     type: reasoning
     prompt: |
@@ -166,8 +186,8 @@ nodes:
         $ref: state.selected_history.name
       workflow_analysis:
         $ref: state.workflow_analysis
-      jobs:
-        $ref: state.jobs
+      job_details:
+        $ref: state.job_details
       citations:
         $ref: state.citations
     emit:

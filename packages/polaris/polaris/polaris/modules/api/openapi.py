@@ -46,7 +46,7 @@ class OpenApiCatalog:
                 # List parameters if available
                 params = operation.get("parameters", [])
                 if params:
-                    f.write(f"   Parameters:\n")
+                    f.write("   Parameters:\n")
                     for param in params:
                         param_name = param.get("name", "?")
                         param_in = param.get("in", "?")
