@@ -2163,19 +2163,6 @@ import "molstar/build/viewer/molstar.css";
     }));
   }
 
-  function setLayout(layout) {
-    if (!LAYOUTS.has(layout) || state.layout === layout) {
-      return;
-    }
-    state.layout = layout;
-    if (!state.visible.has(state.currentIndex)) {
-      state.currentIndex = firstVisibleSliceIndex();
-    }
-    syncUrlState();
-    renderChips();
-    renderScene(true);
-  }
-
   function reloadScene(autoView = false) {
     state.loaded = false;
     state.liveTransforms = false;
@@ -2282,21 +2269,6 @@ import "molstar/build/viewer/molstar.css";
     queueSceneReload(false);
   }
 
-  function updateRenderMode(value) {
-    const requested = String(value || "").toLowerCase();
-    const next = requested === "clean" ? "clean-interactive" : requested;
-    if (!RENDER_PRESETS.has(next)) {
-      return;
-    }
-    state.renderMode = next;
-    if (elements.renderSelect) {
-      elements.renderSelect.value = next;
-    }
-    applyMolstarRenderStyle();
-    updateMetrics();
-    syncUrlState();
-  }
-
   function setOutline(enabled) {
     state.outline = Boolean(enabled);
     elements.outlineCheckbox.checked = state.outline;
@@ -2350,12 +2322,6 @@ import "molstar/build/viewer/molstar.css";
     queueSceneReload(false);
   }
 
-  function setLocalDrag(enabled) {
-    state.localDrag = Boolean(enabled);
-    syncUrlState();
-    updateMetrics();
-  }
-
   function updateRotateSensitivity(value) {
     const next = clamp(Number(value), 0.1, 3);
     if (!Number.isFinite(next)) {
@@ -2366,12 +2332,6 @@ import "molstar/build/viewer/molstar.css";
     elements.rotateSensitivityNumber.value = next.toFixed(3);
     syncUrlState();
     updateMetrics();
-  }
-
-  function setMarker(enabled) {
-    state.marker = Boolean(enabled);
-    syncUrlState();
-    renderScene(false);
   }
 
   function wireEvents() {
