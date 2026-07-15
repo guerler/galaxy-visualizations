@@ -1,3 +1,6 @@
+import { Viewer } from "molstar/lib/apps/viewer/app";
+import "molstar/build/viewer/molstar.css";
+
 (function () {
   "use strict";
 
@@ -17,7 +20,6 @@
   const incoming = parseIncoming(appElement?.dataset?.incoming);
   const visualizationConfig = incoming.visualization_config || {};
   const FETCH_CREDENTIALS = process.env.credentials || "same-origin";
-  const STATIC_BASE = "/static/plugins/visualizations/rmsx-flipbook/static/";
   const scriptUrl = document.currentScript?.src || "";
 
   function parseIncoming(value) {
@@ -34,25 +36,6 @@
     return `${normalizedRoot}${String(path).replace(/^\/+/, "")}`;
   }
 
-  function resolveStaticAsset(path) {
-    const candidates = [
-      scriptUrl,
-      `${window.location.origin}${STATIC_BASE}`
-    ];
-    for (const candidate of candidates) {
-      try {
-        return new URL(path, candidate).href;
-      } catch (_error) {
-        // Galaxy may inject visualization scripts with a non-URL placeholder
-        // during local Planemo runs; fall through to the fixed static route.
-      }
-    }
-    return `${STATIC_BASE}${path}`;
-  }
-  const LOCAL_MOLSTAR_JS = resolveStaticAsset("vendor/molstar/5.4.2/molstar.js");
-  const LOCAL_MOLSTAR_CSS = resolveStaticAsset("vendor/molstar/5.4.2/molstar.css");
-  const CDN_MOLSTAR_JS = "https://cdn.jsdelivr.net/npm/molstar@5.4.2/build/viewer/molstar.js";
-  const CDN_MOLSTAR_CSS = "https://cdn.jsdelivr.net/npm/molstar@5.4.2/build/viewer/molstar.css";
   const VISUAL_MIN = 0;
   const VISUAL_MAX = 1;
   const MANAGED_URL_PARAMS = [
@@ -101,7 +84,7 @@
     loaded: false,
     liveTransforms: false,
     forceCoordinateFallback: false,
-    molstarAssetSource: "-",
+    molstarAssetSource: "bundled",
     manifestSource: "-",
     keyboardShortcutCount: 0,
     lastKeyboardAction: "-",
@@ -455,61 +438,6 @@
     if (!Array.isArray(manifest.residues) || !manifest.residues.length) {
       throw new Error("RMSX manifest does not contain residue-level RMSX values.");
     }
-  }
-
-  function loadCss(url) {
-    if (!url || [...document.styleSheets].some((sheet) => sheet.href === url)) {
-      return null;
-    }
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = url;
-    document.head.appendChild(link);
-    return link;
-  }
-
-  function loadScript(url) {
-    return new Promise((resolve, reject) => {
-      if (window.molstar?.Viewer) {
-        resolve(url);
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = url;
-      script.onload = () => resolve(url);
-      script.onerror = () => reject(new Error(`Molstar failed to load from ${url}.`));
-      document.head.appendChild(script);
-    });
-  }
-
-  async function loadMolstarAssets() {
-    const cssCandidates = [
-      LOCAL_MOLSTAR_CSS,
-      REPORT.molstar?.localCssUrl,
-      REPORT.molstar?.cssUrl,
-      CDN_MOLSTAR_CSS
-    ].filter(Boolean);
-    const scriptCandidates = [
-      LOCAL_MOLSTAR_JS,
-      REPORT.molstar?.localJsUrl,
-      REPORT.molstar?.jsUrl,
-      CDN_MOLSTAR_JS
-    ].filter(Boolean);
-    loadCss([...new Set(cssCandidates)][0]);
-    const failures = [];
-    for (const candidate of [...new Set(scriptCandidates)]) {
-      try {
-        const loaded = await loadScript(candidate);
-        state.molstarAssetSource = loaded === LOCAL_MOLSTAR_JS ? "local molstar@5.4.2" : loaded;
-        if (loaded !== LOCAL_MOLSTAR_JS) {
-          loadCss(loaded === REPORT.molstar?.jsUrl ? REPORT.molstar?.cssUrl : CDN_MOLSTAR_CSS);
-        }
-        return;
-      } catch (error) {
-        failures.push(error.message);
-      }
-    }
-    throw new Error(`Molstar could not be loaded from local or fallback assets. ${failures.join(" ")}`);
   }
 
   function clamp(value, min, max) {
@@ -1494,7 +1422,7 @@
 
   async function createViewer() {
     elements.viewport.replaceChildren();
-    viewer = await window.molstar.Viewer.create("molstarViewport", {
+    viewer = await Viewer.create("molstarViewport", {
       layoutIsExpanded: false,
       layoutShowControls: false,
       layoutShowRemoteState: false,
@@ -2663,7 +2591,6 @@
       REPORT = await fetchManifest();
       validateManifest(REPORT);
       document.title = REPORT.title || "RMSX Flipbook";
-      await loadMolstarAssets();
       populateControls();
       wireEvents();
       syncRotationControls();
