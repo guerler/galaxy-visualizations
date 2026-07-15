@@ -317,49 +317,6 @@ import "molstar/build/viewer/molstar.css";
     elements.status.classList.toggle("error", Boolean(isError));
   }
 
-  function uniqueStrings(values) {
-    return [...new Set(values.filter(Boolean).map(String))];
-  }
-
-  function datasetIdCandidates() {
-    return uniqueStrings([
-      visualizationConfig.dataset_id,
-      visualizationConfig.id,
-      visualizationConfig.hda_id,
-      visualizationConfig.dataset?.id,
-      incoming.dataset_id,
-      incoming.id
-    ]);
-  }
-
-  function historyIdCandidates() {
-    return uniqueStrings([
-      visualizationConfig.history_id,
-      visualizationConfig.historyId,
-      visualizationConfig.history?.id,
-      visualizationConfig.dataset?.history_id,
-      visualizationConfig.dataset?.historyId,
-      incoming.history_id,
-      incoming.historyId,
-      incoming.history?.id,
-      incoming.dataset?.history_id,
-      incoming.dataset?.historyId,
-      URL_PARAMS.get("history_id")
-    ]);
-  }
-
-  function parseManifestResponseText(text) {
-    const parsed = JSON.parse(text);
-    if (parsed?.schemaVersion) {
-      return parsed;
-    }
-    const envelopeText = parsed?.item_data || parsed?.data || parsed?.contents || parsed?.content;
-    if (typeof envelopeText === "string") {
-      return JSON.parse(envelopeText);
-    }
-    return parsed;
-  }
-
   async function fetchManifest() {
     const inlineManifest = incoming.manifest || visualizationConfig.manifest;
     if (inlineManifest?.schemaVersion) {
@@ -371,52 +328,17 @@ import "molstar/build/viewer/molstar.css";
       state.manifestSource = "inline-harness-dataset";
       return JSON.parse(manifestText);
     }
-    const datasetCandidates = datasetIdCandidates();
-    const historyCandidates = historyIdCandidates();
-    if (!datasetCandidates.length) {
+    const datasetId = visualizationConfig.dataset_id;
+    if (!datasetId) {
       throw new Error("No Galaxy dataset id was provided to the RMSX Flipbook visualization.");
     }
-    const urls = [];
-    for (const historyId of historyCandidates) {
-      const encodedHistoryId = encodeURIComponent(historyId);
-      for (const datasetId of datasetCandidates) {
-        if (/^https?:\/\//.test(datasetId)) {
-          continue;
-        }
-        const encodedDatasetId = encodeURIComponent(datasetId);
-        urls.push(galaxyUrl(`api/histories/${encodedHistoryId}/contents/${encodedDatasetId}/display?to_ext=json`));
-        urls.push(galaxyUrl(`api/histories/${encodedHistoryId}/contents/${encodedDatasetId}/display`));
-      }
+    const url = galaxyUrl(`api/datasets/${encodeURIComponent(datasetId)}/display`);
+    const response = await fetch(url, { credentials: FETCH_CREDENTIALS });
+    if (!response.ok) {
+      throw new Error(`Could not load RMSX manifest from Galaxy dataset (${response.status}).`);
     }
-    for (const datasetId of datasetCandidates) {
-      if (/^https?:\/\//.test(datasetId)) {
-        urls.push(datasetId);
-        continue;
-      }
-      const encoded = encodeURIComponent(datasetId);
-      urls.push(galaxyUrl(`api/datasets/${encoded}/display`));
-      urls.push(galaxyUrl(`api/datasets/${encoded}/display?to_ext=json`));
-      urls.push(galaxyUrl(`api/datasets/${encoded}/get_content_as_text`));
-      urls.push(galaxyUrl(`api/datasets/${encoded}/content/data`));
-      urls.push(galaxyUrl(`datasets/${encoded}/display?to_ext=json`));
-      urls.push(galaxyUrl(`datasets/${encoded}/display/?preview=True`));
-    }
-    const errors = [];
-    for (const url of [...new Set(urls)]) {
-      try {
-        const response = await fetch(url, { credentials: FETCH_CREDENTIALS });
-        if (!response.ok) {
-          errors.push(`${url}: ${response.status}`);
-          continue;
-        }
-        const text = await response.text();
-        state.manifestSource = url;
-        return parseManifestResponseText(text);
-      } catch (error) {
-        errors.push(`${url}: ${error.message}`);
-      }
-    }
-    throw new Error(`Could not load RMSX manifest from Galaxy dataset. Tried ${errors.slice(0, 4).join("; ")}`);
+    state.manifestSource = url;
+    return JSON.parse(await response.text());
   }
 
   function validateManifest(manifest) {

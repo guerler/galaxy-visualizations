@@ -10,7 +10,6 @@
     </data_sources>
     <params>
         <param required="true">dataset_id</param>
-        <param required="false">history_id</param>
     </params>
     <entry_point entry_point_type="script" src="index.js" container="app" />
     <help format="markdown"><![CDATA[
