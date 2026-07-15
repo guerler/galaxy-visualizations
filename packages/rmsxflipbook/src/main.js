@@ -1,5 +1,6 @@
 import { Viewer } from "molstar/lib/apps/viewer/app";
 import "molstar/build/viewer/molstar.css";
+import "./main.css";
 
 (function () {
   "use strict";
@@ -232,85 +233,6 @@ import "molstar/build/viewer/molstar.css";
     styleMetric: null,
     assetMetric: null
   };
-  addStyles();
-
-  function addStyles() {
-    const style = document.createElement("style");
-    style.textContent = `
-      * { box-sizing: border-box; }
-      body { margin: 0; background: #f7f8fa; color: #1d2630; font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; letter-spacing: 0; }
-      .rmsx-app { display: grid; grid-template-columns: minmax(236px, 286px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100vh; min-height: 560px; overflow: hidden; }
-      .rmsx-controls { position: relative; z-index: 5; min-height: 0; background: #fff; border-right: 1px solid #d7dce2; padding: 9px; overflow-y: auto; }
-      .controls-heading { display: grid; grid-template-columns: 1fr; align-items: start; gap: 7px; }
-      h1 { margin: 0; font-size: 15px; font-weight: 650; }
-      .control-panels { display: grid; grid-template-columns: 1fr; gap: 6px; margin-top: 7px; }
-      .control-panel { border: 1px solid #d7dce2; border-radius: 6px; background: #fff; min-width: 0; }
-      .control-panel.active { border-color: #b8c7dc; box-shadow: inset 3px 0 0 #1f6feb; }
-      .control-panel summary { min-height: 29px; padding: 5px 8px; cursor: pointer; font-weight: 650; color: #344054; user-select: none; }
-      .control-panel[open] summary { border-bottom: 1px solid #e8ebef; }
-      .panel-grid { display: grid; grid-template-columns: 1fr; gap: 6px 8px; padding: 7px; }
-      label { display: grid; grid-template-columns: 68px minmax(58px, 1fr) auto; gap: 6px; align-items: center; min-width: 0; margin: 0; color: #5f6b7a; }
-      label.check-row { grid-template-columns: 1fr auto; min-height: 28px; padding: 0 7px; border: 1px solid #d7dce2; border-radius: 6px; background: #fff; color: #1d2630; }
-      label.inline-check { flex: 1 1 110px; min-width: 110px; }
-      select, input, button { min-height: 28px; border: 1px solid #d7dce2; border-radius: 6px; background: #fff; color: #1d2630; font: inherit; }
-      input[type="checkbox"] { min-height: 0; width: 16px; height: 16px; accent-color: #1f6feb; }
-      input[type="range"] { width: 100%; }
-      input[type="number"] { width: 58px; padding: 0 5px; }
-      select { padding: 0 8px; }
-      button { padding: 0 8px; cursor: pointer; }
-      button.primary, button.active { border-color: #1f6feb; background: #1f6feb; color: #fff; }
-      .control-row, .button-group { display: flex; flex-wrap: wrap; gap: 6px; }
-      .primary-row { margin-left: 0; width: 100%; }
-      .primary-row button { width: 100%; }
-      .button-group button { flex: 1 1 auto; min-width: 62px; }
-      .metrics { margin: 0; }
-      .metrics div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #e8ebef; padding: 4px 0; }
-      .metrics div:last-child { border-bottom: 0; }
-      .metrics dt { color: #5f6b7a; }
-      .metrics dd { margin: 0; font-weight: 650; }
-      .color-metric { display: inline-flex; align-items: center; gap: 6px; }
-      .color-swatch { width: 14px; height: 14px; }
-      .rmsx-viewer { position: relative; z-index: 1; display: grid; grid-template-rows: minmax(0, 1fr); min-width: 0; min-height: 0; height: 100vh; }
-      .status { margin: 7px 0 0; padding: 6px 8px; border: 1px solid #d7dce2; border-radius: 6px; background: #fbfcfd; color: #13795b; font-size: 12px; line-height: 1.3; }
-      .status.error { color: #b42318; border-color: #f1b4ad; background: #fff4f2; }
-      .citation-note { margin: 6px 0 0; padding: 0 2px; color: #5f6b7a; font-size: 11px; line-height: 1.35; }
-      .citation-note a { color: #1f6feb; text-decoration: none; }
-      .citation-note a:hover { text-decoration: underline; }
-      .slice-visibility { display: grid; grid-column: 1 / -1; gap: 6px; }
-      .field-label { color: #5f6b7a; }
-      .chips { display: flex; flex-wrap: wrap; gap: 5px; padding: 0; }
-      .chip { min-width: 30px; border-radius: 999px; padding: 3px 8px; background: #fff; border: 1px solid #d7dce2; }
-      .chip.active { border-color: #1f6feb; background: #eef4ff; color: #1f6feb; }
-      .legend { display: grid; grid-column: 1 / -1; gap: 7px; color: #5f6b7a; font-size: 12px; }
-      .bar { height: 10px; border: 1px solid #d7dce2; border-radius: 999px; background: linear-gradient(90deg, #440154, #21918c, #fde725); }
-      .legend-values, .radius-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: center; }
-      .legend-stop, .radius-stop { display: inline-flex; align-items: center; min-width: 0; gap: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-      .legend-stop:nth-child(2), .radius-stop:nth-child(2) { justify-content: center; }
-      .legend-stop:nth-child(3), .radius-stop:nth-child(3) { justify-content: flex-end; }
-      .legend-swatch { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 999px; border: 1px solid rgba(29, 38, 48, 0.25); background: #5f6b7a; }
-      .radius-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 999px; border: 1px solid rgba(29, 38, 48, 0.25); background: #5f6b7a; }
-      .viewport { min-height: 0; height: 100%; background: #fff; border-top: 1px solid #d7dce2; cursor: grab; }
-      .viewport.local-drag-disabled { cursor: default; }
-      .viewport.dragging { cursor: grabbing; }
-      @media (min-width: 1280px) {
-        .rmsx-app { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr); }
-      }
-      @media (max-width: 900px) {
-        .rmsx-app { grid-template-columns: 1fr; grid-template-rows: auto minmax(420px, 1fr); height: auto; min-height: 100vh; overflow: visible; }
-        .rmsx-controls { min-height: auto; border-right: 0; border-bottom: 1px solid #d7dce2; overflow: visible; }
-        .control-panels { grid-template-columns: 1fr; }
-        .panel-grid { grid-template-columns: repeat(auto-fit, minmax(235px, 1fr)); }
-        .rmsx-viewer { height: auto; min-height: calc(100vh - 240px); }
-        .viewport { min-height: 360px; }
-      }
-      @media (max-width: 720px) {
-        .controls-heading { align-items: stretch; }
-        .primary-row { margin-left: 0; width: 100%; }
-        .primary-row button { flex: 1 1 0; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
 
   function setStatus(message, isError) {
     elements.status.textContent = message;
