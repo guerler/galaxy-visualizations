@@ -21,7 +21,6 @@ import "./main.css";
   const incoming = parseIncoming(appElement?.dataset?.incoming);
   const visualizationConfig = incoming.visualization_config || {};
   const FETCH_CREDENTIALS = process.env.credentials || "same-origin";
-  const scriptUrl = document.currentScript?.src || "";
 
   function parseIncoming(value) {
     try {
@@ -39,13 +38,6 @@ import "./main.css";
 
   const VISUAL_MIN = 0;
   const VISUAL_MAX = 1;
-  const MANAGED_URL_PARAMS = [
-    "layout", "slice", "slices", "sliceA", "sliceB", "sliceC",
-    "thickness", "radiusMin", "radiusMax", "colorMin", "colorMax", "palette",
-    "spacing", "columns", "rotX", "rotY", "rotZ", "residue", "marker", "delayMs",
-    "localDrag", "rotateSensitivity", "render", "outline"
-  ];
-  const URL_PARAMS = initialUrlParams();
   const LAYOUTS = new Set(["tiled"]);
   const CONTROL_PANEL_KEYS = ["view", "style", "rotation", "metrics"];
   const RENDER_PRESETS = new Set(["clean-interactive", "soft"]);
@@ -292,135 +284,8 @@ import "./main.css";
     return Number.isFinite(value) ? value.toFixed(3) : "-";
   }
 
-  function numericParam(name, min, max, fallback) {
-    const raw = URL_PARAMS.get(name);
-    if (raw === null || raw.trim() === "") {
-      return fallback;
-    }
-    const value = Number(raw);
-    return Number.isFinite(value) ? clamp(value, min, max) : fallback;
-  }
 
-  function integerParam(name, min, max, fallback) {
-    const raw = URL_PARAMS.get(name);
-    if (raw === null || raw.trim() === "") {
-      return fallback;
-    }
-    const value = Math.round(Number(raw));
-    return Number.isFinite(value) ? clamp(value, min, max) : fallback;
-  }
 
-  function booleanParam(name, fallback = false) {
-    const raw = URL_PARAMS.get(name);
-    if (raw === null || raw.trim() === "") {
-      return fallback;
-    }
-    return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
-  }
-
-  function compactNumber(value, precision = 3) {
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) {
-      return "";
-    }
-    const rounded = Number(numeric.toFixed(precision));
-    return Object.is(rounded, -0) ? "0" : String(rounded);
-  }
-
-  function numbersClose(left, right, tolerance = 0.0005) {
-    return Math.abs(Number(left) - Number(right)) <= tolerance;
-  }
-
-  function parentWindowIfSameOrigin() {
-    const candidates = [window.top, window.parent];
-    for (const candidate of candidates) {
-      try {
-        if (!candidate || candidate === window || !candidate.location?.href) {
-          continue;
-        }
-        const href = candidate.location.href;
-        const documentUrl = candidate.document?.URL || href;
-        if (href !== "about:blank" && documentUrl !== "about:blank") {
-          return candidate;
-        }
-      } catch (_error) {
-        // Cross-origin embedding is not expected in local Galaxy, but iframe-local
-        // URL persistence still works as a fallback when parent access is blocked.
-      }
-    }
-    return null;
-  }
-
-  function initialUrlParams() {
-    const params = paramsFromVisualizationConfig();
-    new URLSearchParams(window.location.search).forEach((value, name) => {
-      params.set(name, value);
-    });
-    const parentWindow = parentWindowIfSameOrigin();
-    if (parentWindow) {
-      new URLSearchParams(parentWindow.location.search).forEach((value, name) => {
-        params.set(name, value);
-      });
-    }
-    return params;
-  }
-
-  function paramsFromVisualizationConfig() {
-    const params = new URLSearchParams();
-    for (const source of visualizationConfigStateSources()) {
-      for (const name of MANAGED_URL_PARAMS) {
-        const value = source.value[name];
-        if (value === undefined || value === null || value === "") {
-          continue;
-        }
-        params.set(name, Array.isArray(value) ? value.join(",") : String(value));
-      }
-    }
-    return params;
-  }
-
-  function visualizationConfigStateSources() {
-    return [
-      ["visualization_config.flipbookMolstarState", visualizationConfig.flipbookMolstarState],
-      ["visualization_config.flipbook_molstar_state", visualizationConfig.flipbook_molstar_state],
-      ["visualization_config.viewerState", visualizationConfig.viewerState],
-      ["visualization_config.state", visualizationConfig.state],
-      ["visualization_config.settings", visualizationConfig.settings],
-      ["visualization_config.config", visualizationConfig.config],
-      ["incoming.flipbookMolstarState", incoming.flipbookMolstarState],
-      ["incoming.flipbook_molstar_state", incoming.flipbook_molstar_state]
-    ].filter(([, value]) => value && typeof value === "object" && !Array.isArray(value))
-      .map(([name, value]) => ({ name, value }));
-  }
-
-  function visualizationConfigStateSummary() {
-    return visualizationConfigStateSources().map((source) => ({
-      source: source.name,
-      managedKeys: MANAGED_URL_PARAMS.filter((key) => source.value[key] !== undefined)
-    })).filter((source) => source.managedKeys.length > 0);
-  }
-
-  function urlStateContext() {
-    const parentWindow = parentWindowIfSameOrigin();
-    const targetWindow = parentWindow || window;
-    let href = "about:blank";
-    let fallbackOrigin = "http://localhost";
-    try {
-      href = targetWindow.location.href;
-      const scriptOrigin = scriptUrl ? new URL(scriptUrl).origin : "";
-      const windowOrigin = targetWindow.location?.origin || window.location?.origin || "";
-      fallbackOrigin = [scriptOrigin, windowOrigin].find((origin) => origin && origin !== "null") || fallbackOrigin;
-    } catch (_error) {
-      href = "about:blank";
-    }
-    const writable = href !== "about:blank" && /^https?:\/\//.test(href);
-    return {
-      targetWindow,
-      url: writable ? new URL(href) : new URL("/visualizations/blank", fallbackOrigin),
-      scope: writable ? (parentWindow ? "parent-visualization-url" : "iframe-url") : "about-blank-iframe-url-unavailable",
-      writable
-    };
-  }
 
   function defaultLayoutName() {
     return LAYOUTS.has(REPORT.presentation?.defaultLayout) ? REPORT.presentation.defaultLayout : "tiled";
@@ -484,81 +349,8 @@ import "./main.css";
     return REPORT.molstarRenderStyle?.outline !== false;
   }
 
-  function renderModeFromParam() {
-    const requested = (URL_PARAMS.get("render") || "").toLowerCase();
-    if (requested === "clean") {
-      return "clean-interactive";
-    }
-    return RENDER_PRESETS.has(requested) ? requested : defaultRenderMode();
-  }
-
-  function outlineFromParam() {
-    const raw = URL_PARAMS.get("outline");
-    if (raw === null || raw.trim() === "") {
-      return defaultOutline();
-    }
-    return ["1", "true", "yes", "on"].includes(raw.toLowerCase());
-  }
-
-  function initialLayout() {
-    const requested = (URL_PARAMS.get("layout") || "").toLowerCase();
-    return LAYOUTS.has(requested) ? requested : defaultLayoutName();
-  }
-
-  function sliceIndexFromParam(name) {
-    const raw = URL_PARAMS.get(name);
-    if (!raw) {
-      return null;
-    }
-    const value = Math.round(Number(raw));
-    return Number.isInteger(value) && value >= 1 && value <= REPORT.slices.length ? value - 1 : null;
-  }
-
-  function sliceIndexesFromListParam(name) {
-    const raw = URL_PARAMS.get(name);
-    if (!raw) {
-      return [];
-    }
-    const indexes = [];
-    const seen = new Set();
-    raw.split(/[,\s]+/).forEach((entry) => {
-      const requested = Number(entry);
-      if (!Number.isInteger(requested) || requested < 1 || requested > REPORT.slices.length) {
-        return;
-      }
-      const index = requested - 1;
-      if (!seen.has(index)) {
-        seen.add(index);
-        indexes.push(index);
-      }
-    });
-    return indexes;
-  }
-
-  function initialVisibleSliceIndexes() {
-    const listed = sliceIndexesFromListParam("slices");
-    if (listed.length) {
-      return listed;
-    }
-    const explicit = ["sliceA", "sliceB", "sliceC"].map(sliceIndexFromParam).filter((index) => index !== null);
-    return explicit.length ? [...new Set(explicit)] : REPORT.slices.map((_, index) => index);
-  }
-
-  function initialSliceIndex() {
-    const requested = sliceIndexFromParam("slice");
-    return requested === null ? 0 : requested;
-  }
-
   function defaultResidueKey() {
     return REPORT.residues[0]?.key || "";
-  }
-
-  function initialResidueKey() {
-    const requested = URL_PARAMS.get("residue");
-    if (requested && REPORT.residues.some((residue) => residue.key === requested || residue.id === requested)) {
-      return requested;
-    }
-    return defaultResidueKey();
   }
 
   function paletteNames() {
@@ -1795,92 +1587,6 @@ import "./main.css";
     return visibleSliceIndexes()[0] ?? 0;
   }
 
-  function expectedManagedUrlParams() {
-    const allVisible = visibleSliceIndexes().length === REPORT.slices.length;
-    const residue = selectedResidue();
-    return {
-      layout: state.layout === defaultLayoutName() ? null : state.layout,
-      slice: state.currentIndex === 0 ? null : String(state.currentIndex + 1),
-      slices: allVisible ? null : visibleSliceIndexes().map((index) => index + 1).join(","),
-      sliceA: null,
-      sliceB: null,
-      sliceC: null,
-      thickness: numbersClose(state.thickness, defaultThickness()) ? null : compactNumber(state.thickness),
-      radiusMin: numbersClose(state.radiusMin, defaultRadiusMin()) ? null : compactNumber(state.radiusMin),
-      radiusMax: numbersClose(state.radiusMax, defaultRadiusMax()) ? null : compactNumber(state.radiusMax),
-      colorMin: numbersClose(colorDomainMin(), defaultColorMin()) ? null : compactNumber(colorDomainMin()),
-      colorMax: numbersClose(colorDomainMax(), defaultColorMax()) ? null : compactNumber(colorDomainMax()),
-      palette: state.paletteName === defaultPaletteName() ? null : state.paletteName,
-      spacing: numbersClose(state.spacing, defaultSpacing()) ? null : compactNumber(state.spacing),
-      columns: state.columns === defaultTileColumns() ? null : String(state.columns),
-      rotX: numbersClose(state.rotation.x, REPORT.rotationModel?.defaultRotation?.x ?? 90) ? null : compactNumber(state.rotation.x, 0),
-      rotY: numbersClose(state.rotation.y, REPORT.rotationModel?.defaultRotation?.y ?? 0) ? null : compactNumber(state.rotation.y, 0),
-      rotZ: numbersClose(state.rotation.z, REPORT.rotationModel?.defaultRotation?.z ?? 0) ? null : compactNumber(state.rotation.z, 0),
-      residue: residue?.key === defaultResidueKey() ? null : residue?.key,
-      marker: state.marker === (REPORT.selectedResidueMarker?.enabledDefault !== false) ? null : state.marker ? "1" : "0",
-      delayMs: null,
-      localDrag: state.localDrag === true ? null : "0",
-      rotateSensitivity: numbersClose(state.rotationSensitivity, 0.35) ? null : compactNumber(state.rotationSensitivity),
-      render: state.renderMode === defaultRenderMode() ? null : state.renderMode,
-      outline: state.outline === defaultOutline() ? null : state.outline ? "1" : "0"
-    };
-  }
-
-  function syncUrlState() {
-    if (!window.history?.replaceState || !REPORT) {
-      return;
-    }
-    const context = urlStateContext();
-    if (!context.writable) {
-      return;
-    }
-    const url = context.url;
-    const expected = expectedManagedUrlParams();
-    Object.entries(expected).forEach(([name, value]) => {
-      if (value === null || value === "") {
-        url.searchParams.delete(name);
-      } else {
-        url.searchParams.set(name, value);
-      }
-    });
-    const current = `${context.targetWindow.location.pathname}${context.targetWindow.location.search}${context.targetWindow.location.hash}`;
-    const next = `${url.pathname}${url.search}${url.hash}`;
-    if (next !== current) {
-      try {
-        context.targetWindow.history.replaceState({ flipbookMolstarState: true, scope: context.scope }, "", next);
-      } catch (error) {
-        console.debug("RMSX Flipbook URL state could not be written; controls will continue without shareable URL sync.", error);
-      }
-    }
-  }
-
-  function urlStateSummary() {
-    const context = urlStateContext();
-    if (!context.writable) {
-      return {
-        scope: context.scope,
-        writable: false,
-        synced: true,
-        expectedManagedParams: expectedManagedUrlParams(),
-        matches: {},
-        note: "Galaxy did not expose a writable iframe or parent visualization URL; viewer state remains live in controls and diagnostics."
-      };
-    }
-    const params = context.url.searchParams;
-    const expected = expectedManagedUrlParams();
-    const matches = {};
-    MANAGED_URL_PARAMS.forEach((name) => {
-      matches[name] = expected[name] === null ? !params.has(name) : params.get(name) === expected[name];
-    });
-    return {
-      scope: context.scope,
-      writable: true,
-      synced: Object.values(matches).every(Boolean),
-      expectedManagedParams: expected,
-      matches
-    };
-  }
-
   function updateDiagnostics() {
     const focusSphere = sceneFocusSphere();
     const diagnostics = {
@@ -1893,10 +1599,6 @@ import "./main.css";
       coordinateFallback: state.forceCoordinateFallback,
       statusText: elements.status.textContent,
       geometryMode: state.liveTransforms ? "molstar-representation-transform" : state.forceCoordinateFallback ? "browser-side-pdb-copies" : "native-transform-pending",
-      stateInitialization: {
-        visualizationConfigSources: visualizationConfigStateSummary(),
-        urlParamsOverrideVisualizationConfig: true
-      },
       mask: {
         maskedResidues: Number(REPORT.maskSummary?.maskedResidues ?? REPORT.maskSummary?.maskedKeys?.length ?? 0),
         totalResidues: Number(REPORT.maskSummary?.totalResidues ?? REPORT.residues?.length ?? 0),
@@ -1986,7 +1688,6 @@ import "./main.css";
         lastAction: state.lastKeyboardAction
       },
       lastRotationGesture: state.lastRotationGesture,
-      urlState: urlStateSummary(),
       molstarAssetSource: state.molstarAssetSource
     };
     elements.diagnostics.textContent = JSON.stringify(diagnostics, null, 2);
@@ -1994,34 +1695,32 @@ import "./main.css";
 
   function populateControls() {
     const defaultRotation = REPORT.rotationModel?.defaultRotation || { x: 90, y: 0, z: 0 };
-    state.layout = initialLayout();
-    state.paletteName = availablePalettes()[(URL_PARAMS.get("palette") || "").toLowerCase()]
-      ? (URL_PARAMS.get("palette") || "").toLowerCase()
-      : defaultPaletteName();
-    state.colorMin = numericParam("colorMin", REPORT.domain.min, REPORT.domain.max, defaultColorMin());
-    state.colorMax = numericParam("colorMax", REPORT.domain.min, REPORT.domain.max, defaultColorMax());
-    state.radiusMin = numericParam("radiusMin", 0.05, 5, defaultRadiusMin());
-    state.radiusMax = numericParam("radiusMax", 0.1, 8, defaultRadiusMax());
-    state.thickness = numericParam("thickness", 0.25, 2.5, defaultThickness());
-    state.spacing = numericParam("spacing", minSpacing(), maxSpacing(), defaultSpacing());
-    state.renderMode = renderModeFromParam();
-    state.outline = outlineFromParam();
+    state.layout = defaultLayoutName();
+    state.paletteName = defaultPaletteName();
+    state.colorMin = defaultColorMin();
+    state.colorMax = defaultColorMax();
+    state.radiusMin = defaultRadiusMin();
+    state.radiusMax = defaultRadiusMax();
+    state.thickness = defaultThickness();
+    state.spacing = defaultSpacing();
+    state.renderMode = defaultRenderMode();
+    state.outline = defaultOutline();
     state.rotation = {
-      x: numericParam("rotX", -180, 180, Number(defaultRotation.x ?? 90)),
-      y: numericParam("rotY", -180, 180, Number(defaultRotation.y ?? 0)),
-      z: numericParam("rotZ", -180, 180, Number(defaultRotation.z ?? 0))
+      x: Number(defaultRotation.x ?? 90),
+      y: Number(defaultRotation.y ?? 0),
+      z: Number(defaultRotation.z ?? 0)
     };
     syncRotationMatrixFromEuler();
-    state.rotationSensitivity = numericParam("rotateSensitivity", 0.1, 3, 0.35);
-    state.columns = integerParam("columns", 1, Math.max(1, REPORT.slices.length), defaultTileColumns());
-    state.visible = new Set(initialVisibleSliceIndexes());
-    state.currentIndex = initialSliceIndex();
+    state.rotationSensitivity = 0.35;
+    state.columns = defaultTileColumns();
+    state.visible = new Set(REPORT.slices.map((_, index) => index));
+    state.currentIndex = 0;
     if (!state.visible.has(state.currentIndex)) {
       state.currentIndex = firstVisibleSliceIndex();
     }
-    state.marker = booleanParam("marker", false);
-    state.localDrag = booleanParam("localDrag", true);
-    state.selectedResidueKey = initialResidueKey();
+    state.marker = false;
+    state.localDrag = true;
+    state.selectedResidueKey = defaultResidueKey();
 
     elements.columnsNumber.max = String(Math.max(1, REPORT.slices.length));
     elements.columnsNumber.value = String(state.columns);
@@ -2043,7 +1742,6 @@ import "./main.css";
     setActiveControlPanel(state.activePanel);
     updateMetrics();
     renderChips();
-    syncUrlState();
   }
 
   function setActiveControlPanel(panel) {
@@ -2078,7 +1776,6 @@ import "./main.css";
         }
         state.currentIndex = index;
         renderChips();
-        syncUrlState();
         renderScene(true);
       });
       return button;
@@ -2133,7 +1830,6 @@ import "./main.css";
     state.rotation[axis] = ((Number(state.rotation[axis]) || 0) + degrees + 540) % 360 - 180;
     syncRotationMatrixFromEuler();
     syncRotationControls();
-    syncUrlState();
     queueGeometryUpdate(false);
   }
 
@@ -2146,7 +1842,6 @@ import "./main.css";
     elements.thicknessRange.value = next.toFixed(3);
     elements.thicknessNumber.value = next.toFixed(3);
     updateMetrics();
-    syncUrlState();
     queueSceneReload(false);
   }
 
@@ -2159,7 +1854,6 @@ import "./main.css";
     elements.spacingRange.value = next.toFixed(3);
     elements.spacingNumber.value = next.toFixed(3);
     updateMetrics();
-    syncUrlState();
     if (state.layout === "tiled") {
       queueGeometryUpdate(true);
     }
@@ -2173,7 +1867,6 @@ import "./main.css";
     state.columns = next;
     elements.columnsNumber.value = String(next);
     updateMetrics();
-    syncUrlState();
     if (state.layout === "tiled") {
       queueGeometryUpdate(true);
     }
@@ -2187,7 +1880,6 @@ import "./main.css";
     state.paletteName = requested;
     elements.paletteSelect.value = requested;
     updateMetrics();
-    syncUrlState();
     queueSceneReload(false);
   }
 
@@ -2196,7 +1888,6 @@ import "./main.css";
     elements.outlineCheckbox.checked = state.outline;
     applyMolstarRenderStyle();
     updateMetrics();
-    syncUrlState();
   }
 
   function updateColorDomain(bound, value) {
@@ -2212,7 +1903,6 @@ import "./main.css";
     elements.colorMinNumber.value = colorDomainMin().toFixed(3);
     elements.colorMaxNumber.value = colorDomainMax().toFixed(3);
     updateMetrics();
-    syncUrlState();
     queueSceneReload(false);
   }
 
@@ -2229,7 +1919,6 @@ import "./main.css";
     elements.radiusMinNumber.value = state.radiusMin.toFixed(3);
     elements.radiusMaxNumber.value = state.radiusMax.toFixed(3);
     updateMetrics();
-    syncUrlState();
     queueSceneReload(false);
   }
 
@@ -2240,7 +1929,6 @@ import "./main.css";
     state.radiusMax = defaultRadiusMax();
     state.thickness = defaultThickness();
     updateMetrics();
-    syncUrlState();
     queueSceneReload(false);
   }
 
@@ -2252,7 +1940,6 @@ import "./main.css";
     state.rotationSensitivity = next;
     elements.rotateSensitivityRange.value = next.toFixed(3);
     elements.rotateSensitivityNumber.value = next.toFixed(3);
-    syncUrlState();
     updateMetrics();
   }
 
@@ -2284,7 +1971,6 @@ import "./main.css";
         state.rotation[axis] = Number(event.target.value);
         syncRotationMatrixFromEuler();
         syncRotationControls();
-        syncUrlState();
         queueGeometryUpdate(false);
       };
       range.addEventListener("input", handler);
@@ -2303,7 +1989,6 @@ import "./main.css";
       state.rotation = { ...(REPORT.rotationModel?.defaultRotation || { x: 90, y: 0, z: 0 }) };
       syncRotationMatrixFromEuler();
       syncRotationControls();
-      syncUrlState();
       queueGeometryUpdate(false);
     });
     elements.colorMinNumber.addEventListener("input", (event) => updateColorDomain("min", event.target.value));
@@ -2352,7 +2037,6 @@ import "./main.css";
       dragState = null;
       elements.viewport.classList.remove("dragging");
       elements.viewport.releasePointerCapture?.(event.pointerId);
-      syncUrlState();
       queueGeometryUpdate(false, 20);
     };
     elements.viewport.addEventListener("pointerup", endDrag);
