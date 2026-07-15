@@ -1,5 +1,5 @@
 {
-    "name": "@finn2400/rmsxflipbook",
+    "name": "@galaxyproject/rmsxflipbook",
     "description": "RMSX Flipbook Galaxy visualization for rmsx.json viewer manifests rendered with bundled Molstar.",
     "keywords": [
         "galaxy",
