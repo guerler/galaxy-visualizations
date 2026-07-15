@@ -20,7 +20,6 @@ import "./main.css";
 
     const incoming = parseIncoming(appElement?.dataset?.incoming);
     const visualizationConfig = incoming.visualization_config || {};
-    const FETCH_CREDENTIALS = process.env.credentials || "same-origin";
 
     function parseIncoming(value) {
         try {
@@ -247,7 +246,7 @@ import "./main.css";
             throw new Error("No Galaxy dataset id was provided to the RMSX Flipbook visualization.");
         }
         const url = galaxyUrl(`api/datasets/${encodeURIComponent(datasetId)}/display`);
-        const response = await fetch(url, { credentials: FETCH_CREDENTIALS });
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Could not load RMSX manifest from Galaxy dataset (${response.status}).`);
         }
