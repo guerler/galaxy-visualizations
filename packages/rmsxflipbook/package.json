@@ -24,7 +24,9 @@
         "prepack": "vite build",
         "preview": "vite preview",
         "prettier": "prettier --write 'package.json' 'src/**/*.js' 'test.spec.js'",
-        "test": "playwright test"
+        "fixture": "node scripts/make-fixture.mjs",
+        "test": "playwright test",
+        "test:update": "playwright test --update-snapshots"
     },
     "devDependencies": {
         "@playwright/test": "^1.60.0",

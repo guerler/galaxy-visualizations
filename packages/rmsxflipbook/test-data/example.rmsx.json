@@ -1,0 +1,168 @@
+{
+  "schemaVersion": "flipbook-molstar-viewer/v1",
+  "title": "RMSX Flipbook Example",
+  "slices": [
+    {
+      "index": 1,
+      "id": "slice-1",
+      "label": "Frame 1",
+      "filename": "frame_1.pdb",
+      "rmsxColumn": "rmsx0",
+      "pdb": "ATOM      1 N    ALA A   1      -1.200   0.500   0.000  1.00  0.00           N\nATOM      2 CA   ALA A   1       0.000   0.000   0.000  1.00  0.00           C\nATOM      3 C    ALA A   1       1.200   0.500   0.000  1.00  0.00           C\nATOM      4 O    ALA A   1       1.200   1.700   0.000  1.00  0.00           O\nATOM      5 N    ALA A   2       2.600   0.500   0.000  1.00  0.00           N\nATOM      6 CA   ALA A   2       3.800   0.000   0.000  1.00  0.00           C\nATOM      7 C    ALA A   2       5.000   0.500   0.000  1.00  0.00           C\nATOM      8 O    ALA A   2       5.000   1.700   0.000  1.00  0.00           O\nATOM      9 N    ALA A   3       6.400   0.500   0.000  1.00  0.00           N\nATOM     10 CA   ALA A   3       7.600   0.000   0.000  1.00  0.00           C\nATOM     11 C    ALA A   3       8.800   0.500   0.000  1.00  0.00           C\nATOM     12 O    ALA A   3       8.800   1.700   0.000  1.00  0.00           O\nATOM     13 N    ALA A   4      10.200   0.500   0.000  1.00  0.00           N\nATOM     14 CA   ALA A   4      11.400   0.000   0.000  1.00  0.00           C\nATOM     15 C    ALA A   4      12.600   0.500   0.000  1.00  0.00           C\nATOM     16 O    ALA A   4      12.600   1.700   0.000  1.00  0.00           O\nATOM     17 N    ALA A   5      14.000   0.500   0.000  1.00  0.00           N\nATOM     18 CA   ALA A   5      15.200   0.000   0.000  1.00  0.00           C\nATOM     19 C    ALA A   5      16.400   0.500   0.000  1.00  0.00           C\nATOM     20 O    ALA A   5      16.400   1.700   0.000  1.00  0.00           O\nATOM     21 N    ALA A   6      17.800   0.500   0.000  1.00  0.00           N\nATOM     22 CA   ALA A   6      19.000   0.000   0.000  1.00  0.00           C\nATOM     23 C    ALA A   6      20.200   0.500   0.000  1.00  0.00           C\nATOM     24 O    ALA A   6      20.200   1.700   0.000  1.00  0.00           O\nATOM     25 N    ALA A   7      21.600   0.500   0.000  1.00  0.00           N\nATOM     26 CA   ALA A   7      22.800   0.000   0.000  1.00  0.00           C\nATOM     27 C    ALA A   7      24.000   0.500   0.000  1.00  0.00           C\nATOM     28 O    ALA A   7      24.000   1.700   0.000  1.00  0.00           O\nATOM     29 N    ALA A   8      25.400   0.500   0.000  1.00  0.00           N\nATOM     30 CA   ALA A   8      26.600   0.000   0.000  1.00  0.00           C\nATOM     31 C    ALA A   8      27.800   0.500   0.000  1.00  0.00           C\nATOM     32 O    ALA A   8      27.800   1.700   0.000  1.00  0.00           O\nTER\nEND"
+    },
+    {
+      "index": 2,
+      "id": "slice-2",
+      "label": "Frame 2",
+      "filename": "frame_2.pdb",
+      "rmsxColumn": "rmsx1",
+      "pdb": "ATOM      1 N    ALA A   1      -1.200   0.500   0.000  1.00  0.00           N\nATOM      2 CA   ALA A   1       0.000   0.000   0.000  1.00  0.00           C\nATOM      3 C    ALA A   1       1.200   0.500   0.000  1.00  0.00           C\nATOM      4 O    ALA A   1       1.200   1.700   0.000  1.00  0.00           O\nATOM      5 N    ALA A   2       2.600   0.500   0.000  1.00  0.00           N\nATOM      6 CA   ALA A   2       3.800   0.000   0.000  1.00  0.00           C\nATOM      7 C    ALA A   2       5.000   0.500   0.000  1.00  0.00           C\nATOM      8 O    ALA A   2       5.000   1.700   0.000  1.00  0.00           O\nATOM      9 N    ALA A   3       6.400   0.500   0.000  1.00  0.00           N\nATOM     10 CA   ALA A   3       7.600   0.000   0.000  1.00  0.00           C\nATOM     11 C    ALA A   3       8.800   0.500   0.000  1.00  0.00           C\nATOM     12 O    ALA A   3       8.800   1.700   0.000  1.00  0.00           O\nATOM     13 N    ALA A   4      10.200   0.500   0.000  1.00  0.00           N\nATOM     14 CA   ALA A   4      11.400   0.000   0.000  1.00  0.00           C\nATOM     15 C    ALA A   4      12.600   0.500   0.000  1.00  0.00           C\nATOM     16 O    ALA A   4      12.600   1.700   0.000  1.00  0.00           O\nATOM     17 N    ALA A   5      14.000   0.500   0.000  1.00  0.00           N\nATOM     18 CA   ALA A   5      15.200   0.000   0.000  1.00  0.00           C\nATOM     19 C    ALA A   5      16.400   0.500   0.000  1.00  0.00           C\nATOM     20 O    ALA A   5      16.400   1.700   0.000  1.00  0.00           O\nATOM     21 N    ALA A   6      17.800   0.500   0.000  1.00  0.00           N\nATOM     22 CA   ALA A   6      19.000   0.000   0.000  1.00  0.00           C\nATOM     23 C    ALA A   6      20.200   0.500   0.000  1.00  0.00           C\nATOM     24 O    ALA A   6      20.200   1.700   0.000  1.00  0.00           O\nATOM     25 N    ALA A   7      21.600   0.500   0.000  1.00  0.00           N\nATOM     26 CA   ALA A   7      22.800   0.000   0.000  1.00  0.00           C\nATOM     27 C    ALA A   7      24.000   0.500   0.000  1.00  0.00           C\nATOM     28 O    ALA A   7      24.000   1.700   0.000  1.00  0.00           O\nATOM     29 N    ALA A   8      25.400   0.500   0.000  1.00  0.00           N\nATOM     30 CA   ALA A   8      26.600   0.000   0.000  1.00  0.00           C\nATOM     31 C    ALA A   8      27.800   0.500   0.000  1.00  0.00           C\nATOM     32 O    ALA A   8      27.800   1.700   0.000  1.00  0.00           O\nTER\nEND"
+    },
+    {
+      "index": 3,
+      "id": "slice-3",
+      "label": "Frame 3",
+      "filename": "frame_3.pdb",
+      "rmsxColumn": "rmsx2",
+      "pdb": "ATOM      1 N    ALA A   1      -1.200   0.500   0.000  1.00  0.00           N\nATOM      2 CA   ALA A   1       0.000   0.000   0.000  1.00  0.00           C\nATOM      3 C    ALA A   1       1.200   0.500   0.000  1.00  0.00           C\nATOM      4 O    ALA A   1       1.200   1.700   0.000  1.00  0.00           O\nATOM      5 N    ALA A   2       2.600   0.500   0.000  1.00  0.00           N\nATOM      6 CA   ALA A   2       3.800   0.000   0.000  1.00  0.00           C\nATOM      7 C    ALA A   2       5.000   0.500   0.000  1.00  0.00           C\nATOM      8 O    ALA A   2       5.000   1.700   0.000  1.00  0.00           O\nATOM      9 N    ALA A   3       6.400   0.500   0.000  1.00  0.00           N\nATOM     10 CA   ALA A   3       7.600   0.000   0.000  1.00  0.00           C\nATOM     11 C    ALA A   3       8.800   0.500   0.000  1.00  0.00           C\nATOM     12 O    ALA A   3       8.800   1.700   0.000  1.00  0.00           O\nATOM     13 N    ALA A   4      10.200   0.500   0.000  1.00  0.00           N\nATOM     14 CA   ALA A   4      11.400   0.000   0.000  1.00  0.00           C\nATOM     15 C    ALA A   4      12.600   0.500   0.000  1.00  0.00           C\nATOM     16 O    ALA A   4      12.600   1.700   0.000  1.00  0.00           O\nATOM     17 N    ALA A   5      14.000   0.500   0.000  1.00  0.00           N\nATOM     18 CA   ALA A   5      15.200   0.000   0.000  1.00  0.00           C\nATOM     19 C    ALA A   5      16.400   0.500   0.000  1.00  0.00           C\nATOM     20 O    ALA A   5      16.400   1.700   0.000  1.00  0.00           O\nATOM     21 N    ALA A   6      17.800   0.500   0.000  1.00  0.00           N\nATOM     22 CA   ALA A   6      19.000   0.000   0.000  1.00  0.00           C\nATOM     23 C    ALA A   6      20.200   0.500   0.000  1.00  0.00           C\nATOM     24 O    ALA A   6      20.200   1.700   0.000  1.00  0.00           O\nATOM     25 N    ALA A   7      21.600   0.500   0.000  1.00  0.00           N\nATOM     26 CA   ALA A   7      22.800   0.000   0.000  1.00  0.00           C\nATOM     27 C    ALA A   7      24.000   0.500   0.000  1.00  0.00           C\nATOM     28 O    ALA A   7      24.000   1.700   0.000  1.00  0.00           O\nATOM     29 N    ALA A   8      25.400   0.500   0.000  1.00  0.00           N\nATOM     30 CA   ALA A   8      26.600   0.000   0.000  1.00  0.00           C\nATOM     31 C    ALA A   8      27.800   0.500   0.000  1.00  0.00           C\nATOM     32 O    ALA A   8      27.800   1.700   0.000  1.00  0.00           O\nTER\nEND"
+    }
+  ],
+  "residues": [
+    {
+      "key": "A:1",
+      "id": "1",
+      "label": "ALA1",
+      "values": {
+        "rmsx0": 0.5,
+        "rmsx1": 0.822,
+        "rmsx2": 0.993
+      }
+    },
+    {
+      "key": "A:2",
+      "id": "2",
+      "label": "ALA2",
+      "values": {
+        "rmsx0": 0.822,
+        "rmsx1": 0.993,
+        "rmsx2": 0.932
+      }
+    },
+    {
+      "key": "A:3",
+      "id": "3",
+      "label": "ALA3",
+      "values": {
+        "rmsx0": 0.993,
+        "rmsx1": 0.932,
+        "rmsx2": 0.667
+      }
+    },
+    {
+      "key": "A:4",
+      "id": "4",
+      "label": "ALA4",
+      "values": {
+        "rmsx0": 0.932,
+        "rmsx1": 0.667,
+        "rmsx2": 0.325
+      }
+    },
+    {
+      "key": "A:5",
+      "id": "5",
+      "label": "ALA5",
+      "values": {
+        "rmsx0": 0.667,
+        "rmsx1": 0.325,
+        "rmsx2": 0.064
+      }
+    },
+    {
+      "key": "A:6",
+      "id": "6",
+      "label": "ALA6",
+      "values": {
+        "rmsx0": 0.325,
+        "rmsx1": 0.064,
+        "rmsx2": 0.009
+      }
+    },
+    {
+      "key": "A:7",
+      "id": "7",
+      "label": "ALA7",
+      "values": {
+        "rmsx0": 0.064,
+        "rmsx1": 0.009,
+        "rmsx2": 0.184
+      }
+    },
+    {
+      "key": "A:8",
+      "id": "8",
+      "label": "ALA8",
+      "values": {
+        "rmsx0": 0.009,
+        "rmsx1": 0.184,
+        "rmsx2": 0.508
+      }
+    }
+  ],
+  "summaries": {},
+  "domain": {
+    "min": 0,
+    "max": 1
+  },
+  "maskSummary": {
+    "maskedResidues": 0,
+    "totalResidues": 8,
+    "maskedKeys": []
+  },
+  "maskOpacity": 0.3,
+  "palette": {
+    "name": "viridis",
+    "colors": [
+      "#440154",
+      "#21918c",
+      "#fde725"
+    ]
+  },
+  "availablePalettes": {
+    "viridis": [
+      "#440154",
+      "#21918c",
+      "#fde725"
+    ]
+  },
+  "presentation": {
+    "defaultLayout": "tiled"
+  },
+  "visualMapping": {
+    "defaultColorMin": 0,
+    "defaultColorMax": 1,
+    "defaultRadiusMin": 0.63,
+    "defaultRadiusMax": 3.18,
+    "defaultThicknessScale": 1,
+    "colorDomainStep": 0.1,
+    "radiusStep": 0.05
+  },
+  "rotationModel": {
+    "defaultRotation": {
+      "x": 90,
+      "y": 0,
+      "z": 0
+    }
+  },
+  "molstarRenderStyle": {
+    "preset": "clean-interactive",
+    "outline": true
+  },
+  "flipbookReference": {
+    "defaultColumns": 3,
+    "defaultSpacingFactor": 1,
+    "minimumSpacingFactor": 0.1,
+    "maximumSpacingFactor": 2.5,
+    "tilePaddingFactor": 1.55
+  }
+}

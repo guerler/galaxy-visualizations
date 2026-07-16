@@ -3,6 +3,7 @@ import { defineConfig } from "@playwright/test";
 const webServerCommand = process.env.PLAYWRIGHT_WEB_SERVER_COMMAND || "npm run dev";
 
 export default defineConfig({
+    snapshotPathTemplate: "{testDir}/test-data/{arg}.png",
     testIgnore: ["src/**"],
     timeout: 120000,
     use: {
