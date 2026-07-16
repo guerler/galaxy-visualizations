@@ -6,6 +6,8 @@ import "./main.css";
     "use strict";
 
     const SCHEMA_VERSION = "flipbook-molstar-viewer/v1";
+    const TEST_DATASET_ID = "__test__";
+    const TEST_DATA_FILE = "test-data/example.rmsx.json";
     const appElement = document.querySelector("#app");
 
     if (import.meta.env.DEV && appElement && !appElement.dataset.incoming) {
@@ -13,7 +15,9 @@ import "./main.css";
         appElement.dataset.incoming = JSON.stringify({
             root: "/",
             visualization_config: {
-                dataset_id: pageUrl.searchParams.get("dataset_id") || process.env.dataset_id,
+                dataset_id: pageUrl.searchParams.has("dataset_id")
+                    ? pageUrl.searchParams.get("dataset_id")
+                    : process.env.dataset_id || TEST_DATASET_ID,
             },
         });
     }
@@ -228,7 +232,10 @@ import "./main.css";
         if (!datasetId) {
             throw new Error("No Galaxy dataset id was provided to the RMSX Flipbook visualization.");
         }
-        const url = galaxyUrl(`api/datasets/${encodeURIComponent(datasetId)}/display`);
+        const url =
+            datasetId === TEST_DATASET_ID
+                ? TEST_DATA_FILE
+                : galaxyUrl(`api/datasets/${encodeURIComponent(datasetId)}/display`);
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`Could not load RMSX manifest from Galaxy dataset (${response.status}).`);

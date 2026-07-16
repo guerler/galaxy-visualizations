@@ -23,7 +23,7 @@ async function expectStatusError(page, message) {
 }
 
 test("shows an error when Galaxy does not provide a dataset id", async ({ page }) => {
-    await page.goto("http://localhost:5173");
+    await page.goto("http://localhost:5173?dataset_id=");
     await expectStatusError(page, "No Galaxy dataset id was provided");
 });
 
@@ -77,4 +77,10 @@ test("renders the flipbook viewer for a valid manifest", async ({ page }) => {
     await expect(page.locator("#status")).not.toHaveClass(/error/);
     await page.waitForTimeout(2000);
     await expect(page).toHaveScreenshot("example.png", { maxDiffPixelRatio: 0.07 });
+});
+
+test("dev mode loads the bundled example manifest without a dataset id", async ({ page }) => {
+    await page.goto("http://localhost:5173");
+    await page.waitForSelector("#molstarViewport canvas", { timeout: 90000 });
+    await expect(page.locator("#status")).not.toHaveClass(/error/);
 });
