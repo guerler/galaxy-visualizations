@@ -20,8 +20,18 @@
     <help format="markdown"><![CDATA[
 # What is RMSX Flipbook?
 
-RMSX Flipbook opens `rmsx.json` viewer manifests produced by RMSX/Flipbook workflows. It renders the embedded PDB time slices with bundled Molstar and colors residues by their RMSX values.
+**RMSX Flipbook** is a Galaxy visualization for exploring RMSX flipbook manifests produced by RMSX/Flipbook workflows. It renders the structural frames stored in an `rmsx.json` dataset with the bundled **Molstar** 3D viewer, coloring each residue by its RMSX value.
 
-Use it from Galaxy's Visualize action on an `rmsx.json` dataset. The manifest must use schema version `flipbook-molstar-viewer/v1`; if required fields are missing, the viewer reports the validation problem before rendering.
+After selecting a compatible dataset, you'll see an interactive 3D view where the frames are laid out side by side along a shared RMSX color scale, ready to rotate, rescale, and compare.
+
+## Key Features
+
+- **Frame Flipbook**: Lays out the manifest's structural frames side by side for direct comparison.
+- **RMSX Coloring**: Colors residues by their per-frame RMSX values using a selectable palette.
+- **Interactive Controls**: Adjust layout spacing, columns, color and radius scales, thickness, and rotation in real time.
+- **Molstar Rendering**: Draws each structure as a smooth putty representation powered by the bundled Molstar viewer.
+
+To learn more about RMSX/Flipbook, see:
+[https://doi.org/10.1038/s41598-026-39869-7](https://doi.org/10.1038/s41598-026-39869-7)
     ]]></help>
 </visualization>
