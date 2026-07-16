@@ -76,11 +76,6 @@ import "./main.css";
         loaded: false,
         liveTransforms: false,
         forceCoordinateFallback: false,
-        molstarAssetSource: "bundled",
-        manifestSource: "-",
-        keyboardShortcutCount: 0,
-        lastKeyboardAction: "-",
-        lastRotationGesture: null,
     };
 
     document.body.innerHTML = `
@@ -162,7 +157,6 @@ import "./main.css";
       </aside>
       <section class="rmsx-viewer" data-testid="molstar-report">
         <div id="molstarViewport" class="viewport" data-testid="molstar-viewport"></div>
-        <pre id="diagnostics" data-testid="molstar-diagnostics" hidden>{}</pre>
       </section>
     </main>
   `;
@@ -197,7 +191,6 @@ import "./main.css";
         resetScaleButton: document.getElementById("resetScaleButton"),
         sliceChips: document.getElementById("sliceChips"),
         viewport: document.getElementById("molstarViewport"),
-        diagnostics: document.getElementById("diagnostics"),
         legendColorBar: document.getElementById("legendColorBar"),
         domainMin: document.getElementById("domainMin"),
         domainMid: document.getElementById("domainMid"),
@@ -231,16 +224,6 @@ import "./main.css";
     }
 
     async function fetchManifest() {
-        const inlineManifest = incoming.manifest || visualizationConfig.manifest;
-        if (inlineManifest?.schemaVersion) {
-            state.manifestSource = "inline-harness-manifest";
-            return inlineManifest;
-        }
-        const manifestText = appElement?.dataset?.manifest;
-        if (manifestText) {
-            state.manifestSource = "inline-harness-dataset";
-            return JSON.parse(manifestText);
-        }
         const datasetId = visualizationConfig.dataset_id;
         if (!datasetId) {
             throw new Error("No Galaxy dataset id was provided to the RMSX Flipbook visualization.");
@@ -250,7 +233,6 @@ import "./main.css";
         if (!response.ok) {
             throw new Error(`Could not load RMSX manifest from Galaxy dataset (${response.status}).`);
         }
-        state.manifestSource = url;
         return JSON.parse(await response.text());
     }
 
@@ -800,28 +782,9 @@ import "./main.css";
         return multiplyMatrices(vertical, horizontal);
     }
 
-    function roundedVector(vector) {
-        return {
-            x: Number(vector.x.toFixed(4)),
-            y: Number(vector.y.toFixed(4)),
-            z: Number(vector.z.toFixed(4)),
-        };
-    }
-
     function applyScreenRotationDrag(dx, dy, axes) {
         const delta = rotationDeltaMatrixForScreenDrag(dx, dy, axes);
         setRotationMatrix(multiplyMatrices(delta, rotationMatrix()));
-        state.lastRotationGesture = {
-            mode: "screen-axis delta, per-slice local pivot",
-            dx: Number(dx.toFixed(2)),
-            dy: Number(dy.toFixed(2)),
-            sensitivity: state.rotationSensitivity,
-            axes: {
-                right: roundedVector(axes.right),
-                up: roundedVector(axes.up),
-                view: roundedVector(axes.view),
-            },
-        };
     }
 
     function transformedPdb(slice, index, mode, applySceneTransform = true) {
@@ -1059,20 +1022,6 @@ import "./main.css";
         return Math.max(4, sphere.radius * 0.9);
     }
 
-    function tiledPlacementSummary(focusSphere = null) {
-        const envelope = visualEnvelope();
-        const slot = envelope * state.spacing;
-        return {
-            envelope: Number(envelope.toFixed(3)),
-            slot: Number(slot.toFixed(3)),
-            spacing: state.spacing,
-            columns: state.columns,
-            tilePaddingFactor: tilePaddingFactor(),
-            visualRadiusPadding: Number(visualRadiusPadding().toFixed(3)),
-            cameraExtraRadius: focusSphere ? Number(cameraFocusExtraRadius(focusSphere).toFixed(3)) : null,
-        };
-    }
-
     function hexColorToMolstarNumber(hex, fallback = 0xffffff) {
         const normalized = String(hex || "").replace("#", "");
         if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
@@ -1169,21 +1118,6 @@ import "./main.css";
         }
     }
 
-    function canvasRenderStyleSummary() {
-        const props = viewer?.plugin?.canvas3d?.props || {};
-        const post = props.postprocessing || {};
-        return {
-            preset: state.renderMode,
-            outline: post.outline?.name || (state.outline ? "on" : "off"),
-            occlusion: post.occlusion?.name || "off",
-            illumination: Boolean(props.illumination?.enabled),
-            cameraFog: props.cameraFog?.name || "off",
-            multiSampleMode: props.multiSample?.mode || "off",
-            ambientIntensity: props.renderer?.ambientIntensity ?? null,
-            backgroundColor: props.renderer?.backgroundColor ?? null,
-        };
-    }
-
     async function createViewer() {
         elements.viewport.replaceChildren();
         viewer = await Viewer.create("molstarViewport", {
@@ -1219,7 +1153,6 @@ import "./main.css";
         const resetAfterLayout = () => {
             requestMolstarDraw();
             resetView();
-            updateDiagnostics();
         };
         const scheduleFrame = window.requestAnimationFrame || ((callback) => window.setTimeout(callback, 16));
         scheduleFrame(() => {
@@ -1253,7 +1186,6 @@ import "./main.css";
             resizeResetTimer = window.setTimeout(() => {
                 requestMolstarDraw();
                 resetView();
-                updateDiagnostics();
             }, 120);
         });
         resizeObserver.observe(elements.viewport);
@@ -1593,7 +1525,6 @@ import "./main.css";
         elements.rotateSensitivityRange.value = String(Number(state.rotationSensitivity.toFixed(3)));
         elements.rotateSensitivityNumber.value = String(Number(state.rotationSensitivity.toFixed(3)));
         updateLegend();
-        updateDiagnostics();
     }
 
     function hexToRgb(hex) {
@@ -1730,163 +1661,12 @@ import "./main.css";
         });
     }
 
-    function legendSummary() {
-        return {
-            activeRmsxColorDomain: {
-                min: Number(colorDomainMin().toFixed(4)),
-                max: Number(colorDomainMax().toFixed(4)),
-            },
-            radiusRange: {
-                min: Number(wormRadiusMin().toFixed(4)),
-                max: Number(wormRadiusMax().toFixed(4)),
-            },
-            stops: mappingLegendStops().map((stop) => ({
-                key: stop.key.toLowerCase(),
-                rmsx: Number(stop.rmsx.toFixed(4)),
-                normalized: stop.normalized,
-                radius: Number(stop.radius.toFixed(4)),
-                color: stop.color,
-            })),
-            elements: {
-                legend: Boolean(document.querySelector('[data-testid="molstar-rmsx-legend"]')),
-                colorBar: Boolean(elements.legendColorBar),
-                radiusLegend: Boolean(document.querySelector('[data-testid="molstar-radius-legend"]')),
-                lowValue: elements.domainMin?.textContent || "",
-                midValue: elements.domainMid?.textContent || "",
-                highValue: elements.domainMax?.textContent || "",
-                lowRadius: elements.legendLowRadiusLabel?.textContent || "",
-                midRadius: elements.legendMidRadiusLabel?.textContent || "",
-                highRadius: elements.legendHighRadiusLabel?.textContent || "",
-            },
-        };
-    }
-
     function visibleSliceIndexes() {
         return REPORT.slices.map((_, index) => index).filter((index) => state.visible.has(index));
     }
 
-    function hiddenSliceIndexes() {
-        const visible = new Set(visibleSliceIndexes());
-        return REPORT.slices.map((_, index) => index).filter((index) => !visible.has(index));
-    }
-
     function firstVisibleSliceIndex() {
         return visibleSliceIndexes()[0] ?? 0;
-    }
-
-    function updateDiagnostics() {
-        const focusSphere = sceneFocusSphere();
-        const diagnostics = {
-            schemaVersion: REPORT?.schemaVersion,
-            manifestSource: state.manifestSource,
-            sliceCount: REPORT?.slices?.length || 0,
-            layout: state.layout,
-            loadedAllSlices: state.loaded && state.records.length >= (REPORT?.slices?.length || 0),
-            liveTransforms: state.liveTransforms,
-            coordinateFallback: state.forceCoordinateFallback,
-            statusText: elements.status.textContent,
-            geometryMode: state.liveTransforms
-                ? "molstar-representation-transform"
-                : state.forceCoordinateFallback
-                  ? "browser-side-pdb-copies"
-                  : "native-transform-pending",
-            mask: {
-                maskedResidues: Number(
-                    REPORT.maskSummary?.maskedResidues ?? REPORT.maskSummary?.maskedKeys?.length ?? 0,
-                ),
-                totalResidues: Number(REPORT.maskSummary?.totalResidues ?? REPORT.residues?.length ?? 0),
-                opacity: Number(REPORT.maskOpacity ?? 0.3),
-            },
-            palette: state.paletteName,
-            visibleSlices: visibleSliceIndexes().map((index) => index + 1),
-            focusSphere,
-            visibility: {
-                loadedSliceIndexes: state.loaded ? REPORT.slices.map((_, index) => index + 1) : [],
-                visibleSliceIndexes: visibleSliceIndexes().map((index) => index + 1),
-                hiddenSliceIndexes: hiddenSliceIndexes().map((index) => index + 1),
-                chipCount: elements.sliceChips.querySelectorAll("[data-testid='molstar-slice-chip']").length,
-            },
-            presentation: {
-                layout: state.layout,
-                currentIndex: state.currentIndex,
-                currentSlice: state.currentIndex + 1,
-                spacing: state.spacing,
-                columns: state.columns,
-                tiledPlacement: tiledPlacementSummary(focusSphere),
-                rotation: {
-                    x: Number(state.rotation.x.toFixed(3)),
-                    y: Number(state.rotation.y.toFixed(3)),
-                    z: Number(state.rotation.z.toFixed(3)),
-                },
-                marker: state.marker,
-                localDrag: state.localDrag,
-                rotationSensitivity: state.rotationSensitivity,
-            },
-            renderStyle: canvasRenderStyleSummary(),
-            visualMapping: {
-                colorMin: colorDomainMin(),
-                colorMax: colorDomainMax(),
-                configuredRadiusMin: state.radiusMin,
-                configuredRadiusMax: state.radiusMax,
-                radiusMin: wormRadiusMin(),
-                radiusMax: wormRadiusMax(),
-                radiusSpan: wormRadiusSpan(),
-                thickness: state.thickness,
-                colorPalette: state.paletteName,
-                defaultColorPalette: defaultPaletteName(),
-                availableColorPalettes: paletteNames(),
-                colorTheme: {
-                    requestedTheme: REPORT.visualMapping?.colorTheme || "uncertainty",
-                    molstarUncertaintyReversesColorList:
-                        REPORT.visualMapping?.molstarUncertaintyReversesColorList === true,
-                    flipbookLowToHighColors: currentPaletteColors(),
-                    sentToMolstarUncertaintyColors: [...currentPaletteColors()]
-                        .reverse()
-                        .map((hex) => hex.toUpperCase()),
-                    effectiveOrder: REPORT.visualMapping?.paletteOrder || "low-to-high",
-                },
-                selectedResidue: selectedResidue()?.key || null,
-                selectedRmsx: selectedResidueRmsx(),
-                selectedVisualRadius: visualRadiusForRmsx(selectedResidueRmsx()),
-                selectedVisualColor: selectedResidueColor(),
-                legend: legendSummary(),
-            },
-            controls: {
-                sidebarLayout: true,
-                compactControlPanels: true,
-                compactTabs: false,
-                accordionControls: true,
-                activeControlPanel: state.activePanel,
-                playback: false,
-                layoutModes: ["tiled"],
-                paletteSwitching: true,
-                colorDomain: true,
-                radiusRange: true,
-                resetScale: true,
-                renderStyle: false,
-                outlineToggle: true,
-                spacing: true,
-                thickness: true,
-                columns: true,
-                rotateSensitivity: true,
-                localRotation: true,
-                selectedResidueMarker: false,
-                maskedResidueStyling: true,
-                urlStatePersistence: true,
-            },
-            keyboard: {
-                enabled: true,
-                rotationStepDegrees: 5,
-                spacingStep: 0.05,
-                thicknessStep: 0.05,
-                bindings: ["u/i", "n/m", "j/k", "[/]", "-/=", ",/."],
-                shortcutCount: state.keyboardShortcutCount,
-                lastAction: state.lastKeyboardAction,
-            },
-            lastRotationGesture: state.lastRotationGesture,
-            molstarAssetSource: state.molstarAssetSource,
-        };
-        elements.diagnostics.textContent = JSON.stringify(diagnostics, null, 2);
     }
 
     function populateControls() {
@@ -1956,7 +1736,6 @@ import "./main.css";
                 panelElement.open = true;
             }
         });
-        updateDiagnostics();
     }
 
     function renderChips() {
@@ -2294,9 +2073,6 @@ import "./main.css";
                 event.preventDefault();
                 event.stopPropagation();
                 action[1]();
-                state.keyboardShortcutCount += 1;
-                state.lastKeyboardAction = action[0];
-                updateDiagnostics();
             }
         });
     }
