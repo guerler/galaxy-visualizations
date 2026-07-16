@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE visualization SYSTEM "../../visualization.dtd">
 <visualization name="RMSX Flipbook">
-    <description>Renders RMSX Flipbook manifests with bundled Molstar.</description>
+    <description>Renders RMSX Flipbook Manifests</description>
     <data_sources>
         <data_source>
             <model_class>HistoryDatasetAssociation</model_class>

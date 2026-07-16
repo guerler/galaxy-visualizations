@@ -73,15 +73,14 @@ test("renders the flipbook viewer for a valid manifest", async ({ page }) => {
     });
 
     await page.goto("http://localhost:5173?dataset_id=example");
-    await page.waitForSelector("#molstarViewport canvas", { timeout: 90000 });
-    await expect(page.locator("#status")).not.toHaveClass(/error/);
+    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
     await page.mouse.move(0, 0);
     await page.waitForTimeout(2000);
-    await expect(page).toHaveScreenshot("example.png", { maxDiffPixelRatio: 0.07 });
+    await expect(page.locator("#molstarViewport")).toHaveScreenshot("example.png", { maxDiffPixelRatio: 0.07 });
 });
 
 test("dev mode loads the bundled example manifest without a dataset id", async ({ page }) => {
     await page.goto("http://localhost:5173");
-    await page.waitForSelector("#molstarViewport canvas", { timeout: 90000 });
+    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
     await expect(page.locator("#status")).not.toHaveClass(/error/);
 });

@@ -8,6 +8,10 @@ export default defineConfig({
     timeout: 120000,
     use: {
         headless: !!process.env.CI,
+        launchOptions: {
+            // Modern Chromium gates software WebGL behind this flag; Molstar needs it to render headless.
+            args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+        },
     },
     webServer: {
         command: webServerCommand,

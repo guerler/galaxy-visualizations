@@ -30,7 +30,7 @@
     },
     "devDependencies": {
         "@playwright/test": "^1.60.0",
-        "molstar": "^5.4.2",
+        "molstar": "5.5.0",
         "prettier": "^3.5.3",
         "vite": "^6.0.0"
     }
