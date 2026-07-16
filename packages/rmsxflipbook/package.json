@@ -2,14 +2,12 @@
     "name": "@galaxyproject/rmsxflipbook",
     "description": "RMSX Flipbook Galaxy visualization for rmsx.json viewer manifests rendered with bundled Molstar.",
     "keywords": [
-        "galaxy",
-        "charts",
         "rmsx",
         "flipbook",
         "molstar"
     ],
     "license": "MIT",
-    "version": "0.0.1",
+    "version": "0.0.0",
     "type": "module",
     "publishConfig": {
         "access": "public"
