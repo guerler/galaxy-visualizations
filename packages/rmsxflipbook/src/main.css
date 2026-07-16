@@ -25,7 +25,7 @@ button.primary, button.active { border-color: #1f6feb; background: #1f6feb; colo
 .primary-row button { width: 100%; }
 .button-group button { flex: 1 1 auto; min-width: 62px; }
 .metrics { margin: 0; }
-.metrics div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #e8ebef; padding: 4px 0; }
+.metrics div { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid #e8ebef; padding: 4px 8px; }
 .metrics div:last-child { border-bottom: 0; }
 .metrics dt { color: #5f6b7a; }
 .metrics dd { margin: 0; font-weight: 650; }
