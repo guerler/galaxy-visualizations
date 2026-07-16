@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE visualization SYSTEM "../../visualization.dtd">
 <visualization name="RMSX Flipbook">
-    <description>Render RMSX Flipbook viewer manifests with bundled Molstar.</description>
+    <description>Renders RMSX Flipbook manifests with bundled Molstar.</description>
     <data_sources>
         <data_source>
             <model_class>HistoryDatasetAssociation</model_class>
@@ -11,7 +11,12 @@
     <params>
         <param required="true">dataset_id</param>
     </params>
-    <entry_point entry_point_type="script" src="index.js" container="app" />
+    <entry_point src="index.js" css="index.css" />
+    <tests>
+        <test>
+            <param name="dataset_id" value="http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.rmsx.json" ftype="rmsx.json" />
+        </test>
+    </tests>
     <help format="markdown"><![CDATA[
 # What is RMSX Flipbook?
 
