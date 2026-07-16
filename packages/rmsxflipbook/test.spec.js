@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA_VERSION = "flipbook-molstar-viewer/v1";
 
 async function routeDatasetDisplay(page, handler) {
@@ -19,7 +23,7 @@ async function expectStatusError(page, message) {
 }
 
 test("shows an error when Galaxy does not provide a dataset id", async ({ page }) => {
-    await page.goto("http://localhost:5173");
+    await page.goto("http://localhost:5173?dataset_id=");
     await expectStatusError(page, "No Galaxy dataset id was provided");
 });
 
@@ -60,4 +64,23 @@ test("shows an error when Galaxy dataset display requests fail", async ({ page }
 
     await page.goto("http://localhost:5173?dataset_id=http-error");
     await expectStatusError(page, "Could not load RMSX manifest from Galaxy dataset");
+});
+
+test("renders the flipbook viewer for a valid manifest", async ({ page }) => {
+    const manifest = readFileSync(join(__dirname, "test-data", "example.rmsx.json"));
+    await routeDatasetDisplay(page, async (route) => {
+        await route.fulfill({ status: 200, contentType: "application/json", body: manifest });
+    });
+
+    await page.goto("http://localhost:5173?dataset_id=example");
+    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(2000);
+    await expect(page.locator("#molstarViewport")).toHaveScreenshot("example.png", { maxDiffPixelRatio: 0.07 });
+});
+
+test("dev mode loads the bundled example manifest without a dataset id", async ({ page }) => {
+    await page.goto("http://localhost:5173");
+    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
+    await expect(page.locator("#status")).not.toHaveClass(/error/);
 });

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE visualization SYSTEM "../../visualization.dtd">
+<visualization name="RMSX Flipbook">
+    <description>Renders RMSX Flipbook Manifests</description>
+    <data_sources>
+        <data_source>
+            <model_class>HistoryDatasetAssociation</model_class>
+            <test test_attr="ext">rmsx.json</test>
+        </data_source>
+    </data_sources>
+    <params>
+        <param required="true">dataset_id</param>
+    </params>
+    <entry_point src="index.js" css="index.css" />
+    <tests>
+        <test>
+            <param name="dataset_id" value="http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.rmsx.json" ftype="rmsx.json" />
+        </test>
+    </tests>
+    <help format="markdown"><![CDATA[
+# What is RMSX Flipbook?
+
+**RMSX Flipbook** is a Galaxy visualization for exploring RMSX flipbook manifests produced by RMSX/Flipbook workflows. It renders the structural frames stored in an `rmsx.json` dataset with the bundled **Molstar** 3D viewer, coloring each residue by its RMSX value.
+
+After selecting a compatible dataset, you'll see an interactive 3D view where the frames are laid out side by side along a shared RMSX color scale, ready to rotate, rescale, and compare.
+
+## Key Features
+
+- **Frame Flipbook**: Lays out the manifest's structural frames side by side for direct comparison.
+- **RMSX Coloring**: Colors residues by their per-frame RMSX values using a selectable palette.
+- **Interactive Controls**: Adjust layout spacing, columns, color and radius scales, thickness, and rotation in real time.
+- **Molstar Rendering**: Draws each structure as a smooth putty representation powered by the bundled Molstar viewer.
+
+To learn more about RMSX/Flipbook, see:
+[https://doi.org/10.1038/s41598-026-39869-7](https://doi.org/10.1038/s41598-026-39869-7)
+    ]]></help>
+</visualization>

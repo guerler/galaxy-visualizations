@@ -2,14 +2,14 @@
 
 RMSX Flipbook is a Galaxy visualization package for RMSX `rmsx.json` viewer manifests rendered with bundled Molstar.
 
-The initial npm package is published under `@finn2400/rmsx-flipbook`.
+The initial npm package is published under `@finn2400/rmsxflipbook`.
 
 It follows the Galaxy visualization XML framework:
 
-- `public/rmsx-flipbook.xml` declares the visualization, compatible `rmsx.json` datatype, params, and script entry point.
+- `public/rmsxflipbook.xml` declares the visualization, compatible `rmsx.json` datatype, params, and script entry point.
 - `src/main.js` reads Galaxy's `data-incoming` payload from `#app`.
 - The selected manifest is fetched from `${root}api/datasets/${dataset_id}/display`.
-- Molstar 5.4.2 is bundled under `public/vendor/molstar/5.4.2`.
+- Molstar is installed from npm (`molstar`) and bundled at build time.
 
 ## Development
 

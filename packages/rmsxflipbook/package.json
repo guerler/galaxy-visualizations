@@ -1,5 +1,5 @@
 {
-    "name": "@finn2400/rmsx-flipbook",
+    "name": "@galaxyproject/rmsxflipbook",
     "description": "RMSX Flipbook Galaxy visualization for rmsx.json viewer manifests rendered with bundled Molstar.",
     "keywords": [
         "galaxy",
@@ -24,10 +24,13 @@
         "prepack": "vite build",
         "preview": "vite preview",
         "prettier": "prettier --write 'package.json' 'src/**/*.js' 'test.spec.js'",
-        "test": "playwright test"
+        "fixture": "node scripts/make-fixture.mjs",
+        "test": "playwright test",
+        "test:update": "playwright test --update-snapshots"
     },
     "devDependencies": {
         "@playwright/test": "^1.60.0",
+        "molstar": "5.5.0",
         "prettier": "^3.5.3",
         "vite": "^6.0.0"
     }
