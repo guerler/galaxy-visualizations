@@ -51,6 +51,7 @@ button.primary, button.active { border-color: #1f6feb; background: #1f6feb; colo
 .legend-swatch { width: 12px; height: 12px; flex: 0 0 auto; border-radius: 999px; border: 1px solid rgba(29, 38, 48, 0.25); background: #5f6b7a; }
 .radius-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 999px; border: 1px solid rgba(29, 38, 48, 0.25); background: #5f6b7a; }
 .viewport { min-height: 0; height: 100%; background: #fff; border-top: 1px solid #d7dce2; cursor: grab; }
+.msp-viewport-controls { display: none; }
 .viewport.local-drag-disabled { cursor: default; }
 .viewport.dragging { cursor: grabbing; }
 @media (min-width: 1280px) {

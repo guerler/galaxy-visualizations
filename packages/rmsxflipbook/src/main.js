@@ -435,38 +435,6 @@ import "./main.css";
         return map;
     }
 
-    function selectedResidue() {
-        return (
-            REPORT?.residues?.find(
-                (residue) => residue.key === state.selectedResidueKey || residue.id === state.selectedResidueKey,
-            ) ||
-            REPORT?.residues?.[0] ||
-            null
-        );
-    }
-
-    function selectedResidueRmsx() {
-        const slice = REPORT?.slices?.[state.currentIndex];
-        const residue = selectedResidue();
-        const value = slice && residue ? Number(residue.values?.[slice.rmsxColumn]) : NaN;
-        return Number.isFinite(value) ? value : NaN;
-    }
-
-    function visualRadiusForRmsx(value) {
-        if (!Number.isFinite(value)) {
-            return NaN;
-        }
-        return wormRadiusMin() + wormRadiusSpan() * normalizedRmsx(value);
-    }
-
-    function selectedResidueColor() {
-        const value = selectedResidueRmsx();
-        if (!Number.isFinite(value)) {
-            return "-";
-        }
-        return expectedColorForNormalizedRmsx(normalizedRmsx(value));
-    }
-
     function structureStats(pdb) {
         const stats = {
             minX: Infinity,
@@ -1134,7 +1102,7 @@ import "./main.css";
             layoutShowSequence: false,
             layoutShowLog: false,
             layoutShowLeftPanel: false,
-            viewportShowExpand: true,
+            viewportShowExpand: false,
             viewportShowSelectionMode: false,
             viewportShowAnimation: false,
         });
