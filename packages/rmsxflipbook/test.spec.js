@@ -73,7 +73,8 @@ test("renders the flipbook viewer for a valid manifest", async ({ page }) => {
     });
 
     await page.goto("http://localhost:5173?dataset_id=example");
-    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
+    await expect(page.locator("#status")).toContainText("9/9 slices visible", { timeout: 90000 });
+    await expect(page.getByTestId("molstar-slice-chip")).toHaveCount(9);
     await page.mouse.move(0, 0);
     await page.waitForTimeout(2000);
     await expect(page.locator("#molstarViewport")).toHaveScreenshot("example.png", { maxDiffPixelRatio: 0.07 });
@@ -81,6 +82,7 @@ test("renders the flipbook viewer for a valid manifest", async ({ page }) => {
 
 test("dev mode loads the bundled example manifest without a dataset id", async ({ page }) => {
     await page.goto("http://localhost:5173");
-    await expect(page.locator("#status")).toContainText("slices visible", { timeout: 90000 });
+    await expect(page.locator("#status")).toContainText("9/9 slices visible", { timeout: 90000 });
+    await expect(page.getByTestId("molstar-slice-chip")).toHaveCount(9);
     await expect(page.locator("#status")).not.toHaveClass(/error/);
 });
