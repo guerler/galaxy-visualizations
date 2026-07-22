@@ -5,12 +5,12 @@ export default defineConfig({
     testIgnore: ["src/**"],
     timeout: 60000,
     use: {
-        headless: true,
+        headless: !!process.env.CI,
     },
     webServer: {
-        command: "GALAXY_DATASET_ID=__test__ npm run dev",
+        command: "npm run dev",
         url: "http://localhost:5173",
-        reuseExistingServer: true,
-        timeout: 120_000,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120000,
     },
 });
