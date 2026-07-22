@@ -28,48 +28,6 @@ body {
     overscroll-behavior: none;
 }
 
-#format-bar {
-    display: none;
-    font-family: sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 0.4rem 1rem;
-    background: #f0f0f0;
-    color: #555;
-    border-bottom: 1px solid #ddd;
-}
-
-#sample-picker {
-    padding: 2rem;
-    text-align: center;
-}
-
-#sample-label {
-    font-family: sans-serif;
-    font-size: 0.95rem;
-    color: #666;
-    margin-bottom: 1.2rem;
-}
-
-.sample-btn {
-    display: inline-block;
-    padding: 0.6rem 1.4rem;
-    margin: 0 0.4rem;
-    border: 1px solid #aeddf5;
-    border-radius: 4px;
-    background: #fff;
-    color: #3b82f6;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background 200ms ease, color 200ms ease;
-}
-
-.sample-btn:hover {
-    background: #3b82f6;
-    color: #fff;
-}
-
 #jsoneditor {
     position: absolute;
     top: 0;

@@ -1,57 +1,42 @@
 import { test, expect } from "@playwright/test";
-import fs from "fs";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
-const JSON_CONTENT = fs.readFileSync("./test-data/test.json", "utf-8");
-const YAML_CONTENT = fs.readFileSync("./test-data/test.yaml", "utf-8");
-const JSONLD_CONTENT = fs.readFileSync("./test-data/test.jsonld", "utf-8");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const maxDiffPixelRatio = 0.05;
 
-const TEST_URLS = {
-    json: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.json",
-    yaml: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.yaml",
-    jsonld: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.jsonld",
+const TESTS = {
+    json: { file: "test.json", extension: "json", contentType: "application/json" },
+    yaml: { file: "test.yaml", extension: "yaml", contentType: "text/yaml" },
+    jsonld: { file: "test.jsonld", extension: "jsonld", contentType: "application/ld+json" },
 };
 
 test("json viewer", async ({ page }) => {
-    await page.route(TEST_URLS.json, async (route) => {
-        await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON_CONTENT,
-        });
+    await page.route("**/api/datasets/**", async (route) => {
+        const url = new URL(route.request().url());
+        const match = url.pathname.match(/\/api\/datasets\/([^/]+)(\/display)?$/);
+        const name = match?.[1];
+        const fixture = name ? TESTS[name] : null;
+        if (!fixture) {
+            return route.continue();
+        }
+        if (match[2] === "/display") {
+            const body = readFileSync(join(__dirname, "test-data", fixture.file), "utf8");
+            await route.fulfill({ status: 200, contentType: fixture.contentType, body });
+        } else {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ extension: fixture.extension }),
+            });
+        }
     });
 
-    await page.goto("http://localhost:5173/?format=json");
-    await page.waitForSelector(".jse-main", { timeout: 15000 });
-    await page.waitForTimeout(2000);
-    await expect(page).toHaveScreenshot("json.png", { maxDiffPixelRatio: 0.05 });
-});
-
-test("yaml viewer", async ({ page }) => {
-    await page.route(TEST_URLS.yaml, async (route) => {
-        await route.fulfill({
-            status: 200,
-            contentType: "text/yaml",
-            body: YAML_CONTENT,
-        });
-    });
-
-    await page.goto("http://localhost:5173/?format=yaml");
-    await page.waitForSelector(".jse-main", { timeout: 15000 });
-    await page.waitForTimeout(2000);
-    await expect(page).toHaveScreenshot("yaml.png", { maxDiffPixelRatio: 0.05 });
-});
-
-test("json-ld viewer", async ({ page }) => {
-    await page.route(TEST_URLS.jsonld, async (route) => {
-        await route.fulfill({
-            status: 200,
-            contentType: "application/ld+json",
-            body: JSONLD_CONTENT,
-        });
-    });
-
-    await page.goto("http://localhost:5173/?format=jsonld");
-    await page.waitForSelector(".jse-main", { timeout: 15000 });
-    await page.waitForTimeout(2000);
-    await expect(page).toHaveScreenshot("jsonld.png", { maxDiffPixelRatio: 0.05 });
+    for (const name of Object.keys(TESTS)) {
+        await page.goto(`http://localhost:5173?dataset_id=${name}`);
+        await page.waitForSelector(".jse-main", { timeout: 15000 });
+        await page.waitForTimeout(2000);
+        await expect(page).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio });
+    }
 });

@@ -4,88 +4,30 @@ import * as yaml from "js-yaml";
 import * as jsonld from "jsonld";
 import "./main.css";
 
-const TEST_URLS = {
-    json: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.json",
-    yaml: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.yaml",
-    jsonld: "http://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.jsonld",
-};
-
-const SAMPLE_JSON = {
-    name: "Galaxy Workflow",
-    version: "1.0",
-    steps: [
-        { id: 1, tool: "bwa_mem", input: "reads.fastq", output: "aligned.bam" },
-        { id: 2, tool: "samtools_sort", input: "aligned.bam", output: "sorted.bam" },
-        { id: 3, tool: "macs2_callpeak", input: "sorted.bam", output: "peaks.bed" },
-    ],
-    annotation: "Example ChIP-seq analysis pipeline",
-};
-
-const SAMPLE_YAML = `
-workflow: RNA-seq Differential Expression
-version: "2.0"
-inputs:
-  - name: fastq_r1
-    type: fastq
-    description: Read 1
-  - name: fastq_r2
-    type: fastq
-    description: Read 2
-steps:
-  - tool: fastp
-    inputs: [fastq_r1, fastq_r2]
-    outputs: [trimmed_r1, trimmed_r2]
-  - tool: hisat2
-    inputs: [trimmed_r1, trimmed_r2]
-    outputs: [aligned_bam]
-  - tool: featurecounts
-    inputs: [aligned_bam]
-    outputs: [counts]
-  - tool: deseq2
-    inputs: [counts]
-    outputs: [results]
-`;
-
-const SAMPLE_JSONLD = {
-    "@context": "https://schema.org",
-    "@type": "Dataset",
-    name: "Gene Expression Matrix",
-    description: "RNA-seq gene expression counts from 12 samples",
-    creator: {
-        "@type": "Person",
-        name: "Jane Doe",
-    },
-    distribution: {
-        "@type": "DataDownload",
-        encodingFormat: "text/tab-separated-values",
-        contentUrl: "https://example.org/data/expr_matrix.tsv",
-    },
-};
+const TEST_DATASET_ID = "__test__";
+const TEST_DATA_FILE = "test-data/test.json";
+const TEST_DATA_EXTENSION = "json";
 
 const appElement = document.querySelector("#app");
 
 if (import.meta.env.DEV) {
-    const devDatasetId = process.env.dataset_id || "__sample__";
+    const pageUrl = new URL(window.location.href);
     const dataIncoming = {
         root: "/",
         visualization_config: {
-            dataset_id: devDatasetId,
+            dataset_id: pageUrl.searchParams.get("dataset_id") || process.env.dataset_id || TEST_DATASET_ID,
+            settings: {},
         },
     };
     appElement.setAttribute("data-incoming", JSON.stringify(dataIncoming));
 }
 
 const incoming = JSON.parse(appElement?.getAttribute("data-incoming") || "{}");
-const datasetId = incoming.visualization_config.dataset_id;
-const root = incoming.root;
-const settings = incoming.visualization_config.settings || {};
+const datasetId = incoming?.visualization_config?.dataset_id || "";
+const root = incoming?.root || "";
+const settings = incoming?.visualization_config?.settings || {};
 const mode = settings.mode || "tree";
 const expandJsonld = settings.expand_jsonld === true || settings.expand_jsonld === "true";
-
-const isTestMode = datasetId === "__test__";
-const isSampleMode = !datasetId || datasetId === "__sample__";
-const isDirectUrl = datasetId && datasetId.startsWith("http");
-const testFormat = new URLSearchParams(window.location.search).get("format") || "json";
 
 const messageElement = document.createElement("div");
 messageElement.id = "message";
@@ -102,10 +44,18 @@ function isDarkTheme() {
     return style.getPropertyValue("--galaxy-theme")?.trim() === "dark";
 }
 
+function extensionToFormat(ext) {
+    if (ext === "yaml" || ext === "yml") return "yaml";
+    if (ext === "jsonld") return "jsonld";
+    if (ext === "json") return "json";
+    return null;
+}
+
 function detectFormatFromUrl(url) {
     if (url.endsWith(".yaml") || url.endsWith(".yml")) return "yaml";
     if (url.endsWith(".jsonld")) return "jsonld";
-    return "json";
+    if (url.endsWith(".json")) return "json";
+    return null;
 }
 
 function detectFormatFromContent(content) {
@@ -120,10 +70,6 @@ function detectFormatFromContent(content) {
             return "text";
         }
     }
-}
-
-function parseYaml(content) {
-    return yaml.load(content);
 }
 
 async function expandJsonLd(data) {
@@ -160,141 +106,55 @@ function renderEditor(jsonData, parserConfig) {
     hideMessage();
 }
 
-function renderSamplePicker() {
-    const container = document.createElement("div");
-    container.id = "sample-picker";
-
-    const label = document.createElement("div");
-    label.id = "sample-label";
-    label.textContent = "No Galaxy connection detected. Choose sample data to preview:";
-    container.appendChild(label);
-
-    const formats = [
-        { name: "JSON", format: "json", data: SAMPLE_JSON },
-        { name: "YAML", format: "yaml", data: SAMPLE_YAML },
-        { name: "JSON-LD", format: "jsonld", data: SAMPLE_JSONLD },
-    ];
-
-    formats.forEach(({ name, format, data }) => {
-        const btn = document.createElement("button");
-        btn.className = "sample-btn";
-        btn.textContent = name;
-        btn.onclick = () => loadInlineData(format, data);
-        container.appendChild(btn);
-    });
-
-    appElement.insertBefore(container, editorElement);
-    hideMessage();
-}
-
-function loadInlineData(format, data) {
-    const picker = document.getElementById("sample-picker");
-    if (picker) picker.remove();
-
-    let jsonData;
-    let parserConfig = {};
-    let content;
+async function buildEditorData(content, format) {
+    if (!format) {
+        format = detectFormatFromContent(content);
+    }
 
     if (format === "yaml") {
-        content = typeof data === "string" ? data : yaml.dump(data, { lineWidth: -1 });
-        jsonData = parseYaml(content);
-        parserConfig = {
-            parser: {
-                parse: (text) => yaml.load(text),
-                stringify: (value) => yaml.dump(value, { lineWidth: -1 }),
+        return {
+            jsonData: yaml.load(content),
+            parserConfig: {
+                parser: {
+                    parse: (text) => yaml.load(text),
+                    stringify: (value) => yaml.dump(value, { lineWidth: -1 }),
+                },
             },
         };
-    } else if (format === "jsonld") {
-        jsonData = typeof data === "string" ? JSON.parse(data) : data;
+    }
+
+    if (format === "jsonld") {
+        let jsonData = JSON.parse(content);
         if (expandJsonld) {
-            expandJsonLd(jsonData).then((expanded) => renderEditor(expanded, parserConfig));
-            return;
+            jsonData = await expandJsonLd(jsonData);
         }
-    } else {
-        jsonData = typeof data === "string" ? JSON.parse(data) : data;
+        return { jsonData, parserConfig: {} };
     }
 
-    renderEditor(jsonData, parserConfig);
+    if (format === "json") {
+        return { jsonData: JSON.parse(content), parserConfig: {} };
+    }
+
+    return { jsonData: { text: content }, parserConfig: {} };
 }
 
-async function loadFromUrl(url, format) {
-    showMessage("Loading...");
-    try {
-        const { data: content } = await axios.get(url, { responseType: "text" });
-        if (!format) {
-            format = detectFormatFromUrl(url) || detectFormatFromContent(content);
+async function fetchContent() {
+    if (datasetId && datasetId !== TEST_DATASET_ID) {
+        showMessage("Loading...");
+        if (datasetId.startsWith("http")) {
+            const { data: content } = await axios.get(datasetId, { responseType: "text" });
+            return { content, format: detectFormatFromUrl(datasetId) };
         }
-
-        let jsonData;
-        let parserConfig = {};
-
-        if (format === "yaml") {
-            jsonData = parseYaml(content);
-            parserConfig = {
-                parser: {
-                    parse: (text) => yaml.load(text),
-                    stringify: (value) => yaml.dump(value, { lineWidth: -1 }),
-                },
-            };
-        } else if (format === "jsonld") {
-            jsonData = JSON.parse(content);
-            if (expandJsonld) {
-                jsonData = await expandJsonLd(jsonData);
-            }
-        } else if (format === "json") {
-            jsonData = JSON.parse(content);
-        } else {
-            jsonData = { text: content };
-        }
-
-        renderEditor(jsonData, parserConfig);
-    } catch (e) {
-        showError("Failed to load dataset", e);
+        const { data: metadata } = await axios.get(`${root}api/datasets/${datasetId}`);
+        const { data: content } = await axios.get(`${root}api/datasets/${datasetId}/display`, {
+            responseType: "text",
+        });
+        return { content, format: extensionToFormat(metadata.extension || metadata.data_type) };
     }
-}
 
-async function loadFromGalaxy() {
-    showMessage("Loading...");
-    try {
-        const metaUrl = `${root}api/datasets/${datasetId}`;
-        const contentUrl = `${root}api/datasets/${datasetId}/display`;
-
-        const { data: metadata } = await axios.get(metaUrl);
-        const { data: content } = await axios.get(contentUrl, { responseType: "text" });
-
-        const ext = metadata.extension || metadata.data_type || "";
-        let format;
-        if (ext === "yaml" || ext === "yml") format = "yaml";
-        else if (ext === "jsonld") format = "jsonld";
-        else if (ext === "json") format = "json";
-        else format = detectFormatFromContent(content);
-
-        let jsonData;
-        let parserConfig = {};
-
-        if (format === "yaml") {
-            jsonData = parseYaml(content);
-            parserConfig = {
-                parser: {
-                    parse: (text) => yaml.load(text),
-                    stringify: (value) => yaml.dump(value, { lineWidth: -1 }),
-                },
-            };
-        } else if (format === "jsonld") {
-            jsonData = JSON.parse(content);
-            if (expandJsonld) {
-                jsonData = await expandJsonLd(jsonData);
-            }
-        } else if (format === "json") {
-            jsonData = JSON.parse(content);
-        } else {
-            jsonData = { text: content };
-        }
-
-        renderEditor(jsonData, parserConfig);
-    } catch (e) {
-        showError("Failed to load dataset", e);
-    }
+    showMessage(`Loading test data from ${TEST_DATA_FILE}...`);
+    const { data: content } = await axios.get(TEST_DATA_FILE, { responseType: "text" });
+    return { content, format: TEST_DATA_EXTENSION };
 }
 
 function showMessage(title) {
@@ -312,12 +172,14 @@ function hideMessage() {
     messageElement.style.display = "none";
 }
 
-if (isSampleMode) {
-    renderSamplePicker();
-} else if (isTestMode) {
-    loadFromUrl(TEST_URLS[testFormat] || TEST_URLS.json, testFormat);
-} else if (isDirectUrl) {
-    loadFromUrl(datasetId);
-} else {
-    loadFromGalaxy();
+async function initialize() {
+    try {
+        const { content, format } = await fetchContent();
+        const { jsonData, parserConfig } = await buildEditorData(content, format);
+        renderEditor(jsonData, parserConfig);
+    } catch (e) {
+        showError("Failed to load dataset", e);
+    }
 }
+
+initialize();
