@@ -26,7 +26,7 @@ const datasetId = incoming?.visualization_config?.dataset_id || "";
 const root = incoming?.root || "";
 const settings = incoming?.visualization_config?.settings || {};
 const mode = settings.mode || "tree";
-const expandJsonld = settings.expand_jsonld === true || settings.expand_jsonld === "true";
+const shouldExpandJsonld = settings.expand_jsonld === true || settings.expand_jsonld === "true";
 
 const messageElement = document.createElement("div");
 messageElement.id = "message";
@@ -124,7 +124,7 @@ async function buildEditorData(content, format) {
 
     if (format === "jsonld") {
         let jsonData = JSON.parse(content);
-        if (expandJsonld) {
+        if (shouldExpandJsonld) {
             jsonData = await expandJsonLd(jsonData);
         }
         return { jsonData, parserConfig: {} };
