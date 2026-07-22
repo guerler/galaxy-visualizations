@@ -19,7 +19,6 @@
     },
     "devDependencies": {
         "@playwright/test": "^1.56.0",
-        "axios": "^1.8.4",
         "prettier": "^3.5.3",
         "typescript": "^5.5.4",
         "vite": "^6.2.2"

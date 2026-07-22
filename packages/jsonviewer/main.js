@@ -1,4 +1,3 @@
-import axios from "axios";
 import { createJSONEditor } from "vanilla-jsoneditor";
 import * as yaml from "js-yaml";
 import * as jsonld from "jsonld";
@@ -138,22 +137,26 @@ async function buildEditorData(content, format) {
     return { jsonData: { text: content }, parserConfig: {} };
 }
 
+async function fetchUrl(url, format = "text") {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${url}`);
+    return response[format]();
+}
+
 async function fetchContent() {
     if (datasetId && datasetId !== TEST_DATASET_ID) {
         showMessage("Loading...");
         if (datasetId.startsWith("http")) {
-            const { data: content } = await axios.get(datasetId, { responseType: "text" });
+            const content = await fetchUrl(datasetId);
             return { content, format: detectFormatFromUrl(datasetId) };
         }
-        const { data: metadata } = await axios.get(`${root}api/datasets/${datasetId}`);
-        const { data: content } = await axios.get(`${root}api/datasets/${datasetId}/display`, {
-            responseType: "text",
-        });
-        return { content, format: extensionToFormat(metadata.extension || metadata.data_type) };
+        const metadata = await fetchUrl(`${root}api/datasets/${datasetId}`, "json");
+        const content = await fetchUrl(`${root}api/datasets/${datasetId}/display`);
+        return { content, format: extensionToFormat(metadata.extension) };
     }
 
     showMessage(`Loading test data from ${TEST_DATA_FILE}...`);
-    const { data: content } = await axios.get(TEST_DATA_FILE, { responseType: "text" });
+    const content = await fetchUrl(TEST_DATA_FILE);
     return { content, format: TEST_DATA_EXTENSION };
 }
 
