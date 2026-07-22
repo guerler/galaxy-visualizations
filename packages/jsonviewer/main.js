@@ -160,14 +160,18 @@ async function fetchContent() {
     return { content, format: TEST_DATA_EXTENSION };
 }
 
-function showMessage(title) {
-    messageElement.innerHTML = `<strong>${title}</strong>`;
+function showMessage(title, detail) {
+    const strong = document.createElement("strong");
+    strong.textContent = title;
+    messageElement.replaceChildren(strong);
+    if (detail !== undefined) {
+        messageElement.append(`: ${detail}`);
+    }
     messageElement.style.display = "inline";
 }
 
 function showError(title, err) {
-    messageElement.innerHTML = `<strong>${title}</strong>: ${err}`;
-    messageElement.style.display = "inline";
+    showMessage(title, err);
     console.error(`${title}: ${err}`);
 }
 
