@@ -13,7 +13,7 @@ one spectrum of rigidity:
   the loop as one reliable tool via `run_process`. The model *cannot* deviate. Use a
   process when the task must be *deterministic/validated/bounded* — a procedure a
   markdown skill cannot guarantee (e.g. reproduce ~65 chart transforms and emit a
-  valid Vega-Lite spec every time: `visualize_dataset`).
+  valid Vega-Lite spec every time: `vintent_dataset`).
 
 Pick the form by need: guidance → skill; a procedure that must run the same way every
 time → process. A task can also start as a skill and crystallize into a process once
@@ -33,20 +33,43 @@ Shipped:
   `traverse` upstream (dataset -> creating_job -> inputs/outputs) -> `reasoning`
   narrative -> `lineage.mermaid` materializer -> `terminal`. Exercises executor +
   traverse + reasoning + materializer + terminal.
-- **`visualize_dataset`** (`processes/visualize_dataset.yml`): the absorbed vintent
+- **`vintent_dataset`** (`processes/vintent_dataset.yml`): the absorbed vintent
   pipeline. Fetch + profile a dataset, four state-derived `planner` decisions
   (intent, extract, shell, params), deterministic transforms, then compile a
-  Vega-Lite chart returned as a typed artifact. Its leaves live under `vintent/` and
-  are registered by `vintent_bridge.py`.
+  Vega-Lite chart returned as a typed artifact. Its leaves live under `extensions/vintent/` and
+  are registered by that package's `bridge.py`.
 
 Materializers and schema-builders used by processes register in code
-(`materializers.py` + `vintent_bridge.py`, via `register_materializer` /
+(`extensions/*/bridge.py`, via `register_materializer` /
 `register_builder`). Import is lazy: the graph engine and registrations load only
 when `run_process` first runs.
 
 Add a process by dropping an `agent.yml` in `processes/` (shipped via
 `package-data`). A process starts life as an ad hoc loop task; once proven, it is
 frozen here.
+
+The name says which renderer it uses. A future `visualize_dataset` would choose among
+Galaxy's registered visualizations rather than always producing Vega-Lite; when it
+exists, narrow this one's `when_to_use` so the two do not compete for the same request.
+
+## extensions
+
+Primitive packs a graph node can call — olite's own or absorbed. Each is a directory
+with a `bridge.py` that registers what it offers, and `extensions/__init__.py` imports
+every bridge.
+
+```
+extensions/
+  __init__.py     imports each pack's bridge
+  lineage/
+    bridge.py     lineage.mermaid, for lineage_report.yml
+  vintent/
+    bridge.py     vintent's leaves as materializers + schema-builders
+    core/ modules/
+```
+
+`registry.load_primitives()` is the one call that loads them; nothing registers by
+side-effect import any more. Tests mirror the layout under `tests/extensions/`.
 
 ## skills
 
@@ -78,7 +101,7 @@ Two behaviours are deliberately Orbit's, not ours:
 
 Repos:
 
-- `skills/olite/` — olite's own, sorted first so it is the default repo. Its skills
+- `skills/olite-skills/` — olite's own, sorted first so it is the default repo. Its skills
   route to olite processes, which the shipped corpus knows nothing about.
 - `skills/galaxy-skills/` — `galaxyproject/galaxy-skills`, vendored at build time by
   `skills.install.js` and pinned by the committed `skills.lock.json`. Gitignored: it

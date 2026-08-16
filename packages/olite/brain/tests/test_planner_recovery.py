@@ -11,7 +11,9 @@ from olite.drivers.graph import GraphDriver
 from olite.drivers.graph.constants import PLANNER_MAX_ATTEMPTS, ErrorCode
 from olite.registry import ProcessRegistry
 
-import olite.registry.materializers  # noqa: F401  (registers materializers + bridge)
+from olite.registry import load_primitives
+
+load_primitives()
 
 FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 
@@ -76,7 +78,7 @@ class FakeSubstrate:
 
 
 def _run(csv_text, scripts):
-    proc = ProcessRegistry().load_packaged().get("visualize_dataset")
+    proc = ProcessRegistry().load_packaged().get("vintent_dataset")
     substrate = FakeSubstrate(csv_text, scripts)
     result = asyncio.run(
         GraphDriver(substrate).run(proc.graph, {"dataset_id": "d1", "request": "scatter BMI vs Glucose"})
@@ -115,7 +117,7 @@ def test_retry_prompt_quotes_the_rejected_value_and_the_reason():
             captured.append(messages[-1].get("content", ""))
             return await super().complete(messages, tools)
 
-    proc = ProcessRegistry().load_packaged().get("visualize_dataset")
+    proc = ProcessRegistry().load_packaged().get("vintent_dataset")
     substrate = FakeSubstrate(_fixture_csv(), BAD_THEN_GOOD)
     substrate.llm = CapturingLlm(BAD_THEN_GOOD)
     asyncio.run(GraphDriver(substrate).run(proc.graph, {"dataset_id": "d1", "request": "x"}))
@@ -150,7 +152,7 @@ def test_unplottable_data_fails_at_the_decision_not_at_compile():
 
 
 def test_fill_params_builder_rejects_an_unknown_shell():
-    from olite.registry.vintent_bridge import _fill_params_schema
+    from olite.registry.extensions.vintent.bridge import _fill_params_schema
 
     profile = {"fields": {"a": {"type": "quantitative"}}, "row_count": 1}
     try:
