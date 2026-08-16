@@ -2,6 +2,7 @@
 
 import logging
 
+from olite import config as config_module
 from olite import prompt
 from olite.drivers import LoopDriver
 from olite.registry import ProcessRegistry, SkillRegistry
@@ -12,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def run(config, inputs, on_event=None):
+    config = config_module.parse(config)
     substrate = await Substrate(config).init()
     processes = ProcessRegistry().load_packaged()
     skills = SkillRegistry().load_packaged()
@@ -22,8 +24,7 @@ async def run(config, inputs, on_event=None):
     try:
         result = await driver.run(transcripts, on_event, cancellation.from_js())
     except Exception as e:
-        # A failed turn is a result, not a crash: the shell can say what went wrong,
-        # where a raised exception reaches the user as a Pyodide traceback.
+        # A failed turn is a result, not a crash.
         logger.exception("turn failed")
         return {
             "logs": [],

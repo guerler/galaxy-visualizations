@@ -1,11 +1,7 @@
-"""The OpenAI chat-completions dialect.
-
-Galaxy's chat proxy speaks it, and so do Gemini's shim, DeepSeek, LiteLLM and
-llama.cpp. It is the only dialect olite needs today; the point of the Api seam is that
-the next one is a sibling of this file rather than an edit to the loop.
-"""
+"""The OpenAI chat-completions dialect."""
 
 import json
+from dataclasses import dataclass, field
 
 MIN = 0.0000001
 MAX = 999999999
@@ -13,15 +9,15 @@ TEMPERATURE = 0.3
 TOP_P = 0.8
 
 
+@dataclass
 class Reply:
     """What the loop needs from a completion, named rather than dug out of JSON."""
 
-    def __init__(self, content="", tool_calls=None, finish_reason=None, usage=None, raw=None):
-        self.content = content
-        self.tool_calls = tool_calls or []
-        self.finish_reason = finish_reason
-        self.usage = usage or {}
-        self.raw = raw
+    content: str = ""
+    tool_calls: list = field(default_factory=list)
+    finish_reason: str | None = None
+    usage: dict = field(default_factory=dict)
+    raw: dict | None = None
 
 
 class OpenAICompletions:

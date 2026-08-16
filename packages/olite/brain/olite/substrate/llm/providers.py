@@ -1,11 +1,7 @@
-"""Which endpoint olite talks to, and what that endpoint's properties are.
-
-Modelled on pi's `createProvider`: an entry names its dialect, its base URL, where its
-key comes from, and the models it serves. olite adds `limits`, because an endpoint's
-caps are facts the brain has to plan around rather than discover in production.
-"""
+"""Which endpoint olite talks to, and what that endpoint's properties are."""
 
 import os
+from dataclasses import dataclass, field
 
 # Requested per reply when nothing narrower applies.
 DEFAULT_MAX_TOKENS = 16384
@@ -14,55 +10,46 @@ DEFAULT_CONTEXT_WINDOW = 128000
 DEFAULT_RATE_LIMIT = 30
 
 
+@dataclass(frozen=True)
 class Limits:
     """What an endpoint refuses, as opposed to what a model cannot do."""
 
-    def __init__(self, max_tokens=None, max_tool_bytes=None, max_tools=None):
-        self.max_tokens = max_tokens
-        self.max_tool_bytes = max_tool_bytes
-        self.max_tools = max_tools
+    max_tokens: int | None = None
+    max_tool_bytes: int | None = None
+    max_tools: int | None = None
 
 
+@dataclass(frozen=True)
 class Model:
-    def __init__(self, id, context_window=None, max_tokens=None, compat=None):
-        self.id = id
-        self.context_window = context_window
-        self.max_tokens = max_tokens
-        self.compat = compat or {}
+    id: str | None = None
+    context_window: int | None = None
+    max_tokens: int | None = None
+    compat: dict = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
 class Provider:
-    def __init__(
-        self,
-        id,
-        name=None,
-        api="openai-completions",
-        base_url=None,
-        auth_env=None,
-        limits=None,
-        models=None,
-        context_window=None,
-        rate_limit=None,
-        compat=None,
-    ):
-        self.id = id
-        self.name = name or id
-        self.api = api
-        self.base_url = base_url
-        self.auth_env = auth_env
-        self.limits = limits or Limits()
-        self.models = models or {}
-        self.context_window = context_window
-        self.rate_limit = rate_limit
-        self.compat = compat or {}
+    id: str
+    name: str | None = None
+    api: str = "openai-completions"
+    base_url: str | None = None
+    auth_env: str | None = None
+    limits: Limits = field(default_factory=Limits)
+    models: dict = field(default_factory=dict)
+    context_window: int | None = None
+    rate_limit: int | None = None
+    compat: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.name is None:
+            object.__setattr__(self, "name", self.id)
 
     def model(self, model_id):
         """The named model, or a bare record so an unknown id still resolves."""
         return self.models.get(model_id) or Model(model_id)
 
 
-# Galaxy's own caps, read from lib/galaxy/webapps/galaxy/api/plugins.py. Hard-coded
-# because Galaxy exposes no endpoint for them; revisit if it ever does.
+# Galaxy's own caps, from lib/galaxy/webapps/galaxy/api/plugins.py.
 GALAXY = Provider(
     id="galaxy",
     name="Galaxy chat proxy",
@@ -90,8 +77,7 @@ DEEPSEEK = Provider(
     models={"deepseek-v4-flash": Model("deepseek-v4-flash", context_window=1_000_000)},
 )
 
-# llama.cpp and Ollama both serve here and ignore the model name, so the window is a
-# property of whatever is loaded rather than of any model id.
+# llama.cpp and Ollama ignore the model name, so the window belongs to the server.
 LOCAL = Provider(
     id="local",
     name="Local OpenAI-compatible server",
@@ -102,17 +88,17 @@ LOCAL = Provider(
 REGISTRY = {p.id: p for p in (GALAXY, GEMINI, DEEPSEEK, LOCAL)}
 
 
+@dataclass(frozen=True)
 class Target:
     """One resolved endpoint: everything a request needs, already reconciled."""
 
-    def __init__(self, provider, model, base_url, api_key, context_window, max_tokens, rate_limit):
-        self.provider = provider
-        self.model = model
-        self.base_url = base_url
-        self.api_key = api_key
-        self.context_window = context_window
-        self.max_tokens = max_tokens
-        self.rate_limit = rate_limit
+    provider: Provider
+    model: Model
+    base_url: str | None
+    api_key: str | None
+    context_window: int
+    max_tokens: int
+    rate_limit: int
 
     @property
     def api(self):
@@ -137,11 +123,7 @@ def _first(*values):
 
 
 def resolve(config):
-    """The endpoint this config points at.
-
-    `ai_provider` names a registry entry; failing that a base URL means a custom
-    provider, as in pi; failing that it is Galaxy's proxy.
-    """
+    """The endpoint this config points at: named provider, else custom, else Galaxy."""
     config = config or {}
     named = config.get("ai_provider")
     base_url = config.get("ai_base_url")
