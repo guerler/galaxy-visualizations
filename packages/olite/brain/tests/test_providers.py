@@ -239,3 +239,92 @@ def test_an_unlisted_openrouter_model_still_resolves():
     target = resolve({"ai_provider": "openrouter", "ai_model": "some/new-model"})
     assert target.model.id == "some/new-model"
     assert target.context_window == DEFAULT_CONTEXT_WINDOW
+
+
+def test_an_unusable_provider_response_is_an_error_not_an_empty_turn():
+    """pi turns a failed provider response into stopReason "error"; a silent empty turn
+    would be graded as the agent choosing to stop, which is a different claim."""
+    from olite.exceptions import ProviderError
+
+    adapter = get_adapter("openai-completions")
+
+    with pytest.raises(ProviderError):
+        adapter.parse_reply({"choices": []})
+    with pytest.raises(ProviderError):
+        adapter.parse_reply({})
+
+
+def test_a_deliberate_empty_reply_with_a_stop_reason_still_parses():
+    """A model may legitimately stop with nothing to add; that is not a provider failure."""
+    adapter = get_adapter("openai-completions")
+
+    reply = adapter.parse_reply({"choices": [{"message": {"content": ""}, "finish_reason": "stop"}]})
+
+    assert reply.finish_reason == "stop"
+    assert reply.content == ""
+
+
+class _Adapter:
+    """Answers empty the first N times, then normally."""
+
+    def __init__(self, empties):
+        self.empties = empties
+        self.sent = 0
+
+    def url(self, target): return "http://x/v1/chat/completions"
+    def headers(self, target): return {}
+    def oversized_tools(self, target, tools): return []
+    def build_request(self, *a, **k): return {}
+
+    def parse_reply(self, payload):
+        from olite.exceptions import ProviderError
+        self.sent += 1
+        if self.sent <= self.empties:
+            raise ProviderError("The model provider returned an empty response.")
+        return "reply"
+
+
+def _llm_with(adapter, monkeypatch):
+    import olite.substrate.llm.client as client_mod
+    from olite.substrate.llm.client import Llm
+
+    async def fake_request(**kwargs): return {}
+    monkeypatch.setattr(client_mod.http, "request", fake_request)
+    monkeypatch.setattr(client_mod.asyncio, "sleep", lambda s: _done())
+
+    llm = Llm.__new__(Llm)
+    llm.adapter = adapter
+    llm.target = resolve({"ai_provider": "openrouter", "ai_model": "x/y"})
+    llm.manifest = type("M", (), {"require": lambda self, c: None})()
+    llm._limiter = type("L", (), {"acquire": lambda self: _done()})()
+    return llm
+
+
+async def _done(): return None
+
+
+def test_one_empty_reply_is_resent_rather_than_raised(monkeypatch):
+    """A single dropped response should not end a turn; two in a row is a broken endpoint."""
+    import asyncio
+
+    from olite.substrate.llm.client import EMPTY_REPLY_ATTEMPTS
+
+    adapter = _Adapter(empties=1)
+    llm = _llm_with(adapter, monkeypatch)
+
+    assert asyncio.run(llm.complete([{"role": "user", "content": "hi"}])) == "reply"
+    assert adapter.sent == 2
+    assert EMPTY_REPLY_ATTEMPTS == 2
+
+
+def test_a_persistently_empty_endpoint_still_raises(monkeypatch):
+    import asyncio
+
+    from olite.exceptions import ProviderError
+
+    adapter = _Adapter(empties=5)
+    llm = _llm_with(adapter, monkeypatch)
+
+    with pytest.raises(ProviderError):
+        asyncio.run(llm.complete([{"role": "user", "content": "hi"}]))
+    assert adapter.sent == 2
