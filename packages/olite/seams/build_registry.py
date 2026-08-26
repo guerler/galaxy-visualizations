@@ -5,13 +5,15 @@ whole point of the registry is that a trigger is recorded next to its text.
 """
 
 import json
+import os
 import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import extract  # noqa: E402
 
-LOOM = pathlib.Path("/Users/guerler/loom")
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+LOOM = pathlib.Path(os.environ.get("LOOM_ROOT", pathlib.Path.home() / "loom"))
 CTX = "extensions/loom/context.ts"
 
 # loom symbol -> (condition, olite symbol or None, label, note)
@@ -86,7 +88,7 @@ CONSTS = [
 
 def main():
     loom_ctx = (LOOM / CTX).read_text()
-    olite_prompt = pathlib.Path("brain/olite/prompt.py").read_text()
+    olite_prompt = (ROOT / "brain/olite/prompt.py").read_text()
     rows = []
     for symbol, condition, olite_symbol, label, note in BLOCKS:
         src = extract.ts_symbol(loom_ctx, symbol)
@@ -155,8 +157,10 @@ def main():
             "note": note,
         })
 
-    out = pathlib.Path("seams/registry.json")
-    out.write_text(json.dumps({"seams": rows}, indent=2) + "\n")
+    out = ROOT / "seams/registry.json"
+    registry = json.loads(out.read_text()) if out.exists() else {}
+    registry["seams"] = rows
+    out.write_text(json.dumps(registry, indent=2) + "\n")
     print(f"wrote {len(rows)} rows -> {out}")
 
 
