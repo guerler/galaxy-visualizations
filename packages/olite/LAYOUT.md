@@ -77,8 +77,8 @@ vintent (a natural-language-to-chart plugin) is fully absorbed here as the
 its orchestration was dropped, and olite's graph driver runs the pipeline. Tests:
 `brain/tests/leaves/` (ported vintent leaf tests) + `brain/tests/test_visualize_dataset.py`.
 
-Adopted from polaris (not a dependency; polaris is unpublished, so its substrate is
-copied in and owned here): `core/*` and `api/*` became `substrate/*`. The capability
+Adopted from the polaris prototype, which olite absorbed (not a dependency; its substrate
+is owned here): `core/*` and `api/*` became `substrate/*`. The capability
 gate, factored out of polaris's `Registry.call_api`, now lives in `Catalog` +
 `CapabilityManifest`, used uniformly by both drivers.
 

@@ -1,4 +1,4 @@
-"""Type definitions for Polaris agent execution."""
+"""Type definitions for graph agent execution."""
 
 from typing import Any, Callable, TypedDict
 

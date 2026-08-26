@@ -28,8 +28,8 @@ substrate / drivers / registry. Full map: **[`LAYOUT.md`](./LAYOUT.md)**.
   in (numpy/pandas available, state persists across calls).
 - **Remote compute + storage**: the scoped, capability-gated catalog hits the Galaxy API
   with the user's session. Reads are available now; writes are gated and enabled targeted.
-- **Substrate origin**: `substrate/` is adopted from the `polaris` Charts plugin (`core/` +
-  `api/`) and owned here, since polaris is unpublished. The capability gate is factored into
+- **Substrate origin**: `substrate/` originated in the `polaris` prototype (`core/` +
+  `api/`), which olite absorbed and now owns. The capability gate is factored into
   `Catalog` + `CapabilityManifest`.
 
 ## Running it locally
@@ -138,5 +138,5 @@ Every deliberate difference is recorded rather than assumed.
 - Galaxy visualization framework:
   [github.com/galaxyproject/galaxy-charts](https://github.com/galaxyproject/galaxy-charts)
 
-The Pyodide substrate (`substrate/`) is adopted from the `vintent` / `polaris` Charts
-plugins.
+The Pyodide substrate (`substrate/`) is adopted from the `vintent` Charts plugin and the
+`polaris` prototype.

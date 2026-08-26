@@ -1,4 +1,4 @@
-"""Constants for Polaris agent execution."""
+"""Constants for graph agent execution."""
 
 from enum import Enum
 

@@ -7,8 +7,8 @@ in three layers. See `../LAYOUT.md` for the full map.
 - `runtime.py` — `run(config, inputs)`: builds the substrate, runs a driver.
 - `substrate/` — LAYER 1, the shared kernel: `CapabilityManifest` (the gate),
   `LocalPython` (Pyodide compute), `Catalog` (scoped, capability-gated Galaxy
-  API), `Llm` (chat proxy). Adopted from polaris `core/` + `api/` and owned here
-  (polaris is unpublished).
+  API), `Llm` (chat proxy). Adopted from the polaris prototype's `core/` + `api/` and
+  owned here.
 - `drivers/` — LAYER 2, how it decides: `loop/` (open-ended, Orbit parity, the
   default) and a deferred `graph/` (polaris runner for crystallized `agent.yml`
   processes). See `drivers/README.md`.
