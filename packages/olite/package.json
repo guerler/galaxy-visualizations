@@ -21,7 +21,7 @@
     "test:ui": "vitest --ui",
     "test:unit": "vitest run",
     "test:watch": "vitest --watch",
-    "seams": "python3 seams/check.py"
+    "seams": "python3 seams/check.py && python3 seams/check_vendored.py"
   },
   "dependencies": {
     "mermaid": "^11.16.1",
