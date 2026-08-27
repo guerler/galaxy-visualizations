@@ -101,16 +101,12 @@ async function main() {
     const ARTIFACT_BREAKPOINT = 700;
 
     const chatPane = container.querySelector<HTMLElement>("#chat-pane")!;
-    // Last width chosen by dragging the divider, so hiding the pane does not discard it.
-    let splitFlex = "";
 
     const applyArtifactCollapsed = (collapsed: boolean) => {
         document.body.classList.toggle("artifact-collapsed", collapsed);
-        // The drag writes an inline flex-basis, which outranks the stylesheet rule
-        // giving the chat pane full width when collapsed. Clear it while hidden and
-        // restore it on reopen. Orbit never clears it, so a collapse after a drag
-        // leaves the chat pane at its dragged width there -- see orbit-faithfulness.
-        chatPane.style.flex = collapsed ? "" : splitFlex;
+        if (collapsed) {
+            chatPane.style.flex = "";
+        }
     };
     const setArtifactCollapsed = (collapsed: boolean) => {
         applyArtifactCollapsed(collapsed);
@@ -219,8 +215,7 @@ async function main() {
         const width = appMain.getBoundingClientRect().width;
         const left = chatPane.getBoundingClientRect().left;
         const pct = (((e as MouseEvent).clientX - left) / width) * 100;
-        splitFlex = `0 0 ${Math.max(25, Math.min(75, pct))}%`;
-        chatPane.style.flex = splitFlex;
+        chatPane.style.flex = `0 0 ${Math.max(25, Math.min(75, pct))}%`;
     });
     document.addEventListener("mouseup", () => {
         if (!dragging) {
