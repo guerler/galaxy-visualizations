@@ -83,6 +83,12 @@ const stored = (p) => p.evaluate(() => localStorage.getItem("olite.artifactColla
     await page.waitForTimeout(300);
     check("widening restores the stored preference", !(await collapsed(page)));
 
+    // Usage starts hidden: an empty "0 tok" pill before the first turn is noise.
+    check("usage bar is hidden before any turn",
+        await page.evaluate(() => document.querySelector("#usage-bar").classList.contains("hidden")));
+    check("usage cost is empty until a provider reports one",
+        await page.evaluate(() => document.querySelector("#usage-cost").textContent === ""));
+
     await browser.close();
     const failed = results.filter(r => !r.ok).length;
     console.log(`\n${results.length - failed}/${results.length} passed`);

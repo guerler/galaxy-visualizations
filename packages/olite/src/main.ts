@@ -82,6 +82,10 @@ async function main() {
       <div id="app-footer">
         <button id="model-btn" class="footer-control is-interactive" title="Change the model provider">Model</button>
         <button id="artifact-btn" class="footer-control is-interactive" title="Show or hide the artifact pane (Ctrl/Cmd+\\)">Artifact</button>
+        <div id="usage-bar" class="footer-control hidden" title="Session token usage">
+          <span id="usage-tokens">0 tok</span>
+          <span id="usage-cost"></span>
+        </div>
       </div>
       <!-- Orbit's request modal, reduced to the confirm variant. -->
       <div id="ext-overlay" class="modal-overlay hidden">
@@ -169,6 +173,40 @@ async function main() {
         input.style.height = "auto";
         input.style.height = Math.min(input.scrollHeight, 150) + "px";
     });
+
+    // Session usage, accumulated across turns as Orbit does (app.ts:308).
+    const usageBar = container.querySelector<HTMLElement>("#usage-bar")!;
+    const usageTokens = container.querySelector<HTMLElement>("#usage-tokens")!;
+    const usageCost = container.querySelector<HTMLElement>("#usage-cost")!;
+    const sessionUsage = { input: 0, output: 0, cost: null as number | null };
+
+    const formatTokens = (n: number) => {
+        if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + "M";
+        if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";
+        return String(n);
+    };
+
+    function renderUsage() {
+        const total = sessionUsage.input + sessionUsage.output;
+        if (!total) {
+            usageBar.classList.add("hidden");
+            return;
+        }
+        usageBar.classList.remove("hidden");
+        usageTokens.textContent = `${formatTokens(total)} tok`;
+        usageTokens.title =
+            `Session usage:\n  input: ${sessionUsage.input.toLocaleString()}` +
+            `\n  output: ${sessionUsage.output.toLocaleString()}`;
+        // Shown only when the provider priced the call; olite keeps no price table.
+        if (sessionUsage.cost === null) {
+            usageCost.textContent = "";
+            usageCost.classList.add("hidden");
+            return;
+        }
+        usageCost.textContent = sessionUsage.cost < 0.01 ? "<$0.01" : `$${sessionUsage.cost.toFixed(2)}`;
+        usageCost.title = `Session cost: $${sessionUsage.cost.toFixed(4)} (reported by the provider)`;
+        usageCost.classList.remove("hidden");
+    }
 
     const artifactBtn = container.querySelector<HTMLButtonElement>("#artifact-btn")!;
     artifactBtn.addEventListener("click", () => setArtifactCollapsed(!artifactCollapsed()));
@@ -390,6 +428,15 @@ async function main() {
                 orphanedActiveSteps: 0,
             });
             resetBtn.classList.toggle("hidden", !session.enabled);
+            const turnUsage = reply.usage;
+            if (turnUsage) {
+                sessionUsage.input += turnUsage.input || 0;
+                sessionUsage.output += turnUsage.output || 0;
+                if (turnUsage.cost != null) {
+                    sessionUsage.cost = (sessionUsage.cost || 0) + turnUsage.cost;
+                }
+                renderUsage();
+            }
             const artifacts = reply.artifacts || [];
             if (artifacts.length) {
                 setArtifactCollapsed(false);
