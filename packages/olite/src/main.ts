@@ -8,7 +8,7 @@ import { applyOrbitTheme } from "./orbit/theme";
 import { parseIncoming } from "./incoming";
 import { catalogRefusalMessage, galaxyCanRun } from "./catalog-gate";
 import { buildConfig } from "./config";
-import { ensureCredentials } from "./credentials-modal";
+import { ensureCredentials, switchProvider } from "./credentials-modal";
 import { describeError, lastLine, renderMessages, replayMessages, toolStatus } from "./transcript";
 import { SessionMemory, galaxyUserId, indexedDbStore } from "./session";
 import { writeSessionSummary } from "./session-summary";
@@ -72,6 +72,7 @@ async function main() {
           <div id="input-hint">
             <span>Enter to send</span>
             <button id="reset-btn" class="hidden" title="Start a fresh conversation">New conversation</button>
+            <button id="model-btn" title="Change the model provider">Model</button>
           </div>
         </div>
         <div id="divider"></div>
@@ -128,6 +129,12 @@ async function main() {
         config.history_id,
         await galaxyUserId(config.galaxy_root, credentials),
     );
+    // Naming the active model in the button makes a misconfigured run obvious,
+    // and reopening the picker avoids clearing browser storage by hand.
+    const modelBtn = container.querySelector<HTMLButtonElement>("#model-btn")!;
+    modelBtn.textContent = creds.model ? `${creds.provider} · ${creds.model}` : creds.provider;
+    modelBtn.addEventListener("click", () => void switchProvider(container));
+
     const resetBtn = container.querySelector<HTMLButtonElement>("#reset-btn")!;
     // Replay before the boot notice, so the restored turns sit above it as history.
     let resumed = false;

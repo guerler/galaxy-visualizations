@@ -43,9 +43,9 @@ const MARKUP = `
  * request, and the overlay stays up on a bad entry rather than stranding the
  * user in front of an agent that never connected.
  */
-export function ensureCredentials(container: HTMLElement): Promise<Credentials> {
+export function ensureCredentials(container: HTMLElement, force = false): Promise<Credentials> {
     const stored = loadCredentials();
-    if (stored && !credentialProblem(stored)) return Promise.resolve(stored);
+    if (!force && stored && !credentialProblem(stored)) return Promise.resolve(stored);
 
     container.insertAdjacentHTML("beforeend", MARKUP);
     const overlay = container.querySelector<HTMLElement>("#cred-overlay")!;
@@ -112,4 +112,15 @@ export function ensureCredentials(container: HTMLElement): Promise<Credentials> 
             }
         });
     });
+}
+
+/**
+ * Reopen the picker so the provider can be changed after boot. The worker takes
+ * its config at initialize, so the new choice is applied by reloading rather than
+ * re-initializing a live brain. Conversation history lives in IndexedDB and is
+ * restored on the way back up, so switching models does not discard it.
+ */
+export async function switchProvider(container: HTMLElement): Promise<void> {
+    await ensureCredentials(container, true);
+    window.location.reload();
 }
