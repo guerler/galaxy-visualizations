@@ -13,7 +13,7 @@ TOOLS = []
 DATA_DIR = "/data"
 # Enough to show the header and shape of a table without a run_python round trip.
 PREVIEW_LINES = 50
-MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
+MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
 
 
 def _q(params):
@@ -448,7 +448,7 @@ _tool("get_collection_details", "read", "Get a dataset collection's details and 
       {"collection_id": _STR, "max_elements": _INT}, ["collection_id"], _get_collection_details)
 _tool("download_dataset", "read",
       "Save a dataset to the local filesystem and return its path plus a short preview. "
-      "A dataset over 100 MB comes back as a line-aligned prefix with partial=true and "
+      "A dataset over 20 MB comes back as a line-aligned prefix with partial=true and "
       "bytes_total set; never compute totals or counts from a partial read. "
       "Read the file with run_python (e.g. pandas.read_csv(path, sep='\\t')); do not paste "
       "the preview into code.",
