@@ -73,6 +73,7 @@ async function main() {
             <span>Enter to send</span>
             <button id="reset-btn" class="hidden" title="Start a fresh conversation">New conversation</button>
             <button id="model-btn" title="Change the model provider">Model</button>
+            <button id="artifact-btn" title="Show or hide the artifact pane (Ctrl/Cmd+\\)">Artifact</button>
           </div>
         </div>
         <div id="divider"></div>
@@ -94,8 +95,32 @@ async function main() {
         </div>
       </div>`;
 
-    // Start with the artifact pane collapsed; it reveals when a tool produces one.
-    document.body.classList.add("artifact-collapsed");
+    // Artifact pane, ported from Orbit (app.ts:453-473). The split matters: a narrow
+    // window collapses the pane visually, but must not overwrite what the user chose.
+    const ARTIFACT_COLLAPSED_KEY = "olite.artifactCollapsed";
+    const ARTIFACT_BREAKPOINT = 700;
+
+    const applyArtifactCollapsed = (collapsed: boolean) => {
+        document.body.classList.toggle("artifact-collapsed", collapsed);
+    };
+    const setArtifactCollapsed = (collapsed: boolean) => {
+        applyArtifactCollapsed(collapsed);
+        try {
+            localStorage.setItem(ARTIFACT_COLLAPSED_KEY, collapsed ? "1" : "0");
+        } catch {
+            // A blocked store only costs the preference, not the pane.
+        }
+    };
+    const artifactCollapsed = () => document.body.classList.contains("artifact-collapsed");
+
+    let storedCollapsed: string | null = null;
+    try {
+        storedCollapsed = localStorage.getItem(ARTIFACT_COLLAPSED_KEY);
+    } catch {
+        // Unreadable store: fall through to the collapsed default.
+    }
+    // Default collapsed (single-pane chat); revealed when a tool produces an artifact.
+    setArtifactCollapsed(storedCollapsed === null ? true : storedCollapsed === "1");
 
     const messagesEl = container.querySelector<HTMLElement>("#messages")!;
     const chat = new ChatPanel(messagesEl);
@@ -136,6 +161,66 @@ async function main() {
     input.addEventListener("input", () => {
         input.style.height = "auto";
         input.style.height = Math.min(input.scrollHeight, 150) + "px";
+    });
+
+    const artifactBtn = container.querySelector<HTMLButtonElement>("#artifact-btn")!;
+    artifactBtn.addEventListener("click", () => setArtifactCollapsed(!artifactCollapsed()));
+
+    // Orbit's Ctrl/Cmd+\ (app.ts:487). Scoped to the container: a Galaxy page owns the
+    // document, and a plugin should not claim shortcuts outside its own frame.
+    container.addEventListener("keydown", (e) => {
+        const ev = e as KeyboardEvent;
+        if ((ev.ctrlKey || ev.metaKey) && ev.key === "\\") {
+            ev.preventDefault();
+            setArtifactCollapsed(!artifactCollapsed());
+        }
+    });
+
+    // Responsive auto-collapse (Orbit's applyResponsiveLayout). Visual only, so a narrow
+    // window does not overwrite the stored preference -- Galaxy often renders a plugin
+    // in a panel narrower than this.
+    let wasNarrow = window.innerWidth < ARTIFACT_BREAKPOINT;
+    if (wasNarrow) {
+        applyArtifactCollapsed(true);
+    }
+    window.addEventListener("resize", () => {
+        const narrow = window.innerWidth < ARTIFACT_BREAKPOINT;
+        if (narrow === wasNarrow) {
+            return;
+        }
+        wasNarrow = narrow;
+        applyArtifactCollapsed(narrow ? true : storedCollapsed === "1");
+    });
+
+    // Divider drag (Orbit app.ts:2947), clamped so neither pane can be squeezed away.
+    const divider = container.querySelector<HTMLElement>("#divider")!;
+    const chatPane = container.querySelector<HTMLElement>("#chat-pane")!;
+    const appMain = container.querySelector<HTMLElement>("#app-main")!;
+    let dragging = false;
+    divider.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        dragging = true;
+        divider.classList.add("dragging");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (!dragging) {
+            return;
+        }
+        const width = appMain.getBoundingClientRect().width;
+        const left = chatPane.getBoundingClientRect().left;
+        const pct = (((e as MouseEvent).clientX - left) / width) * 100;
+        chatPane.style.flex = `0 0 ${Math.max(25, Math.min(75, pct))}%`;
+    });
+    document.addEventListener("mouseup", () => {
+        if (!dragging) {
+            return;
+        }
+        dragging = false;
+        divider.classList.remove("dragging");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
     });
 
     const modelBtn = container.querySelector<HTMLButtonElement>("#model-btn")!;
@@ -301,7 +386,7 @@ async function main() {
             resetBtn.classList.toggle("hidden", !session.enabled);
             const artifacts = reply.artifacts || [];
             if (artifacts.length) {
-                document.body.classList.remove("artifact-collapsed");
+                setArtifactCollapsed(false);
                 artifactContent.innerHTML = "";
                 for (const a of artifacts) {
                     await renderArtifact(artifactContent, a);
