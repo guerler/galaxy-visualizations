@@ -50,6 +50,38 @@ function check(name, ok, detail) {
             return !el || el.classList.contains("hidden");
         }));
 
+    // Dismissal: only meaningful once a working selection exists to fall back on.
+    const labelBefore = await page.textContent("#model-btn");
+
+    await page.click("#model-btn");
+    await page.waitForSelector("#cred-overlay:not(.hidden)", { timeout: 10000 });
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => !document.querySelector("#cred-overlay"), null, { timeout: 5000 });
+    check("Escape dismisses the switch picker", true);
+    check("Escape leaves the active model untouched",
+        (await page.textContent("#model-btn")) === labelBefore, await page.textContent("#model-btn"));
+
+    await page.click("#model-btn");
+    await page.waitForSelector("#cred-overlay:not(.hidden)", { timeout: 10000 });
+    const box = await page.locator("#cred-overlay").boundingBox();
+    await page.mouse.click(box.x + 8, box.y + 8);   // backdrop, outside the dialog
+    await page.waitForFunction(() => !document.querySelector("#cred-overlay"), null, { timeout: 5000 });
+    check("backdrop click dismisses the switch picker", true);
+    check("credentials survive dismissal",
+        (await page.evaluate(() => sessionStorage.getItem("olite.credentials"))).includes("deepseek"));
+
+    // First run must NOT be dismissible: there is nothing to fall back to.
+    await page.evaluate(() => sessionStorage.clear());
+    await page.reload();
+    await page.waitForSelector("#cred-overlay:not(.hidden)", { timeout: 20000 });
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(600);
+    check("first-run picker ignores Escape",
+        await page.evaluate(() => {
+            const el = document.querySelector("#cred-overlay");
+            return !!el && !el.classList.contains("hidden");
+        }));
+
     await browser.close();
     const failed = results.filter(r => !r.ok).length;
     console.log(`\n${results.length - failed}/${results.length} passed`);

@@ -42,10 +42,13 @@ const MARKUP = `
  * cannot work. Rejecting up front beats starting a brain that dies on its first
  * request, and the overlay stays up on a bad entry rather than stranding the
  * user in front of an agent that never connected.
+ *
+ * `cancellable` is only safe when a working selection already exists to fall back
+ * on: dismissing the first-run picker would leave the brain with no key at all.
+ * Resolves null when dismissed.
  */
-export function ensureCredentials(container: HTMLElement, force = false): Promise<Credentials> {
+function openPicker(container: HTMLElement, cancellable: boolean): Promise<Credentials | null> {
     const stored = loadCredentials();
-    if (!force && stored && !credentialProblem(stored)) return Promise.resolve(stored);
 
     container.insertAdjacentHTML("beforeend", MARKUP);
     const overlay = container.querySelector<HTMLElement>("#cred-overlay")!;
@@ -85,7 +88,28 @@ export function ensureCredentials(container: HTMLElement, force = false): Promis
     overlay.classList.remove("hidden");
     keyInput.focus();
 
-    return new Promise<Credentials>((resolve) => {
+    return new Promise<Credentials | null>((resolve) => {
+        const close = (value: Credentials | null) => {
+            document.removeEventListener("keydown", onKey, true);
+            overlay.classList.add("hidden");
+            overlay.remove();
+            resolve(value);
+        };
+        // Escape and a backdrop click mean "leave things as they were", matching the
+        // confirm modal. Captured so Escape answers this and not the Stop handler.
+        const onKey = (e: KeyboardEvent) => {
+            if (cancellable && e.key === "Escape") {
+                e.preventDefault();
+                e.stopPropagation();
+                close(null);
+            }
+        };
+        if (cancellable) {
+            document.addEventListener("keydown", onKey, true);
+            overlay.addEventListener("click", (e) => {
+                if (e.target === overlay) close(null);
+            });
+        }
         const submit = () => {
             const p = providerById(providerSel.value);
             const freeform = !!p && (p.free_model || p.models.length === 0);
@@ -100,9 +124,7 @@ export function ensureCredentials(container: HTMLElement, force = false): Promis
                 return;
             }
             saveCredentials(creds);
-            overlay.classList.add("hidden");
-            overlay.remove();
-            resolve(creds);
+            close(creds);
         };
         saveBtn.addEventListener("click", submit);
         overlay.addEventListener("keydown", (e) => {
@@ -121,6 +143,16 @@ export function ensureCredentials(container: HTMLElement, force = false): Promis
  * restored on the way back up, so switching models does not discard it.
  */
 export async function switchProvider(container: HTMLElement): Promise<void> {
-    await ensureCredentials(container, true);
+    const before = JSON.stringify(loadCredentials());
+    const picked = await openPicker(container, true);
+    // Dismissed, or re-picked the same thing: nothing to apply, so do not reload.
+    if (!picked || JSON.stringify(picked) === before) return;
     window.location.reload();
+}
+
+/** First-run entry point. Not dismissible: there is nothing to fall back to. */
+export async function ensureCredentials(container: HTMLElement): Promise<Credentials> {
+    const stored = loadCredentials();
+    if (stored && !credentialProblem(stored)) return stored;
+    return (await openPicker(container, false)) as Credentials;
 }
