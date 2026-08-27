@@ -52,8 +52,8 @@ class FakeGalaxy:
             cut = text[:size]
             cut = cut[: cut.rfind("\n") + 1] or cut       # line-aligned, as Galaxy does
             return {"ck_data": cut, "offset": len(cut)}
-        if not path.endswith("/display") and self.stated_size is not None:
-            return {"file_size": self.stated_size}
+        if not path.endswith("/display") and "ck_size=" not in path:
+            return {"file_size": self.stated_size} if self.stated_size is not None else {"id": "d"}
         if binary and isinstance(self.content, str):
             return self.content.encode("utf-8")
         return self.content
@@ -183,3 +183,14 @@ async def test_a_dataset_at_the_limit_is_still_downloaded():
     out = await _download_dataset(g, {"dataset_id": "atlimit"})
     assert "error" not in out and out["path"]
     assert "partial" not in out
+
+
+@pytest.mark.asyncio
+async def test_the_details_preview_reads_a_chunk_not_the_whole_file():
+    """/display streams everything; previewing must not pull a large dataset into memory."""
+    from olite.drivers.loop.galaxy_tools import _get_dataset_details
+
+    g = FakeGalaxy(TABLE)
+    out = await _get_dataset_details(g, {"dataset_id": "d", "preview_lines": 1000})
+    assert out["preview"]
+    assert not any(c.endswith("/display") for c in g.fetched)

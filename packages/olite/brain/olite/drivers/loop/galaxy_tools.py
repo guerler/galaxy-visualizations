@@ -2,6 +2,8 @@
 
 import json
 import os
+import sys
+import tempfile
 from urllib.parse import urlencode
 
 from .galaxy_tool_docs import DOCS
@@ -10,10 +12,12 @@ TOOLS = []
 
 # Pyodide's MEMFS is olite's equivalent of the filesystem Orbit has on disk.
 # Datasets land here so run_python can read them as files.
-DATA_DIR = "/data"
+# Pyodide's MEMFS allows a directory at the root; a host filesystem does not.
+DATA_DIR = "/data" if sys.platform == "emscripten" else os.path.join(tempfile.gettempdir(), "olite-data")
 # Enough to show the header and shape of a table without a run_python round trip.
 PREVIEW_LINES = 50
 MAX_DOWNLOAD_BYTES = 20 * 1024 * 1024
+PREVIEW_BYTES = 256 * 1024
 
 
 def _q(params):
@@ -119,10 +123,15 @@ async def _get_dataset_details(g, a):
     dataset = await g.get(f"api/datasets/{a['dataset_id']}") or {}
     if a.get("include_preview", True):
         try:
-            content = await g.get(f"api/datasets/{a['dataset_id']}/display")
-            text = content if isinstance(content, str) else json.dumps(content)
+            # A chunk, not the whole file: /display streams everything, so previewing a
+            # large dataset would pull it all into memory to show ten lines.
+            want = int(a.get("preview_lines", 10) or 10)
+            text = await _chunk(g, a["dataset_id"], PREVIEW_BYTES)
+            if text is None:
+                content = await g.get(f"api/datasets/{a['dataset_id']}/display")
+                text = content if isinstance(content, str) else json.dumps(content)
             dataset = dict(dataset)
-            dataset["preview"] = "\n".join(text.splitlines()[: a.get("preview_lines", 10)])
+            dataset["preview"] = "\n".join(text.splitlines()[:want])
         except Exception:
             pass
     return dataset
