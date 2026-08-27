@@ -131,6 +131,13 @@ async function main() {
     );
     // Naming the active model in the button makes a misconfigured run obvious,
     // and reopening the picker avoids clearing browser storage by hand.
+    // Orbit's auto-grow (app.ts:2375). The textarea is `resize: none`, so its height
+    // has to follow the content; 150 mirrors the max-height in the vendored CSS.
+    input.addEventListener("input", () => {
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 150) + "px";
+    });
+
     const modelBtn = container.querySelector<HTMLButtonElement>("#model-btn")!;
     modelBtn.textContent = creds.model ? `${creds.provider} · ${creds.model}` : creds.provider;
     modelBtn.addEventListener("click", () => void switchProvider(container));
@@ -209,6 +216,7 @@ async function main() {
         }
         busy = true;
         input.value = "";
+        input.style.height = "auto";
         // Stop replaces Send for the duration of the turn, as in Orbit.
         sendBtn.classList.add("hidden");
         abortBtn.classList.remove("hidden");
@@ -395,6 +403,8 @@ async function main() {
             // Edit hands the draft back for the user to change; it does not submit.
             input.value = "Here is the plan with my edits — please revise your draft accordingly:\n\n```plan\n" + body + "\n```";
             input.focus();
+            // Setting .value does not raise `input`, so the box would stay one line tall.
+            input.dispatchEvent(new Event("input"));
         }
     });
 }
