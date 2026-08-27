@@ -7,6 +7,7 @@ import { applyOrbitTheme } from "./orbit/theme";
 import { parseIncoming } from "./incoming";
 import { catalogRefusalMessage, galaxyCanRun } from "./catalog-gate";
 import { buildConfig } from "./config";
+import { ensureCredentials } from "./credentials-modal";
 import { describeError, lastLine, renderMessages, replayMessages, toolStatus } from "./transcript";
 import { SessionMemory, galaxyUserId, indexedDbStore } from "./session";
 import { writeSessionSummary } from "./session-summary";
@@ -101,7 +102,10 @@ async function main() {
     const abortBtn = container.querySelector<HTMLButtonElement>("#abort-btn")!;
     const artifactContent = container.querySelector<HTMLElement>("#artifact-content")!;
 
-    const config = buildConfig(incoming);
+    // Ask for a provider/key before the worker starts: initialize carries the
+    // credentials, so a later prompt would mean re-initializing the brain.
+    const creds = await ensureCredentials(container);
+    const config = buildConfig(incoming, creds);
     // Runtime context: where relative fetches resolve and what origin Galaxy calls hit.
     console.log("[olite] context", {
         href: window.location.href,
