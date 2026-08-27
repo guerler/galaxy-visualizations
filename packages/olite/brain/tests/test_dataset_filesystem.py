@@ -26,12 +26,18 @@ def data_dir(tmp_path, monkeypatch):
 TABLE = "Latitude\tLongitude\n" + "\n".join(f"{i}.5\t-{i}.25" for i in range(1, 120))
 
 
+# A real BAM/HDF5/gzip payload: invalid UTF-8, which text decoding would destroy.
+BINARY = b"\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\xde\xad\xbe\xef\x00\x80\x81"
+
+
 class FakeGalaxy:
     def __init__(self, content):
         self.content = content
         self.posted = None
 
-    async def get(self, path):
+    async def get(self, path, binary=False):
+        if binary and isinstance(self.content, str):
+            return self.content.encode("utf-8")
         return self.content
 
     async def post(self, path, payload):
@@ -88,3 +94,32 @@ async def test_uploading_a_missing_path_is_an_error_not_a_crash():
     g = FakeGalaxy("")
     out = await _upload_file(g, {"path": "/data/does-not-exist.dat"})
     assert "error" in out and g.posted is None
+
+
+@pytest.mark.asyncio
+async def test_binary_content_survives_the_round_trip_to_disk():
+    """Text decoding would replace invalid sequences and corrupt the file."""
+    g = FakeGalaxy(BINARY)
+    out = await _download_dataset(g, {"dataset_id": "bam1"})
+    assert out["binary"] is True
+    assert out["preview"] is None and out["lines"] is None
+    assert out["bytes"] == len(BINARY)
+    with open(out["path"], "rb") as f:
+        assert f.read() == BINARY  # byte-identical, no U+FFFD
+
+
+@pytest.mark.asyncio
+async def test_a_text_dataset_is_still_reported_as_text():
+    g = FakeGalaxy(TABLE)
+    out = await _download_dataset(g, {"dataset_id": "txt1"})
+    assert out["binary"] is False
+    assert out["preview"].startswith("Latitude\tLongitude")
+
+
+@pytest.mark.asyncio
+async def test_uploading_binary_is_refused_rather_than_corrupted():
+    g = FakeGalaxy(BINARY)
+    downloaded = await _download_dataset(g, {"dataset_id": "bam2"})
+    out = await _upload_file(g, {"path": downloaded["path"]})
+    assert "error" in out and "binary" in out["error"].lower()
+    assert g.posted is None  # nothing sent

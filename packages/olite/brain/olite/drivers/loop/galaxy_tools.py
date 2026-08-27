@@ -221,21 +221,32 @@ async def _download_dataset(g, a):
     # has to be re-emitted by the model as an escaped string to be used, which breaks
     # on tabs and newlines and costs the whole file in context -- unusable at real
     # dataset sizes. The path lets run_python open it directly.
-    content = await g.get(f"api/datasets/{a['dataset_id']}/display")
-    text = content if isinstance(content, str) else json.dumps(content)
+    #
+    # Fetched as bytes: Galaxy datasets are routinely BAM, HDF5 or gzip, and decoding
+    # those as text replaces invalid sequences and silently corrupts the file.
+    data = await g.get(f"api/datasets/{a['dataset_id']}/display", binary=True)
+    if isinstance(data, str):  # a stub or a JSON-ish response
+        data = data.encode("utf-8")
     os.makedirs(DATA_DIR, exist_ok=True)
     path = f"{DATA_DIR}/{a['dataset_id']}.dat"
-    with open(path, "w") as f:
-        f.write(text)
+    with open(path, "wb") as f:
+        f.write(data)
+
+    out = {"dataset_id": a["dataset_id"], "path": path, "bytes": len(data)}
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        # Binary: a preview would be meaningless and would corrupt the transcript.
+        out.update(binary=True, preview=None, lines=None, truncated=False)
+        return out
     lines = text.splitlines()
-    return {
-        "dataset_id": a["dataset_id"],
-        "path": path,
-        "bytes": len(text.encode("utf-8")),
-        "lines": len(lines),
-        "preview": "\n".join(lines[:PREVIEW_LINES]),
-        "truncated": len(lines) > PREVIEW_LINES,
-    }
+    out.update(
+        binary=False,
+        lines=len(lines),
+        preview="\n".join(lines[:PREVIEW_LINES]),
+        truncated=len(lines) > PREVIEW_LINES,
+    )
+    return out
 
 
 async def _upload_file_from_url(g, a):
@@ -255,8 +266,19 @@ async def _upload_file(g, a):
     path = a["path"]
     if not os.path.isfile(path):
         return {"error": f"No such file: {path}", "path": path}
-    with open(path) as f:
-        text = f.read()
+    with open(path, "rb") as f:
+        raw = f.read()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        # Galaxy's fetch API takes pasted content as text (data_fetch.py uses StringIO),
+        # so binary would have to go up as multipart. Refuse rather than corrupt it.
+        return {
+            "error": "Cannot upload binary content: Galaxy accepts pasted uploads as text only. "
+            "Use upload_file_from_url for binary data.",
+            "path": path,
+            "bytes": len(raw),
+        }
     element = {
         "src": "pasted",
         "paste_content": text,
