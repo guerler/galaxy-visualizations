@@ -40,8 +40,18 @@ class FakeGalaxy:
     # Galaxy states file_size on the dataset record; the display endpoint returns bytes.
     stated_size = None
 
+    chunkable = True
+
     async def get(self, path, binary=False):
         self.fetched.append(path)
+        if "ck_size=" in path:
+            if not self.chunkable:
+                raise RuntimeError("Dataset appears to contain binary data")
+            size = int(path.split("ck_size=")[1])
+            text = self.content if isinstance(self.content, str) else ""
+            cut = text[:size]
+            cut = cut[: cut.rfind("\n") + 1] or cut       # line-aligned, as Galaxy does
+            return {"ck_data": cut, "offset": len(cut)}
         if not path.endswith("/display") and self.stated_size is not None:
             return {"file_size": self.stated_size}
         if binary and isinstance(self.content, str):
@@ -134,15 +144,36 @@ async def test_uploading_binary_is_refused_rather_than_corrupted():
 
 
 @pytest.mark.asyncio
-async def test_an_oversized_dataset_is_refused_before_it_is_fetched():
-    """The browser holds the whole file in memory; fetching a huge one kills the tab."""
+async def test_an_oversized_dataset_comes_back_as_a_flagged_prefix():
+    """Computing a total from a prefix would be silently wrong, so say it is partial."""
     g = FakeGalaxy(TABLE)
     g.stated_size = MAX_DOWNLOAD_BYTES + 1
     out = await _download_dataset(g, {"dataset_id": "huge"})
+    assert out["partial"] is True
+    assert out["bytes_total"] == MAX_DOWNLOAD_BYTES + 1
+    assert out["bytes"] < out["bytes_total"]
+    # the whole file was never requested
+    assert not any(c.endswith("/display") for c in g.fetched)
+
+
+@pytest.mark.asyncio
+async def test_a_prefix_is_line_aligned():
+    g = FakeGalaxy(TABLE)
+    g.stated_size = MAX_DOWNLOAD_BYTES + 1
+    out = await _download_dataset(g, {"dataset_id": "aligned"})
+    with open(out["path"]) as f:
+        body = f.read()
+    assert body.endswith("\n")
+    assert all(row.count("\t") == 1 for row in body.splitlines()[1:] if row)
+
+
+@pytest.mark.asyncio
+async def test_an_unchunkable_oversized_dataset_is_refused():
+    g = FakeGalaxy(BINARY)
+    g.stated_size = MAX_DOWNLOAD_BYTES + 1
+    g.chunkable = False
+    out = await _download_dataset(g, {"dataset_id": "bigbam"})
     assert "error" in out and "path" not in out
-    assert out["bytes"] == MAX_DOWNLOAD_BYTES + 1
-    # the point is that it never downloaded
-    assert not any(c.endswith("/display") for c in getattr(g, "fetched", []))
 
 
 @pytest.mark.asyncio
@@ -151,3 +182,4 @@ async def test_a_dataset_at_the_limit_is_still_downloaded():
     g.stated_size = MAX_DOWNLOAD_BYTES
     out = await _download_dataset(g, {"dataset_id": "atlimit"})
     assert "error" not in out and out["path"]
+    assert "partial" not in out

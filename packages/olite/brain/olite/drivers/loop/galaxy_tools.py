@@ -217,21 +217,36 @@ async def _get_collection_details(g, a):
     return await g.get(f"api/dataset_collections/{a['collection_id']}?instance_type=history")
 
 
+async def _chunk(g, dataset_id, size):
+    """A line-aligned prefix, or None if the datatype cannot be chunked."""
+    try:
+        got = await g.get(f"api/datasets/{dataset_id}/display?offset=0&ck_size={size}")
+    except Exception:
+        return None
+    return got.get("ck_data") if isinstance(got, dict) else None
+
+
 async def _download_dataset(g, a):
     # Written to the filesystem as bytes: inline content breaks tool-call JSON, and
     # decoding as text corrupts BAM/HDF5/gzip.
     details = await g.get(f"api/datasets/{a['dataset_id']}") or {}
     stated = details.get("file_size") if isinstance(details, dict) else None
+    partial = False
     if isinstance(stated, int) and stated > MAX_DOWNLOAD_BYTES:
-        return {
-            "error": (
-                f"Dataset is {stated / 1e6:.1f} MB, over the {MAX_DOWNLOAD_BYTES / 1e6:.0f} MB "
-                "browser limit. Run a Galaxy tool on it instead."
-            ),
-            "dataset_id": a["dataset_id"],
-            "bytes": stated,
-        }
-    data = await g.get(f"api/datasets/{a['dataset_id']}/display", binary=True)
+        # Galaxy's chunked display: line-aligned, and it refuses binary itself.
+        chunk = await _chunk(g, a["dataset_id"], MAX_DOWNLOAD_BYTES)
+        if chunk is None:
+            return {
+                "error": (
+                    f"Dataset is {stated / 1e6:.1f} MB and cannot be read in chunks. "
+                    "Run a Galaxy tool on it instead."
+                ),
+                "dataset_id": a["dataset_id"],
+                "bytes": stated,
+            }
+        data, partial = chunk.encode("utf-8"), True
+    else:
+        data = await g.get(f"api/datasets/{a['dataset_id']}/display", binary=True)
     if isinstance(data, str):  # a stub or a JSON-ish response
         data = data.encode("utf-8")
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -240,6 +255,8 @@ async def _download_dataset(g, a):
         f.write(data)
 
     out = {"dataset_id": a["dataset_id"], "path": path, "bytes": len(data)}
+    if partial:
+        out.update(partial=True, bytes_total=stated)
     try:
         text = data.decode("utf-8")
     except UnicodeDecodeError:
@@ -431,7 +448,8 @@ _tool("get_collection_details", "read", "Get a dataset collection's details and 
       {"collection_id": _STR, "max_elements": _INT}, ["collection_id"], _get_collection_details)
 _tool("download_dataset", "read",
       "Save a dataset to the local filesystem and return its path plus a short preview. "
-      "Refuses datasets over 100 MB -- run a Galaxy tool on those instead. "
+      "A dataset over 100 MB comes back as a line-aligned prefix with partial=true and "
+      "bytes_total set; never compute totals or counts from a partial read. "
       "Read the file with run_python (e.g. pandas.read_csv(path, sep='\\t')); do not paste "
       "the preview into code.",
       {"dataset_id": _STR, "require_ok_state": _BOOL}, ["dataset_id"], _download_dataset)
