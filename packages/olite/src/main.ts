@@ -1,6 +1,6 @@
 /** olite shell: mounts Orbit's ChatPanel, boots the Pyodide brain, drives the chat. */
 import "./orbit/styles.css";
-import "./credentials.css";
+import "./olite.css";
 import { editRecord } from "./record-write";
 import { applyJobOutcome, noteSubmitted } from "./record-jobs";
 import { ChatPanel } from "./orbit/chat/chat-panel";

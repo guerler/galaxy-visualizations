@@ -19,3 +19,6 @@
 .cred-field select option { background: var(--bg-surface); color: var(--text); }
 .cred-note { margin: 0; font-size: 12px; color: var(--text-dim); }
 .cred-error { min-height: 18px; font-size: 13px; color: var(--error); }
+
+/* Usage sits at the right end of the footer, apart from the controls. */
+#usage-bar { margin-left: auto; }
