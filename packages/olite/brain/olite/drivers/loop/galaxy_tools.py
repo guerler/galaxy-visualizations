@@ -13,6 +13,7 @@ TOOLS = []
 DATA_DIR = "/data"
 # Enough to show the header and shape of a table without a run_python round trip.
 PREVIEW_LINES = 50
+MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
 
 
 def _q(params):
@@ -217,13 +218,19 @@ async def _get_collection_details(g, a):
 
 
 async def _download_dataset(g, a):
-    # Written to the Pyodide filesystem rather than returned inline. Inline content
-    # has to be re-emitted by the model as an escaped string to be used, which breaks
-    # on tabs and newlines and costs the whole file in context -- unusable at real
-    # dataset sizes. The path lets run_python open it directly.
-    #
-    # Fetched as bytes: Galaxy datasets are routinely BAM, HDF5 or gzip, and decoding
-    # those as text replaces invalid sequences and silently corrupts the file.
+    # Written to the filesystem as bytes: inline content breaks tool-call JSON, and
+    # decoding as text corrupts BAM/HDF5/gzip.
+    details = await g.get(f"api/datasets/{a['dataset_id']}") or {}
+    stated = details.get("file_size") if isinstance(details, dict) else None
+    if isinstance(stated, int) and stated > MAX_DOWNLOAD_BYTES:
+        return {
+            "error": (
+                f"Dataset is {stated / 1e6:.1f} MB, over the {MAX_DOWNLOAD_BYTES / 1e6:.0f} MB "
+                "browser limit. Run a Galaxy tool on it instead."
+            ),
+            "dataset_id": a["dataset_id"],
+            "bytes": stated,
+        }
     data = await g.get(f"api/datasets/{a['dataset_id']}/display", binary=True)
     if isinstance(data, str):  # a stub or a JSON-ish response
         data = data.encode("utf-8")
@@ -424,6 +431,7 @@ _tool("get_collection_details", "read", "Get a dataset collection's details and 
       {"collection_id": _STR, "max_elements": _INT}, ["collection_id"], _get_collection_details)
 _tool("download_dataset", "read",
       "Save a dataset to the local filesystem and return its path plus a short preview. "
+      "Refuses datasets over 100 MB -- run a Galaxy tool on those instead. "
       "Read the file with run_python (e.g. pandas.read_csv(path, sep='\\t')); do not paste "
       "the preview into code.",
       {"dataset_id": _STR, "require_ok_state": _BOOL}, ["dataset_id"], _download_dataset)

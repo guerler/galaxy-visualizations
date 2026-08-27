@@ -11,6 +11,7 @@ import pytest
 
 from olite.drivers.loop import galaxy_tools
 from olite.drivers.loop.galaxy_tools import (
+    MAX_DOWNLOAD_BYTES,
     PREVIEW_LINES,
     _download_dataset,
     _upload_file,
@@ -34,8 +35,15 @@ class FakeGalaxy:
     def __init__(self, content):
         self.content = content
         self.posted = None
+        self.fetched = []
+
+    # Galaxy states file_size on the dataset record; the display endpoint returns bytes.
+    stated_size = None
 
     async def get(self, path, binary=False):
+        self.fetched.append(path)
+        if not path.endswith("/display") and self.stated_size is not None:
+            return {"file_size": self.stated_size}
         if binary and isinstance(self.content, str):
             return self.content.encode("utf-8")
         return self.content
@@ -123,3 +131,23 @@ async def test_uploading_binary_is_refused_rather_than_corrupted():
     out = await _upload_file(g, {"path": downloaded["path"]})
     assert "error" in out and "binary" in out["error"].lower()
     assert g.posted is None  # nothing sent
+
+
+@pytest.mark.asyncio
+async def test_an_oversized_dataset_is_refused_before_it_is_fetched():
+    """The browser holds the whole file in memory; fetching a huge one kills the tab."""
+    g = FakeGalaxy(TABLE)
+    g.stated_size = MAX_DOWNLOAD_BYTES + 1
+    out = await _download_dataset(g, {"dataset_id": "huge"})
+    assert "error" in out and "path" not in out
+    assert out["bytes"] == MAX_DOWNLOAD_BYTES + 1
+    # the point is that it never downloaded
+    assert not any(c.endswith("/display") for c in getattr(g, "fetched", []))
+
+
+@pytest.mark.asyncio
+async def test_a_dataset_at_the_limit_is_still_downloaded():
+    g = FakeGalaxy(TABLE)
+    g.stated_size = MAX_DOWNLOAD_BYTES
+    out = await _download_dataset(g, {"dataset_id": "atlimit"})
+    assert "error" not in out and out["path"]
