@@ -44,7 +44,7 @@ async function main() {
 
     const container = document.getElementById(containerId)!;
     const incoming = parseIncoming(container);
-    applyOrbitTheme("dark", document.documentElement);
+    applyOrbitTheme("light", document.documentElement);
 
     // Orbit's layout chain, so the vendored styles.css applies as-is.
     container.innerHTML = `
