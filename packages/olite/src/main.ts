@@ -72,14 +72,16 @@ async function main() {
           <div id="input-hint">
             <span>Enter to send</span>
             <button id="reset-btn" class="hidden" title="Start a fresh conversation">New conversation</button>
-            <button id="model-btn" title="Change the model provider">Model</button>
-            <button id="artifact-btn" title="Show or hide the artifact pane (Ctrl/Cmd+\\)">Artifact</button>
           </div>
         </div>
         <div id="divider"></div>
         <div id="artifact-pane" class="pane">
           <div id="artifact-content"></div>
         </div>
+      </div>
+      <div id="app-footer">
+        <button id="model-btn" class="footer-control is-interactive" title="Change the model provider">Model</button>
+        <button id="artifact-btn" class="footer-control is-interactive" title="Show or hide the artifact pane (Ctrl/Cmd+\\)">Artifact</button>
       </div>
       <!-- Orbit's request modal, reduced to the confirm variant. -->
       <div id="ext-overlay" class="modal-overlay hidden">
