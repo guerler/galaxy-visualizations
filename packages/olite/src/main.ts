@@ -171,7 +171,12 @@ async function main() {
     // has to follow the content; 150 mirrors the max-height in the vendored CSS.
     input.addEventListener("input", () => {
         input.style.height = "auto";
-        input.style.height = Math.min(input.scrollHeight, 150) + "px";
+        // scrollHeight excludes the border that border-box counts in height, so adding
+        // it back is what stops a one-line box from showing a scrollbar.
+        const chrome = input.offsetHeight - input.clientHeight;
+        const wanted = input.scrollHeight + chrome;
+        input.style.height = Math.min(wanted, 150) + "px";
+        input.style.overflowY = wanted > 150 ? "auto" : "hidden";
     });
 
     // Session usage, accumulated across turns as Orbit does (app.ts:308).

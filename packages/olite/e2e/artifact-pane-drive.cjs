@@ -83,6 +83,19 @@ const stored = (p) => p.evaluate(() => localStorage.getItem("olite.artifactColla
     await page.waitForTimeout(300);
     check("widening restores the stored preference", !(await collapsed(page)));
 
+    // The composer must not show a scrollbar while its content still fits.
+    const composer = (n) => page.evaluate((n) => {
+        const i = document.querySelector("#input");
+        i.value = Array.from({ length: n }, (_, k) => "line " + k).join("\n");
+        i.dispatchEvent(new Event("input"));
+        return { clipped: i.scrollHeight > i.clientHeight, overflowY: getComputedStyle(i).overflowY };
+    }, n);
+    const one = await composer(1);
+    check("single-line composer shows no scrollbar", !one.clipped && one.overflowY === "hidden", JSON.stringify(one));
+    const many = await composer(20);
+    check("composer scrolls once it hits the max height", many.overflowY === "auto", JSON.stringify(many));
+    await page.evaluate(() => { const i = document.querySelector("#input"); i.value = ""; i.dispatchEvent(new Event("input")); });
+
     // Usage starts hidden: an empty "0 tok" pill before the first turn is noise.
     check("usage bar is hidden before any turn",
         await page.evaluate(() => document.querySelector("#usage-bar").classList.contains("hidden")));
