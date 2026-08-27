@@ -39,6 +39,12 @@ class StubGalaxy:
         if path.startswith(f"api/datasets/{DATASET_ID}"):
             return {"id": DATASET_ID, "name": "prices.csv", "extension": "csv",
                     "state": "ok", "file_size": len(DATASET_CSV)}
+        # The dataset has to be discoverable, not just fetchable: a well-behaved agent
+        # looks it up in the history before downloading it.
+        if "api/histories" in path and "contents" in path:
+            return [{"id": DATASET_ID, "hid": 1, "name": "prices.csv", "extension": "csv",
+                     "history_content_type": "dataset", "state": "ok", "deleted": False,
+                     "visible": True}]
         if "api/histories" in path:
             return [{"id": "hist1", "name": "Eval history", "state": "ok"}]
         if path.startswith("api/tools/"):
