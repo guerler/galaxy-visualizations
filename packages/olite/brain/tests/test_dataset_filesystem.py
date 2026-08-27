@@ -1,0 +1,90 @@
+"""Datasets move through the Pyodide filesystem, not through the model's context.
+
+Inline content had to be re-emitted by the model as an escaped string to be used,
+which breaks on tabs and newlines and costs the whole file in context. These pin
+the file-based contract that replaced it.
+"""
+
+import os
+
+import pytest
+
+from olite.drivers.loop import galaxy_tools
+from olite.drivers.loop.galaxy_tools import (
+    PREVIEW_LINES,
+    _download_dataset,
+    _upload_file,
+)
+
+
+@pytest.fixture(autouse=True)
+def data_dir(tmp_path, monkeypatch):
+    """Verified separately that Pyodide can create /data; the host cannot."""
+    monkeypatch.setattr(galaxy_tools, "DATA_DIR", str(tmp_path))
+    return str(tmp_path)
+
+TABLE = "Latitude\tLongitude\n" + "\n".join(f"{i}.5\t-{i}.25" for i in range(1, 120))
+
+
+class FakeGalaxy:
+    def __init__(self, content):
+        self.content = content
+        self.posted = None
+
+    async def get(self, path):
+        return self.content
+
+    async def post(self, path, payload):
+        self.posted = (path, payload)
+        return {"ok": True}
+
+
+@pytest.mark.asyncio
+async def test_a_dataset_is_written_to_the_filesystem_not_returned_inline(data_dir):
+    g = FakeGalaxy(TABLE)
+    out = await _download_dataset(g, {"dataset_id": "abc123"})
+    assert out["path"] == f"{data_dir}/abc123.dat"
+    assert os.path.isfile(out["path"])
+    with open(out["path"]) as f:
+        assert f.read() == TABLE
+    # the whole file must not ride back in the tool result
+    assert "content" not in out
+
+
+@pytest.mark.asyncio
+async def test_the_preview_is_capped_and_says_so():
+    g = FakeGalaxy(TABLE)
+    out = await _download_dataset(g, {"dataset_id": "capped"})
+    assert len(out["preview"].splitlines()) == PREVIEW_LINES
+    assert out["truncated"] is True
+    assert out["lines"] == len(TABLE.splitlines())
+    assert out["bytes"] == len(TABLE.encode("utf-8"))
+
+
+@pytest.mark.asyncio
+async def test_a_short_dataset_is_not_marked_truncated():
+    g = FakeGalaxy("a\tb\n1\t2")
+    out = await _download_dataset(g, {"dataset_id": "short"})
+    assert out["truncated"] is False
+    assert out["preview"] == "a\tb\n1\t2"
+
+
+@pytest.mark.asyncio
+async def test_a_file_written_locally_can_be_uploaded_back():
+    g = FakeGalaxy(TABLE)
+    downloaded = await _download_dataset(g, {"dataset_id": "roundtrip"})
+    result = await _upload_file(g, {"path": downloaded["path"], "history_id": "h1"})
+    assert result == {"ok": True}
+    path, payload = g.posted
+    assert path == "api/tools/fetch"
+    element = payload["targets"][0]["elements"][0]
+    assert element["src"] == "pasted"
+    assert element["paste_content"] == TABLE
+    assert payload["history_id"] == "h1"
+
+
+@pytest.mark.asyncio
+async def test_uploading_a_missing_path_is_an_error_not_a_crash():
+    g = FakeGalaxy("")
+    out = await _upload_file(g, {"path": "/data/does-not-exist.dat"})
+    assert "error" in out and g.posted is None

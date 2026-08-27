@@ -1,11 +1,18 @@
 """Orbit-compatible named Galaxy tools, cloned from galaxy-mcp."""
 
 import json
+import os
 from urllib.parse import urlencode
 
 from .galaxy_tool_docs import DOCS
 
 TOOLS = []
+
+# Pyodide's MEMFS is olite's equivalent of the filesystem Orbit has on disk.
+# Datasets land here so run_python can read them as files.
+DATA_DIR = "/data"
+# Enough to show the header and shape of a table without a run_python round trip.
+PREVIEW_LINES = 50
 
 
 def _q(params):
@@ -210,9 +217,25 @@ async def _get_collection_details(g, a):
 
 
 async def _download_dataset(g, a):
-    # PYODIDE: no local filesystem. Return the dataset content instead of writing a file.
+    # Written to the Pyodide filesystem rather than returned inline. Inline content
+    # has to be re-emitted by the model as an escaped string to be used, which breaks
+    # on tabs and newlines and costs the whole file in context -- unusable at real
+    # dataset sizes. The path lets run_python open it directly.
     content = await g.get(f"api/datasets/{a['dataset_id']}/display")
-    return {"dataset_id": a["dataset_id"], "content": content}
+    text = content if isinstance(content, str) else json.dumps(content)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    path = f"{DATA_DIR}/{a['dataset_id']}.dat"
+    with open(path, "w") as f:
+        f.write(text)
+    lines = text.splitlines()
+    return {
+        "dataset_id": a["dataset_id"],
+        "path": path,
+        "bytes": len(text.encode("utf-8")),
+        "lines": len(lines),
+        "preview": "\n".join(lines[:PREVIEW_LINES]),
+        "truncated": len(lines) > PREVIEW_LINES,
+    }
 
 
 async def _upload_file_from_url(g, a):
@@ -226,12 +249,25 @@ async def _upload_file_from_url(g, a):
 
 
 async def _upload_file(g, a):
-    # PYODIDE: no local filesystem, so a local path cannot be read. Use
-    return {
-        "error": "upload_file (local path) is not available in the browser (no local filesystem). "
-        "Use upload_file_from_url instead.",
-        "path": a.get("path"),
+    # The counterpart to download_dataset: read back from the Pyodide filesystem so a
+    # file produced by run_python can be sent to Galaxy. Uploaded as pasted content,
+    # since a browser cannot hand Galaxy a path on disk.
+    path = a["path"]
+    if not os.path.isfile(path):
+        return {"error": f"No such file: {path}", "path": path}
+    with open(path) as f:
+        text = f.read()
+    element = {
+        "src": "pasted",
+        "paste_content": text,
+        "ext": a.get("file_type", "auto"),
+        "dbkey": a.get("dbkey", "?"),
+        "name": a.get("file_name") or os.path.basename(path),
     }
+    payload = {"targets": [{"destination": {"type": "hdas"}, "elements": [element]}]}
+    if a.get("history_id"):
+        payload["history_id"] = a["history_id"]
+    return await g.post("api/tools/fetch", payload)
 
 
 async def _list_workflows(g, a):
@@ -364,12 +400,17 @@ _tool("get_tool_run_examples", "read", "Get structural example inputs for a tool
       {"tool_id": _STR, "tool_version": _STR}, ["tool_id"], _get_tool_run_examples)
 _tool("get_collection_details", "read", "Get a dataset collection's details and elements.",
       {"collection_id": _STR, "max_elements": _INT}, ["collection_id"], _get_collection_details)
-_tool("download_dataset", "read", "Fetch a dataset's content (returned inline; no local file in the browser).",
+_tool("download_dataset", "read",
+      "Save a dataset to the local filesystem and return its path plus a short preview. "
+      "Read the file with run_python (e.g. pandas.read_csv(path, sep='\\t')); do not paste "
+      "the preview into code.",
       {"dataset_id": _STR, "require_ok_state": _BOOL}, ["dataset_id"], _download_dataset)
 _tool("upload_file_from_url", "write", "Upload a dataset into a history from a URL.",
       {"url": _STR, "history_id": _STR, "file_type": _STR, "dbkey": _STR, "file_name": _STR}, ["url"], _upload_file_from_url)
-_tool("upload_file", "write", "Upload a local file (NOT available in the browser; use upload_file_from_url).",
-      {"path": _STR, "history_id": _STR}, ["path"], _upload_file)
+_tool("upload_file", "write",
+      "Upload a file from the local filesystem to a history -- e.g. one written by run_python.",
+      {"path": _STR, "history_id": _STR, "file_name": _STR, "file_type": _STR, "dbkey": _STR},
+      ["path"], _upload_file)
 _tool("list_workflows", "read", "List stored workflows; optional name/id filter, published flag.",
       {"workflow_id": _STR, "name": _STR, "published": _BOOL}, [], _list_workflows)
 _tool("get_workflow_details", "read", "Get a stored workflow's details.",
