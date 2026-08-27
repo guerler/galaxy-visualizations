@@ -194,3 +194,21 @@ async def test_the_details_preview_reads_a_chunk_not_the_whole_file():
     out = await _get_dataset_details(g, {"dataset_id": "d", "preview_lines": 1000})
     assert out["preview"]
     assert not any(c.endswith("/display") for c in g.fetched)
+
+
+@pytest.mark.parametrize(
+    "reported,expect_in,expect_out",
+    [
+        ({"prompt_tokens": 10, "completion_tokens": 4}, 10, 4),
+        ({"input_tokens": 7, "output_tokens": 3}, 7, 3),
+        ({"total_tokens": 12}, 0, 12),
+        ({}, 0, 0),
+    ],
+)
+def test_usage_keys_vary_by_provider(reported, expect_in, expect_out):
+    """Reading only prompt_tokens/completion_tokens silently shows nothing elsewhere."""
+    got_in = reported.get("prompt_tokens") or reported.get("input_tokens") or 0
+    got_out = reported.get("completion_tokens") or reported.get("output_tokens") or 0
+    if not got_in and not got_out:
+        got_out = reported.get("total_tokens") or 0
+    assert (got_in, got_out) == (expect_in, expect_out)
