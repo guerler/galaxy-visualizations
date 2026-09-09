@@ -1,5 +1,7 @@
 import { Viewer } from "molstar/lib/apps/viewer/app";
 import { Binding } from "molstar/lib/mol-util/binding";
+import { ParamDefinition } from "molstar/lib/mol-util/param-definition";
+import { SmaaParams } from "molstar/lib/mol-canvas3d/passes/smaa";
 import "molstar/build/viewer/molstar.css";
 import "./main.css";
 import { structureStats } from "./structure-geometry";
@@ -1241,7 +1243,7 @@ import { structureStats } from "./structure-geometry";
                           },
                       }
                     : { name: "off", params: {} },
-                antialiasing: { name: "smaa", params: {} },
+                antialiasing: { name: "smaa", params: ParamDefinition.getDefaultValues(SmaaParams) },
                 shadow: { name: "off", params: {} },
                 dof: { name: "off", params: {} },
                 sharpening: { name: "off", params: {} },

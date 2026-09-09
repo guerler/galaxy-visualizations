@@ -726,6 +726,8 @@ test("renders a fresh Galaxy multi-chain job with actual slice times", async ({ 
 // The real ubiquitin fixture is pulled at Met1 with Lys48 fixed. Its green
 // unfolding tail points down in the established default side-on view.
 test("keeps ubiquitin unfolding downward with all nine slices after rotation reset", async ({ page }, testInfo) => {
+    const pageErrors = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
     const manifest = readFileSync(join(__dirname, "test-data", "example.rmsx.json"));
     await routeDatasetDisplay(page, (route) =>
         route.fulfill({ status: 200, contentType: "application/json", body: manifest }),
@@ -761,4 +763,5 @@ test("keeps ubiquitin unfolding downward with all nine slices after rotation res
         });
     }).toPass({ timeout: 20000 });
     await page.screenshot({ path: testInfo.outputPath("ubiquitin-downward-analysis.png") });
+    expect(pageErrors).toEqual([]);
 });
