@@ -79,3 +79,19 @@ This workspace also works with `pnpm login` and `pnpm publish --access public`.
 The package runs `vite build` before packing so the published tarball contains
 the Galaxy-ready `static/` assets. After publishing, Galaxy can reference the
 package from `client/visualizations.yml`.
+
+## Ubiquitin orientation and rotation centers
+
+The ubiquitin unfolding example retains the established 90-degree X rotation:
+its +Z pulling direction appears downward on screen (-Y), with X horizontal.
+Each slice (and each Analysis chain lane) rotates around the mass-weighted
+center of the atoms present in that lane, calculated before mask splitting.
+The combined assembly uses one common assembly center, preserving chain geometry.
+Backbone N/C/O atoms therefore receive their respective atomic weights; a
+C-alpha-only slice has the same pivot as its geometric center. If a legacy
+PDB contains an unrecognized element, the complete lane retains the geometric
+center instead of assuming a mass. This does not infer omitted atoms or rerun
+scientific analysis, and no manifest migration is required.
+
+The browser regression checks all nine ubiquitin slices, a downward side-on
+unfolding tail, and restoration after rotation reset in Structures and Analysis.

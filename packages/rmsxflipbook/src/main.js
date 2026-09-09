@@ -2,6 +2,7 @@ import { Viewer } from "molstar/lib/apps/viewer/app";
 import { Binding } from "molstar/lib/mol-util/binding";
 import "molstar/build/viewer/molstar.css";
 import "./main.css";
+import { structureStats } from "./structure-geometry";
 
 (function () {
     "use strict";
@@ -617,62 +618,6 @@ import "./main.css";
             analysisStatsCache.set(key, structureStats(pdbForLane(slice, lane)));
         }
         return analysisStatsCache.get(key);
-    }
-
-    function structureStats(pdb) {
-        const stats = {
-            minX: Infinity,
-            maxX: -Infinity,
-            minY: Infinity,
-            maxY: -Infinity,
-            minZ: Infinity,
-            maxZ: -Infinity,
-            sumX: 0,
-            sumY: 0,
-            sumZ: 0,
-            count: 0,
-        };
-        pdb.split(/\r?\n/).forEach((line) => {
-            if (!line.startsWith("ATOM") && !line.startsWith("HETATM")) {
-                return;
-            }
-            const x = Number(line.slice(30, 38));
-            const y = Number(line.slice(38, 46));
-            const z = Number(line.slice(46, 54));
-            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-                return;
-            }
-            stats.minX = Math.min(stats.minX, x);
-            stats.maxX = Math.max(stats.maxX, x);
-            stats.minY = Math.min(stats.minY, y);
-            stats.maxY = Math.max(stats.maxY, y);
-            stats.minZ = Math.min(stats.minZ, z);
-            stats.maxZ = Math.max(stats.maxZ, z);
-            stats.sumX += x;
-            stats.sumY += y;
-            stats.sumZ += z;
-            stats.count += 1;
-        });
-        if (!stats.count) {
-            return {
-                ...stats,
-                width: 30,
-                height: 30,
-                depth: 30,
-                center: { x: 0, y: 0, z: 0 },
-            };
-        }
-        return {
-            ...stats,
-            width: Math.max(1, stats.maxX - stats.minX),
-            height: Math.max(1, stats.maxY - stats.minY),
-            depth: Math.max(1, stats.maxZ - stats.minZ),
-            center: {
-                x: stats.sumX / stats.count,
-                y: stats.sumY / stats.count,
-                z: stats.sumZ / stats.count,
-            },
-        };
     }
 
     function degreesToRadians(value) {

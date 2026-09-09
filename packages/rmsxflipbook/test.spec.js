@@ -39,6 +39,12 @@ async function renderedProteinClusters(page) {
         const yEnd = Math.floor(height * 0.8);
         const columnCounts = new Uint32Array(width);
         const columnYTotals = new Float64Array(width);
+        const columnMinY = new Float64Array(width).fill(Infinity);
+        const columnMaxY = new Float64Array(width).fill(-Infinity);
+        const greenCounts = new Uint32Array(width);
+        const greenYTotals = new Float64Array(width);
+        const purpleCounts = new Uint32Array(width);
+        const purpleYTotals = new Float64Array(width);
 
         for (let y = yStart; y < yEnd; y += 1) {
             for (let x = 0; x < width; x += 1) {
@@ -51,6 +57,16 @@ async function renderedProteinClusters(page) {
                 if (maximum - minimum > 18 && minimum < 210) {
                     columnCounts[x] += 1;
                     columnYTotals[x] += y;
+                    columnMinY[x] = Math.min(columnMinY[x], y);
+                    columnMaxY[x] = Math.max(columnMaxY[x], y);
+                    if (green > red + 25 && green > blue + 8) {
+                        greenCounts[x]++;
+                        greenYTotals[x] += y;
+                    }
+                    if (blue > green + 15) {
+                        purpleCounts[x]++;
+                        purpleYTotals[x] += y;
+                    }
                 }
             }
         }
@@ -59,12 +75,28 @@ async function renderedProteinClusters(page) {
         const addCluster = (minX, maxX) => {
             let coloredPixels = 0;
             let yTotal = 0;
+            let minY = Infinity,
+                maxY = -Infinity,
+                greenCount = 0,
+                greenY = 0,
+                purpleCount = 0,
+                purpleY = 0;
             for (let x = minX; x <= maxX; x += 1) {
                 coloredPixels += columnCounts[x];
                 yTotal += columnYTotals[x];
+                minY = Math.min(minY, columnMinY[x]);
+                maxY = Math.max(maxY, columnMaxY[x]);
+                greenCount += greenCounts[x];
+                greenY += greenYTotals[x];
+                purpleCount += purpleCounts[x];
+                purpleY += purpleYTotals[x];
             }
             if (maxX - minX >= 4 && coloredPixels >= 30) {
                 clusters.push({
+                    minY,
+                    maxY,
+                    greenY: greenY / greenCount,
+                    purpleY: purpleY / purpleCount,
                     centerX: (minX + maxX) / 2,
                     centerY: yTotal / coloredPixels,
                     coloredPixels,
@@ -180,6 +212,8 @@ async function renderedAnalysisLaneClusters(page, lane) {
                         centerX: current.xTotal / current.pixels,
                         centerY: current.yTotal / current.pixels,
                         height: current.maxY - current.minY + 1,
+                        minY: current.minY,
+                        maxY: current.maxY,
                         maxX: current.maxX,
                         minX: current.minX,
                         pixels: current.pixels,
@@ -687,4 +721,44 @@ test("renders a fresh Galaxy multi-chain job with actual slice times", async ({ 
         timeout: 20000,
     });
     await page.screenshot({ path: testInfo.outputPath("fresh-galaxy-analysis.png"), fullPage: true });
+});
+
+// The real ubiquitin fixture is pulled at Met1 with Lys48 fixed. Its green
+// unfolding tail points down in the established default side-on view.
+test("keeps ubiquitin unfolding downward with all nine slices after rotation reset", async ({ page }, testInfo) => {
+    const manifest = readFileSync(join(__dirname, "test-data", "example.rmsx.json"));
+    await routeDatasetDisplay(page, (route) =>
+        route.fulfill({ status: 200, contentType: "application/json", body: manifest }),
+    );
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto(`${VIEWER_URL}?dataset_id=ubiquitin-downward`);
+    await expect(page.locator("#status")).toContainText("9/9 slices visible", { timeout: 90000 });
+    const checkDownward = async () => {
+        const rendered = await renderedProteinClusters(page);
+        expectNineClustersInOneRow(rendered);
+        const last = rendered.clusters[8];
+        const height = last.maxY - last.minY;
+        expect(height).toBeGreaterThan((last.maxX - last.minX) * 4);
+        expect(last.greenY - last.purpleY).toBeGreaterThan(height * 0.2);
+    };
+    await expect(checkDownward).toPass({ timeout: 20000 });
+    await page.getByText("Rotation", { exact: true }).click();
+    await expect(page.getByTestId("molstar-rotation-x-number")).toHaveValue("90");
+    await page.getByTestId("molstar-rotation-x-number").fill("0");
+    await page.getByTestId("molstar-reset-rotation").click();
+    await expect(checkDownward).toPass({ timeout: 20000 });
+    await page.screenshot({ path: testInfo.outputPath("ubiquitin-downward-structures.png") });
+    await page.getByTestId("analysis-tab").click();
+    const lane = page.getByTestId("rmsx-analysis-chain-lane");
+    await expect(async () => {
+        const result = await renderedAnalysisLaneClusters(page, lane);
+        expect(result.clusters).toHaveLength(9);
+        const last = result.clusters[8];
+        expect(last.height).toBeGreaterThan((last.maxX - last.minX) * 3);
+        result.clusters.forEach((cluster) => {
+            expect(cluster.minY).toBeGreaterThanOrEqual(result.y);
+            expect(cluster.maxY).toBeLessThan(result.y + result.height);
+        });
+    }).toPass({ timeout: 20000 });
+    await page.screenshot({ path: testInfo.outputPath("ubiquitin-downward-analysis.png") });
 });
