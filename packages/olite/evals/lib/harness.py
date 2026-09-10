@@ -149,10 +149,12 @@ class StubGalaxy:
 
 class RunResult:
     def __init__(self, messages, logs, tools_called, error=None, status_code=None, events=None,
-                 artifacts=None):
+                 artifacts=None, exhausted=False):
         self.messages = messages
         # Charts and diagrams routed to the shell, never into the model's context.
         self.artifacts = artifacts or []
+        # The turn hit MAX_STEPS. The shell says so; grading must not read it as silence.
+        self.exhausted = exhausted
         self.logs = logs
         self.tools_called = tools_called
         # Every event the brain emitted, plus turn boundaries synthesised by the harness.
@@ -246,6 +248,7 @@ async def _run(scenario, model):
     logs = []
     events = []
     artifacts = []
+    exhausted = False
     for turn in scenario["inputs"]:
         messages = [*messages, {"role": "user", "content": turn}]
         events.append("turn_start")
@@ -253,9 +256,11 @@ async def _run(scenario, model):
         messages = result.get("messages") or messages
         logs.extend(result.get("logs") or [])
         artifacts.extend(result.get("artifacts") or [])
+        exhausted = exhausted or bool(result.get("exhausted"))
         # Only after run() returns: a turn that dies mid-flight must not look complete.
         events.append("turn_end")
-    return RunResult(messages, logs, tools_called, events=events, artifacts=artifacts)
+    return RunResult(messages, logs, tools_called, events=events, artifacts=artifacts,
+                     exhausted=exhausted)
 
 
 def _note(event, sink, events=None):

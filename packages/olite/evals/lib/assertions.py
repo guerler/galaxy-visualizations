@@ -88,7 +88,10 @@ def _messages(spec, run, failures, exercised):
             failures.append(
                 Failure("messages.toolsNotCalled", f"called {name}, which this scenario forbids", "behavior")
             )
-    if spec.get("repliesInChat") and not run.chat_text.strip():
+    if spec.get("repliesInChat") and getattr(run, "exhausted", False):
+        failures.append(Failure("messages.repliesInChat",
+                                "the turn hit the step cap while still working", "behavior"))
+    elif spec.get("repliesInChat") and not run.chat_text.strip():
         failures.append(Failure("messages.repliesInChat", "the turn produced no chat text", "behavior"))
 
 
