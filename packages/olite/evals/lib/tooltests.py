@@ -159,6 +159,15 @@ def compare(produced, expected, attributes):
 
 
 def grade_output(galaxy, tool_id, dataset_id, expectation, extra_dirs=()):
+    """A failed job never passes, whatever its bytes say.
+
+    Cut1 exits non-zero on a perl locale warning yet writes the correct output; grading
+    the bytes alone reported PASS on an errored job.
+    """
+    dataset = galaxy.call(f"api/datasets/{dataset_id}")
+    state = dataset.get("state")
+    if state != "ok":
+        return False, f"job state {state}, output not graded"
     produced = galaxy.call(f"api/datasets/{dataset_id}/display", raw=True)
     want = expected_bytes(expectation["value"], extra_dirs)
     return compare(produced, want, expectation.get("attributes"))
