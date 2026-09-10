@@ -9,6 +9,8 @@ from olite import prompt
 from olite.drivers import LoopDriver
 from olite.registry import ProcessRegistry, SkillRegistry
 from olite.drivers.loop import notebook
+
+from . import tooltests
 from olite.runtime import _inject_context, _inject_record
 from olite.substrate import Substrate
 from olite.substrate.llm import REGISTRY
@@ -149,12 +151,14 @@ class StubGalaxy:
 
 class RunResult:
     def __init__(self, messages, logs, tools_called, error=None, status_code=None, events=None,
-                 artifacts=None, exhausted=False):
+                 artifacts=None, exhausted=False, staged=None):
         self.messages = messages
         # Charts and diagrams routed to the shell, never into the model's context.
         self.artifacts = artifacts or []
         # The turn hit MAX_STEPS. The shell says so; grading must not read it as silence.
         self.exhausted = exhausted
+        # A tool-test scenario's staged history and the expectation it is graded against.
+        self.staged = staged
         self.logs = logs
         self.tools_called = tools_called
         # Every event the brain emitted, plus turn boundaries synthesised by the harness.
@@ -224,6 +228,14 @@ async def _run(scenario, model):
         substrate.galaxy = StubGalaxy()
         substrate.catalog = StubCatalog(substrate.galaxy)
 
+    # A tool-test scenario runs against a real Galaxy: the harness puts the test's input
+    # files in a history, and the agent is told the goal, not the test's parameters.
+    staged = None
+    if scenario.get("toolTest"):
+        if not config.get("live_galaxy"):
+            raise RuntimeError("toolTest scenarios need GALAXY_URL; no stub can run a tool")
+        staged = stage_tool_test(config, scenario["toolTest"])
+
     processes = ProcessRegistry().load_packaged()
     skills = SkillRegistry().load_packaged()
     driver = LoopDriver(substrate, processes, skills)
@@ -239,8 +251,9 @@ async def _run(scenario, model):
     )
     # Production binds a history and lists its datasets every turn (runtime.py); without it
     # the agent has to hunt for which history holds a dataset, and sometimes stops to ask.
+    bound_history = staged["history_id"] if staged else HISTORY_ID
     transcripts = _inject_record(
-        transcripts, await notebook.excerpt(substrate.galaxy, HISTORY_ID)
+        transcripts, await notebook.excerpt(substrate.galaxy, bound_history)
     )
 
     tools_called = []
@@ -260,7 +273,7 @@ async def _run(scenario, model):
         # Only after run() returns: a turn that dies mid-flight must not look complete.
         events.append("turn_end")
     return RunResult(messages, logs, tools_called, events=events, artifacts=artifacts,
-                     exhausted=exhausted)
+                     exhausted=exhausted, staged=staged)
 
 
 def _note(event, sink, events=None):
@@ -300,3 +313,18 @@ def load_scenarios(root, only=None):
         data["id"] = entry
         out.append(data)
     return out
+
+
+def stage_tool_test(config, spec):
+    """A history holding a tool test's inputs, plus the expectation used to grade it."""
+    galaxy = tooltests.Galaxy(config["galaxy_root"], config.get("galaxy_key", ""))
+    tool_id = spec["tool"]
+    index = spec.get("testIndex", 0)
+    history_id, ids, test = tooltests.stage(galaxy, tool_id, index)
+    return {
+        "galaxy": galaxy,
+        "history_id": history_id,
+        "dataset_ids": ids,
+        "test": test,
+        "tool_id": tool_id,
+    }
