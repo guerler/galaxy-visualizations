@@ -1,6 +1,8 @@
 """Orbit-compatible named Galaxy tools, cloned from galaxy-mcp."""
 
 import json
+
+from .tool_inputs import build_input_template, summarize_tool_inputs
 import os
 import sys
 import tempfile
@@ -211,8 +213,14 @@ async def _get_tool_citations(g, a):
 
 
 async def _get_tool_input_template(g, a):
-    # The parameter request schema is the modern, machine-usable input template.
-    return await g.get(f"api/tools/{a['tool_id']}/parameter_request_schema")
+    # galaxy-mcp builds the skeleton the description promises; the raw request schema
+    # hides a repeat behind three $refs and the model submits an empty one.
+    info = await g.get(f"api/tools/{a['tool_id']}{_q({'io_details': True})}") or {}
+    return {
+        "tool_id": a["tool_id"],
+        "inputs_template": build_input_template(info),
+        "parameters": summarize_tool_inputs(info),
+    }
 
 
 async def _get_tool_run_examples(g, a):
