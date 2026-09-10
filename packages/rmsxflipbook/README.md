@@ -95,3 +95,13 @@ scientific analysis, and no manifest migration is required.
 
 The browser regression checks all nine ubiquitin slices, a downward side-on
 unfolding tail, and restoration after rotation reset in Structures and Analysis.
+
+## 0.0.4 release notes
+
+- Center each structure's rotation on the mass of its displayed atoms, sharing
+  one pivot across its colored representations and preserving complete assemblies.
+- Initialize Molstar's anti-aliasing defaults before the first render to prevent
+  intermittent blank structures while shader resources load.
+- Verify all nine ubiquitin slices remain visible and unfold downward after a
+  rotation reset. Multi-chain Analysis and legacy manifests retain their existing
+  interface and require no migration.
