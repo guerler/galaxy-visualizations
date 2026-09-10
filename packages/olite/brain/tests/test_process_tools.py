@@ -59,9 +59,10 @@ def test_vintent_requires_both_of_its_inputs():
 def test_lineage_keeps_its_optional_numbers_optional():
     fn = _schemas()["lineage_report"]
     params = fn["parameters"]
-    assert params["required"] == ["dataset_id"]
+    # The graph endpoint is history-scoped, so the history is required alongside the seed.
+    assert sorted(params["required"]) == ["dataset_id", "history_id"]
     assert params["properties"]["depth"]["type"] == "integer"
-    assert params["properties"]["max_per_level"]["type"] == "integer"
+    assert params["properties"]["limit"]["type"] == "integer"
 
 
 def test_an_array_input_becomes_an_array_of_strings():
