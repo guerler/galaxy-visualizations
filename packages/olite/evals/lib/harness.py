@@ -31,11 +31,43 @@ VINTENT_CSV = (
 ).read_text()
 
 
+class StubCatalog:
+    """Op names -> StubGalaxy, so process scenarios run without an OpenAPI spec."""
+
+    def __init__(self, galaxy):
+        self.galaxy = galaxy
+        self.calls = []
+
+    def scoped(self, manifest):
+        return self
+
+    async def init(self):
+        return self
+
+    async def call(self, target, input=None):
+        args = dict(input or {})
+        self.calls.append((target, args))
+        if target == "galaxy.datasets.show.display.get":
+            # the graph addresses datasets as history_content_id
+            ds = args.get("history_content_id") or args.get("dataset_id")
+            return {"ok": True, "result": await self.galaxy.get(f"api/datasets/{ds}/display")}
+        if target == "galaxy.histories.show.contents.get":
+            return {"ok": True, "result": await self.galaxy.get(
+                f"api/histories/{args.get('history_id')}/contents")}
+        if target == "galaxy.histories.show.graph.get":
+            return {"ok": True, "result": {"nodes": [], "edges": [], "truncated": {}}}
+        return {"ok": False, "error": {"code": "unknown_api_op", "message": target}}
+
+
 class StubGalaxy:
     """A Galaxy that answers plausibly and records what was asked."""
 
     def __init__(self):
         self.calls = []
+
+    def scoped(self, manifest):
+        """Processes narrow the substrate before running; the stub has one view."""
+        return self
 
     async def get(self, path, binary=False):
         self.calls.append(("GET", path))
@@ -183,6 +215,7 @@ async def _run(scenario, model):
     # `galaxy_root` always holds a sentinel, so only the explicit flag can decide.
     if not config.get("live_galaxy"):
         substrate.galaxy = StubGalaxy()
+        substrate.catalog = StubCatalog(substrate.galaxy)
 
     processes = ProcessRegistry().load_packaged()
     skills = SkillRegistry().load_packaged()
