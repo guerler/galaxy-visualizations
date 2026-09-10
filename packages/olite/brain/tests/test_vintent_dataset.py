@@ -188,13 +188,19 @@ def test_bar_aggregate_graph_equals_leaf_orchestration():
 
 
 def test_artifact_envelope_shape():
+    """The diagram travels as an artifact; what it charted travels beside it."""
     csv_text = _csv_from_rows(_scatter_fixture()["data"]["values"])
     out = _run_graph(csv_text, DECISIONS["scatter"])
-    assert set(out.keys()) == {"artifact"}
+    assert set(out.keys()) == {"chart", "shell", "encoding", "artifact"}
     art = out["artifact"]
     assert art["kind"] == "vega-lite"
     assert art["title"] == "Scatter Plot"
     assert "spec" in art
+    # Without these the model gets a bare ok and polls the history for an output
+    # that never arrives; it ran to the step cap doing so.
+    assert out["chart"] == "Scatter Plot"
+    assert out["shell"] == "scatter"
+    assert out["encoding"] == {"x": "BMI", "y": "Glucose"}
 
 
 def test_fetch_uses_scoped_catalog_display_op():

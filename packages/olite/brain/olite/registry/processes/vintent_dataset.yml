@@ -219,6 +219,12 @@ nodes:
   done:
     type: terminal
     output:
+      chart:
+        $ref: state.title
+      shell:
+        $ref: state.shell_id
+      encoding:
+        $ref: state.params
       artifact:
         kind: vega-lite
         title:
