@@ -392,7 +392,8 @@ async def _invoke_workflow(g, a):
 
 
 async def _cancel_workflow_invocation(g, a):
-    return await g.delete(f"api/invocations/{a['invocation_id']}")
+    result = await g.delete(f"api/invocations/{a['invocation_id']}")
+    return {"cancelled": True, "invocation": result}
 
 
 async def _get_invocations(g, a):
@@ -417,7 +418,8 @@ async def _create_user_tool(g, a):
 
 
 async def _delete_user_tool(g, a):
-    return await g.delete(f"api/dynamic_tools/{a['uuid']}")
+    await g.delete(f"api/dynamic_tools/{a['uuid']}")
+    return {"uuid": a["uuid"], "deactivated": True}
 
 
 async def _run_user_tool(g, a):

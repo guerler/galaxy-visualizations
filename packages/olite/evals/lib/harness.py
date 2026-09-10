@@ -321,6 +321,7 @@ def stage_tool_test(config, spec):
     tool_id = spec["tool"]
     index = spec.get("testIndex", 0)
     history_id, ids, test = tooltests.stage(galaxy, tool_id, index)
+    _resume_record(galaxy, history_id)
     return {
         "galaxy": galaxy,
         "history_id": history_id,
@@ -328,3 +329,20 @@ def stage_tool_test(config, spec):
         "test": test,
         "tool_id": tool_id,
     }
+
+
+def _resume_record(galaxy, history_id):
+    """Give the staged history its record page.
+
+    `notebook.excerpt` returns nothing without one, so the binding block never reaches
+    the agent and it asks which history it is in instead of working.
+    """
+    from olite.drivers.loop import notebook
+
+    slug = notebook.slug_for_history(history_id)
+    galaxy.call("api/pages", "POST", {
+        "slug": slug,
+        "title": notebook.title_for_history(history_id),
+        "content": "## Record\n\n_No entries yet._\n",
+        "content_format": "markdown",
+    })
