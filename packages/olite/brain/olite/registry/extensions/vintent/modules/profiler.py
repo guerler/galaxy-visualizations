@@ -65,6 +65,26 @@ def rows_from_tabular(text: str) -> List[Dict[str, Any]]:
     return rows_from_csv(clean_text)
 
 
+def source_format(text: str) -> Dict[str, Any]:
+    """How Vega should read this file straight from Galaxy, without the rows.
+
+    Galaxy tabular carries no header row, so Vega is given the same synthetic
+    `col:N` names `rows_from_tab` generates. CSV names its own columns, so Vega
+    reads the header itself and none is supplied.
+    """
+    clean_text = skip_comment_lines(text)
+    delimiter = detect_delimiter(clean_text)
+    if delimiter != '\t':
+        return {"type": "csv"}
+    first_line = clean_text.split('\n')[0] if clean_text else ''
+    width = len(first_line.split('\t')) if first_line else 0
+    return {
+        "type": "dsv",
+        "delimiter": "\t",
+        "header": [f"col:{j + 1}" for j in range(width)],
+    }
+
+
 def rows_from_tab(tab_text: str) -> List[Dict[str, Any]]:
     """Parse tab-delimited text into list of dicts with auto-generated column names.
 

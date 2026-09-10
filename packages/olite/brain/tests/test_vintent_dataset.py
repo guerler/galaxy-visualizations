@@ -129,7 +129,8 @@ DECISIONS = {
 }
 
 
-def test_scatter_matches_vintent_expected_output_exactly():
+def test_scatter_encoding_matches_vintent_but_references_the_dataset():
+    """The chart is vintent's; the data is a reference, not a copy."""
     expected = _scatter_fixture()
     csv_text = _csv_from_rows(expected["data"]["values"])
     out = _run_graph(csv_text, DECISIONS["scatter"])
@@ -137,7 +138,36 @@ def test_scatter_matches_vintent_expected_output_exactly():
     assert spec["mark"] == expected["mark"]
     assert spec["encoding"] == expected["encoding"]
     assert spec["$schema"] == expected["$schema"]
-    assert spec["data"]["values"] == expected["data"]["values"]
+    # Nothing rewrote the rows, so the dataset speaks for itself.
+    assert spec["data"] == {"url": "/api/datasets/d1/display", "format": {"type": "csv"}}
+    assert "values" not in spec["data"]
+
+
+def test_a_transformed_chart_still_embeds_its_rows():
+    """histogram bins in Python, so the file behind the URL no longer matches the encoding."""
+    csv_text = _csv_from_rows(_scatter_fixture()["data"]["values"])
+    out = _run_graph(csv_text, DECISIONS["histogram"])
+    spec = out["artifact"]["spec"]
+    assert "values" in spec["data"]
+    assert "url" not in spec["data"]
+
+
+def test_headerless_tabular_is_referenced_with_explicit_column_names():
+    """Galaxy tabular has no header row; Vega is told the names vintent generated."""
+    rows = _scatter_fixture()["data"]["values"][:6]
+    keys = list(rows[0])
+    tab_text = "\n".join("\t".join(str(r[k]) for k in keys) for r in rows) + "\n"
+    decisions = {**DECISIONS["scatter"],
+                 "intent": {"goal": "relationship", "shell_fields": ["col:1", "col:2"],
+                            "extract_fields": []},
+                 "fill": {"x": "col:1", "y": "col:2"}}
+    out = _run_graph(tab_text, decisions)
+    data = out["artifact"]["spec"]["data"]
+    assert data["url"] == "/api/datasets/d1/display"
+    assert data["format"]["type"] == "dsv"
+    assert data["format"]["delimiter"] == "\t"
+    # One name per column, in file order, matching what the profiler invented.
+    assert data["format"]["header"] == [f"col:{i + 1}" for i in range(len(keys))]
 
 
 def test_histogram_graph_equals_leaf_orchestration():

@@ -2,7 +2,11 @@
 
 from olite.drivers.graph import register_builder, register_materializer
 
-from olite.registry.extensions.vintent.modules.profiler import profile_rows, rows_from_tabular
+from olite.registry.extensions.vintent.modules.profiler import (
+    profile_rows,
+    rows_from_tabular,
+    source_format,
+)
 from olite.registry.extensions.vintent.modules.process import run_process as _run_leaf_process
 from olite.registry.extensions.vintent.modules.registry import PROCESSES, SHELLS
 from olite.registry.extensions.vintent.modules.tools import (
@@ -18,9 +22,13 @@ from olite.registry.extensions.vintent.modules.tools import (
 
 @register_materializer("vintent.profile")
 def _profile(text=None):
-    """Parse tabular text and profile its columns."""
+    """Parse tabular text, profile its columns, and record how Vega could read it directly."""
     values = rows_from_tabular(text or "")
-    return {"values": values, "profile": profile_rows(values)}
+    return {
+        "values": values,
+        "profile": profile_rows(values),
+        "source": source_format(text or ""),
+    }
 
 
 @register_materializer("vintent.run_process")
@@ -29,16 +37,22 @@ def _run_process(choice=None, values=None):
     values = values or []
     choice = choice or {}
     pid = choice.get("id")
+    transformed = False
     if pid and pid != NO_PROCESS_ID:
         process = PROCESSES.EXTRACT.get(pid)
         if process:
             values = _run_leaf_process(process, values, choice.get("params", {}))
-    return {"values": values, "profile": profile_rows(values)}
+            transformed = True
+    return {"values": values, "profile": profile_rows(values), "transformed": transformed}
 
 
 @register_materializer("vintent.analyze")
-def _analyze(shell_id=None, values=None, params=None):
-    """Run the chosen shell's analyze processes (if any), then re-profile."""
+def _analyze(shell_id=None, values=None, params=None, transformed=False):
+    """Run the chosen shell's analyze processes (if any), then re-profile.
+
+    `transformed` carries forward: once any step has rewritten the rows, the
+    original dataset no longer matches them and cannot be referenced by URL.
+    """
     values = values or []
     shell = SHELLS.get(shell_id)
     steps = getattr(shell, "processes", None)
@@ -47,18 +61,48 @@ def _analyze(shell_id=None, values=None, params=None):
             process = PROCESSES.ANALYZE.get(step.get("id"))
             if process:
                 values = _run_leaf_process(process, values, step.get("params", {}))
-    return {"values": values, "profile": profile_rows(values)}
+                transformed = True
+    return {"values": values, "profile": profile_rows(values), "transformed": bool(transformed)}
+
+
+DATASET_DISPLAY_URL = "/api/datasets/{dataset_id}/display"
+
+
+def _reference_source(spec, dataset_id, source):
+    """Point the spec at the dataset instead of carrying a copy of its rows.
+
+    Only sound while the rows are the dataset's own: any extract or analyze step
+    rewrites them, and the file behind the URL would no longer match the encoding.
+    """
+    referenced = dict(spec)
+    referenced["data"] = {
+        "url": DATASET_DISPLAY_URL.format(dataset_id=dataset_id),
+        "format": dict(source),
+    }
+    return referenced
 
 
 @register_materializer("vintent.compile")
-def _compile(shell_id=None, values=None, params=None, profile=None):
-    """Validate shell params against the profile, then compile the Vega-Lite spec."""
+def _compile(shell_id=None, values=None, params=None, profile=None,
+             dataset_id=None, source=None, transformed=False):
+    """Validate shell params against the profile, then compile the Vega-Lite spec.
+
+    When nothing has rewritten the rows, the spec references the dataset by URL so a
+    Galaxy page embeds a few hundred bytes rather than the whole table.
+    """
     shell = SHELLS.get(shell_id)
     if shell is None:
         raise ValueError(f"unknown shell: {shell_id}")
     shell.validate_or_raise(profile or profile_rows(values or []), params or {})
     spec = shell.compile(params or {}, values or [], "vega-lite")
-    return {"spec": spec, "title": getattr(shell, "name", shell_id)}
+    embedded = transformed or not dataset_id or not source
+    if not embedded:
+        spec = _reference_source(spec, dataset_id, source)
+    return {
+        "spec": spec,
+        "title": getattr(shell, "name", shell_id),
+        "embedded": bool(embedded),
+    }
 
 
 # --- Schema-builders (state-derived decision contracts) ----------------------
