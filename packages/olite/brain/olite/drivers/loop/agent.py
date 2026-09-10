@@ -113,6 +113,10 @@ class LoopDriver:
                 "content": reply.content,
                 "tool_calls": tool_calls,
             }
+            # Without it the transcript is a run of contentless tool calls: the model
+            # cannot see what it already concluded and re-issues the same call.
+            if reply.reasoning:
+                assistant["reasoning_content"] = reply.reasoning
             messages.append(assistant)
             produced.append(assistant)
             # Kept beside the message, which goes back to the provider verbatim.
