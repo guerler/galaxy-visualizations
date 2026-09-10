@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import pathlib
 
 from olite import prompt
 from olite.drivers import LoopDriver
@@ -24,6 +25,12 @@ DATASET_CSV = "Transaction_date,Product,Price,Country\n" + "\n".join(
 )
 
 
+VINTENT_DATASET_ID = "ds_health_1"
+VINTENT_CSV = (
+    pathlib.Path(__file__).resolve().parents[3] / "vintent" / "test-data" / "dataset.csv"
+).read_text()
+
+
 class StubGalaxy:
     """A Galaxy that answers plausibly and records what was asked."""
 
@@ -34,6 +41,11 @@ class StubGalaxy:
         self.calls.append(("GET", path))
         # Real dataset bytes, so the download -> run_python path is exercised end to
         # end rather than only the tool call being emitted.
+        if path.startswith(f"api/datasets/{VINTENT_DATASET_ID}/display"):
+            return VINTENT_CSV.encode("utf-8") if binary else VINTENT_CSV
+        if path.startswith(f"api/datasets/{VINTENT_DATASET_ID}"):
+            return {"id": VINTENT_DATASET_ID, "name": "health.csv", "extension": "csv",
+                    "state": "ok", "file_size": len(VINTENT_CSV)}
         if path.startswith(f"api/datasets/{DATASET_ID}/display"):
             return DATASET_CSV.encode("utf-8") if binary else DATASET_CSV
         if path.startswith(f"api/datasets/{DATASET_ID}"):
@@ -43,6 +55,9 @@ class StubGalaxy:
         # looks it up in the history before downloading it.
         if "api/histories" in path and "contents" in path:
             return [{"id": DATASET_ID, "hid": 1, "name": "prices.csv", "extension": "csv",
+                     "history_content_type": "dataset", "state": "ok", "deleted": False,
+                     "visible": True},
+                    {"id": VINTENT_DATASET_ID, "hid": 2, "name": "health.csv", "extension": "csv",
                      "history_content_type": "dataset", "state": "ok", "deleted": False,
                      "visible": True}]
         if "api/histories" in path:
@@ -96,8 +111,11 @@ class StubGalaxy:
 
 
 class RunResult:
-    def __init__(self, messages, logs, tools_called, error=None, status_code=None, events=None):
+    def __init__(self, messages, logs, tools_called, error=None, status_code=None, events=None,
+                 artifacts=None):
         self.messages = messages
+        # Charts and diagrams routed to the shell, never into the model's context.
+        self.artifacts = artifacts or []
         self.logs = logs
         self.tools_called = tools_called
         # Every event the brain emitted, plus turn boundaries synthesised by the harness.
@@ -184,15 +202,17 @@ async def _run(scenario, model):
     messages = transcripts
     logs = []
     events = []
+    artifacts = []
     for turn in scenario["inputs"]:
         messages = [*messages, {"role": "user", "content": turn}]
         events.append("turn_start")
         result = await driver.run(messages, lambda ev: _note(ev, tools_called, events))
         messages = result.get("messages") or messages
         logs.extend(result.get("logs") or [])
+        artifacts.extend(result.get("artifacts") or [])
         # Only after run() returns: a turn that dies mid-flight must not look complete.
         events.append("turn_end")
-    return RunResult(messages, logs, tools_called, events=events)
+    return RunResult(messages, logs, tools_called, events=events, artifacts=artifacts)
 
 
 def _note(event, sink, events=None):

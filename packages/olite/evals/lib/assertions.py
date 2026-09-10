@@ -50,6 +50,7 @@ def evaluate(scenario, run):
     _plan(a.get("plan"), run, failures, exercised)
     _behavior(a.get("behavior"), run, failures, exercised)
     _events(a.get("events"), run, failures, exercised)
+    _artifacts(a.get("artifacts"), run, failures, exercised)
     return failures, exercised
 
 
@@ -278,3 +279,36 @@ _ASKS_FOR_INFORMATION = re.compile(
 
 def _asks_for_information(chat):
     return "?" in (chat or "") or bool(_ASKS_FOR_INFORMATION.search(chat or ""))
+
+
+def _artifacts(spec, run, failures, exercised):
+    """Charts routed to the shell: kind, and whether the spec references or embeds."""
+    if not spec:
+        return
+    exercised.add("artifacts")
+    made = getattr(run, "artifacts", []) or []
+    for want in spec.get("mustInclude") or []:
+        kind = want.get("kind")
+        matches = [a for a in made if not kind or a.get("kind") == kind]
+        if not matches:
+            failures.append(f"no {kind or 'any'} artifact was produced")
+            continue
+        data = (matches[0].get("spec") or {}).get("data") or {}
+        if want.get("referencesDataset"):
+            if "url" not in data:
+                failures.append(f"{kind} embeds its rows; expected a dataset reference")
+            elif want.get("datasetId") and want["datasetId"] not in data["url"]:
+                failures.append(f"{kind} references {data['url']}, not {want['datasetId']}")
+        if want.get("embedsRows") and "values" not in data:
+            failures.append(f"{kind} references the dataset; expected embedded rows")
+        for field in want.get("encodes") or []:
+            encoded = {
+                e.get("field")
+                for ch in ((matches[0].get("spec") or {}).get("encoding") or {}).values()
+                for e in (ch if isinstance(ch, list) else [ch])
+                if isinstance(e, dict)
+            }
+            if field not in encoded:
+                failures.append(f"{kind} does not encode {field}")
+    if spec.get("count") is not None and len(made) != spec["count"]:
+        failures.append(f"expected {spec['count']} artifacts, got {len(made)}")

@@ -48,11 +48,7 @@ def _run_process(choice=None, values=None):
 
 @register_materializer("vintent.analyze")
 def _analyze(shell_id=None, values=None, params=None, transformed=False):
-    """Run the chosen shell's analyze processes (if any), then re-profile.
-
-    `transformed` carries forward: once any step has rewritten the rows, the
-    original dataset no longer matches them and cannot be referenced by URL.
-    """
+    """Run the chosen shell's analyze processes (if any), then re-profile."""
     values = values or []
     shell = SHELLS.get(shell_id)
     steps = getattr(shell, "processes", None)
@@ -69,11 +65,7 @@ DATASET_DISPLAY_URL = "/api/datasets/{dataset_id}/display"
 
 
 def _reference_source(spec, dataset_id, source):
-    """Point the spec at the dataset instead of carrying a copy of its rows.
-
-    Only sound while the rows are the dataset's own: any extract or analyze step
-    rewrites them, and the file behind the URL would no longer match the encoding.
-    """
+    """Point the spec at the dataset instead of carrying its rows."""
     referenced = dict(spec)
     referenced["data"] = {
         "url": DATASET_DISPLAY_URL.format(dataset_id=dataset_id),
@@ -85,17 +77,16 @@ def _reference_source(spec, dataset_id, source):
 @register_materializer("vintent.compile")
 def _compile(shell_id=None, values=None, params=None, profile=None,
              dataset_id=None, source=None, transformed=False):
-    """Validate shell params against the profile, then compile the Vega-Lite spec.
-
-    When nothing has rewritten the rows, the spec references the dataset by URL so a
-    Galaxy page embeds a few hundred bytes rather than the whole table.
-    """
+    """Validate shell params against the profile, then compile the Vega-Lite spec."""
     shell = SHELLS.get(shell_id)
     if shell is None:
         raise ValueError(f"unknown shell: {shell_id}")
     shell.validate_or_raise(profile or profile_rows(values or []), params or {})
-    spec = shell.compile(params or {}, values or [], "vega-lite")
-    embedded = transformed or not dataset_id or not source
+    rows = values or []
+    spec = shell.compile(params or {}, rows, "vega-lite")
+    # A shell that reshapes rows while compiling cannot hand back the same list.
+    reshaped = (spec.get("data") or {}).get("values") is not rows
+    embedded = transformed or reshaped or not dataset_id or not source
     if not embedded:
         spec = _reference_source(spec, dataset_id, source)
     return {

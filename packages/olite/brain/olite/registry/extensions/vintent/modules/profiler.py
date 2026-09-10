@@ -66,12 +66,7 @@ def rows_from_tabular(text: str) -> List[Dict[str, Any]]:
 
 
 def source_format(text: str) -> Dict[str, Any]:
-    """How Vega should read this file straight from Galaxy, without the rows.
-
-    Galaxy tabular carries no header row, so Vega is given the same synthetic
-    `col:N` names `rows_from_tab` generates. CSV names its own columns, so Vega
-    reads the header itself and none is supplied.
-    """
+    """Vega `format` for reading this file directly; tabular needs the col:N names."""
     clean_text = skip_comment_lines(text)
     delimiter = detect_delimiter(clean_text)
     if delimiter != '\t':

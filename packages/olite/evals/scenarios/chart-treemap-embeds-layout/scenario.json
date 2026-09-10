@@ -1,0 +1,37 @@
+{
+  "name": "chart: a treemap embeds the layout it computed",
+  "description": "Tier 2. Treemap rebuilds rows inside compile rather than through a declared transform, so the reference decision cannot rest on the transform flag alone.",
+  "tier": 2,
+  "inputs": [
+    "Show the share of records per Obesity category in dataset ds_health_1 as a treemap."
+  ],
+  "timeoutMs": 180000,
+  "assertions": {
+    "events": {
+      "mustInclude": [
+        "turn_start"
+      ]
+    },
+    "messages": {
+      "repliesInChat": true
+    },
+    "toolCalls": {
+      "mustInclude": [
+        {
+          "name": "vintent_dataset",
+          "argsContains": {
+            "dataset_id": "ds_health_1"
+          }
+        }
+      ]
+    },
+    "artifacts": {
+      "mustInclude": [
+        {
+          "kind": "vega-lite",
+          "embedsRows": true
+        }
+      ]
+    }
+  }
+}
