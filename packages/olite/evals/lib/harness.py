@@ -8,7 +8,8 @@ import pathlib
 from olite import prompt
 from olite.drivers import LoopDriver
 from olite.registry import ProcessRegistry, SkillRegistry
-from olite.runtime import _inject_context
+from olite.drivers.loop import notebook
+from olite.runtime import _inject_context, _inject_record
 from olite.substrate import Substrate
 from olite.substrate.llm import REGISTRY
 
@@ -25,6 +26,7 @@ DATASET_CSV = "Transaction_date,Product,Price,Country\n" + "\n".join(
 )
 
 
+HISTORY_ID = "hist1"
 VINTENT_DATASET_ID = "ds_health_1"
 VINTENT_CSV = (
     pathlib.Path(__file__).resolve().parents[3] / "vintent" / "test-data" / "dataset.csv"
@@ -116,8 +118,11 @@ class StubGalaxy:
                          "description": "to an existing dataset",
                          "panel_section_name": "Text Manipulation"}]
             return []
+        if path.startswith("api/pages/"):
+            return {"id": "page1", "slug": f"olite-{HISTORY_ID}",
+                    "content": "## Record\n\n_No entries yet._\n"}
         if "api/pages" in path:
-            return []
+            return [{"id": "page1", "slug": f"olite-{HISTORY_ID}", "title": "olite record"}]
         # Empty identity reads as "Galaxy unreachable" and the agent abandons the task.
         if path.startswith("api/whoami"):
             return {"id": "user1", "username": "eval", "email": "eval@example.org"}
@@ -229,6 +234,11 @@ async def _run(scenario, model):
     )
     transcripts = _inject_context(
         [{"role": "system", "content": scenario.get("systemPrompt", "You are olite.")}], context
+    )
+    # Production binds a history and lists its datasets every turn (runtime.py); without it
+    # the agent has to hunt for which history holds a dataset, and sometimes stops to ask.
+    transcripts = _inject_record(
+        transcripts, await notebook.excerpt(substrate.galaxy, HISTORY_ID)
     )
 
     tools_called = []
