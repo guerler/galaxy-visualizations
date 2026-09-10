@@ -79,8 +79,19 @@ async def _list_history_ids(g, a):
     return [{"id": h.get("id"), "name": h.get("name")} for h in histories]
 
 
+CONTENTS_NOTE = ("This is just a count. To get actual datasets, use "
+                 "get_history_contents(history_id, limit=25, order='create_time-dsc') "
+                 "for newest datasets first.")
+
+
 async def _get_history_details(g, a):
-    return await g.get(f"api/histories/{a['history_id']}")
+    # galaxy-mcp pairs the metadata with a count and steers to get_history_contents,
+    # so a model does not read a metadata-only reply as an empty history.
+    history = await g.get(f"api/histories/{a['history_id']}")
+    contents = await g.get(f"api/histories/{a['history_id']}/contents{_q({'v': 'dev', 'keys': 'id'})}")
+    total = len(contents) if isinstance(contents, list) else 0
+    return {"history": history,
+            "contents_summary": {"total_items": total, "note": CONTENTS_NOTE}}
 
 
 async def _get_history_contents(g, a):
@@ -209,7 +220,11 @@ async def _get_tool_panel(g, a):
 
 
 async def _get_tool_citations(g, a):
-    return await g.get(f"api/tools/{a['tool_id']}/citations")
+    info = await g.get(f"api/tools/{a['tool_id']}") or {}
+    citations = info.get("citations") or []
+    return {"tool_name": info.get("name", a["tool_id"]),
+            "tool_version": info.get("version", "unknown"),
+            "citations": citations}
 
 
 async def _get_tool_input_template(g, a):
