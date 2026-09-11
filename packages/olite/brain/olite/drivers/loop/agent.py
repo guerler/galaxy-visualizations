@@ -22,7 +22,10 @@ TRUNCATED_ERROR = (
     "its arguments may be truncated. Re-issue the tool call with complete arguments."
 )
 # Reported back rather than replaced with `{}`, which would run the wrong request.
-MALFORMED_ARGS_ERROR = 'Tool call "{name}" was not executed: its arguments are not valid JSON ({detail}).'
+MALFORMED_ARGS_ERROR = (
+    'Tool call "{name}" was not executed: its arguments are not valid JSON ({detail}). '
+    "Re-issue the tool call with valid arguments."
+)
 # pi's wording for a call dropped because the run was aborted.
 ABORTED_ERROR = "Operation aborted"
 # Tool results are NOT truncated, matching Orbit.
