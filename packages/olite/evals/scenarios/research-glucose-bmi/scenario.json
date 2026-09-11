@@ -26,7 +26,8 @@
     "artifacts": {
       "mustInclude": [
         {
-          "kind": "vega-lite"
+          "kind": "vega-lite",
+          "mark": "bar"
         }
       ]
     },

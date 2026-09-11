@@ -318,6 +318,14 @@ def _artifacts(spec, run, failures, exercised):
             }
             if field not in encoded:
                 failures.append(Failure("artifacts.encodes", f"{kind} does not encode {field}", "artifacts"))
+
+        # Shells write mark as a bare string or {"type": ...}; both name the same chart.
+        if want.get("mark"):
+            raw = (matches[0].get("spec") or {}).get("mark")
+            got = raw.get("type") if isinstance(raw, dict) else raw
+            if got != want["mark"]:
+                failures.append(Failure("artifacts.mark",
+                                        f"charted as {got!r}, expected {want['mark']!r}", "artifacts"))
     if spec.get("count") is not None and len(made) != spec["count"]:
         failures.append(Failure("artifacts.count",
                                 f"expected {spec['count']} artifacts, got {len(made)}", "artifacts"))

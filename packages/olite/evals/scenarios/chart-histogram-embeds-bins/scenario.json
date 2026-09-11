@@ -29,7 +29,11 @@
       "mustInclude": [
         {
           "kind": "vega-lite",
-          "embedsRows": true
+          "embedsRows": true,
+          "mark": "bar",
+          "encodes": [
+            "bin_label"
+          ]
         }
       ]
     }
