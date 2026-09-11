@@ -112,6 +112,19 @@ def check_layers(data):
             if mine[name] != theirs[name] and name not in allowed:
                 out.append(("DRIFT", f"layer.tool-surface/{name}",
                             "description or parameters differ from galaxy-mcp"))
+
+        # The tables above fingerprint description and parameters, so a tool can match on
+        # both and still return something else. get_tool_input_template shipped galaxy-mcp's
+        # "ready-to-fill skeleton" wording over a raw schema passthrough for months.
+        shaped = surface.get("shaped_returns") or {}
+        if shaped:
+            passthrough = layers.olite_passthrough_handlers()
+            for name in sorted(set(shaped) & passthrough):
+                if name in allowed:
+                    continue
+                keys = ", ".join(shaped[name])
+                out.append(("SHAPE", f"layer.tool-return/{name}",
+                            f"galaxy-mcp returns {{{keys}}}; olite passes the response through"))
     return out
 
 

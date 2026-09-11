@@ -541,6 +541,67 @@
         "list_page_revisions": "903f5fdb2f40b0e4",
         "get_page_revision": "6a3f2dbc2b96f3ac",
         "revert_page_revision": "54f85fea93e8d28f"
+      },
+      "shaped_returns": {
+        "connect": [
+          "auth",
+          "connected",
+          "url",
+          "user"
+        ],
+        "get_tool_run_examples": [
+          "requested_version",
+          "test_cases",
+          "tool_id"
+        ],
+        "get_tool_input_template": [
+          "inputs_template",
+          "parameters",
+          "tool_id"
+        ],
+        "get_tool_citations": [
+          "citations",
+          "tool_name",
+          "tool_version"
+        ],
+        "get_history_details": [
+          "contents_summary",
+          "history"
+        ],
+        "get_history_contents": [
+          "contents",
+          "history_id"
+        ],
+        "get_job_details": [
+          "dataset_id",
+          "job",
+          "job_id"
+        ],
+        "get_collection_details": [
+          "collection",
+          "collection_id",
+          "elements",
+          "elements_truncated",
+          "history_content_type",
+          "note"
+        ],
+        "download_dataset": [
+          "content_available",
+          "dataset_id",
+          "dataset_info",
+          "file_path",
+          "file_size",
+          "note",
+          "suggested_filename"
+        ],
+        "cancel_workflow_invocation": [
+          "cancelled",
+          "invocation"
+        ],
+        "delete_user_tool": [
+          "deactivated",
+          "uuid"
+        ]
       }
     }
   }
