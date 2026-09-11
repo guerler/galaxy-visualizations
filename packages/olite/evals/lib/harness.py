@@ -235,7 +235,11 @@ async def _run(scenario, model):
     # A tool-test scenario runs against a real Galaxy: the harness puts the test's input
     # files in a history, and the agent is told the goal, not the test's parameters.
     staged = None
-    if scenario.get("dataset"):
+    if scenario.get("workflows"):
+        if not config.get("live_galaxy"):
+            raise RuntimeError("workflow scenarios need GALAXY_URL; no stub stores workflows")
+        staged = stage_workflows(config, scenario["workflows"])
+    elif scenario.get("dataset"):
         if not config.get("live_galaxy"):
             raise RuntimeError("dataset scenarios need GALAXY_URL; no stub can run a tool")
         staged = stage_dataset(config, scenario["dataset"])
@@ -354,6 +358,24 @@ def _resume_record(galaxy, history_id):
         "content": "## Record\n\n_No entries yet._\n",
         "content_format": "markdown",
     })
+
+
+def stage_workflows(config, spec):
+    """Import fixture workflows, so questions about the instance have a countable answer."""
+    galaxy = tooltests.Galaxy(config["galaxy_root"], config.get("galaxy_key", ""))
+    base = pathlib.Path(__file__).resolve().parent.parent / "fixtures" / "workflows"
+    definitions = {name: json.loads((base / name).read_text()) for name in spec["files"]}
+    # Counting is only meaningful against a known set, so clear prior runs' copies first.
+    wanted = {d["name"] for d in definitions.values()}
+    for w in galaxy.call("api/workflows") or []:
+        if w.get("name") in wanted:
+            galaxy.call(f"api/workflows/{w['id']}", "DELETE")
+    ids = {name: galaxy.call("api/workflows", "POST", {"workflow": d})["id"]
+           for name, d in definitions.items()}
+    history_id = galaxy.new_history(spec.get("history") or "olite eval")
+    _resume_record(galaxy, history_id)
+    return {"galaxy": galaxy, "history_id": history_id, "dataset_ids": {},
+            "workflow_ids": ids, "test": None, "tool_id": None}
 
 
 def stage_dataset(config, spec):
