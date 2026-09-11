@@ -34,7 +34,8 @@
           "encodes": [
             "Glucose",
             "BMI"
-          ]
+          ],
+          "mark": "point"
         }
       ]
     }

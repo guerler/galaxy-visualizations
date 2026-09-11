@@ -222,16 +222,24 @@ def _api_key(model):
 async def _run(scenario, model):
     config = build_config(model, scenario.get("capabilities"))
     substrate = Substrate(config)
-    # No catalog init: these scenarios exercise the loop, not the graph driver.
     # `galaxy_root` always holds a sentinel, so only the explicit flag can decide.
     if not config.get("live_galaxy"):
+        # Stub scenarios exercise the loop, not the graph driver.
         substrate.galaxy = StubGalaxy()
         substrate.catalog = StubCatalog(substrate.galaxy)
+    else:
+        # A process reaches Galaxy through the catalog, so a live run has to load it
+        # or every process call fails with catalog_unavailable.
+        await substrate.catalog.init()
 
     # A tool-test scenario runs against a real Galaxy: the harness puts the test's input
     # files in a history, and the agent is told the goal, not the test's parameters.
     staged = None
-    if scenario.get("toolTest"):
+    if scenario.get("dataset"):
+        if not config.get("live_galaxy"):
+            raise RuntimeError("dataset scenarios need GALAXY_URL; no stub can run a tool")
+        staged = stage_dataset(config, scenario["dataset"])
+    elif scenario.get("toolTest"):
         if not config.get("live_galaxy"):
             raise RuntimeError("toolTest scenarios need GALAXY_URL; no stub can run a tool")
         staged = stage_tool_test(config, scenario["toolTest"])
@@ -346,3 +354,17 @@ def _resume_record(galaxy, history_id):
         "content": "## Record\n\n_No entries yet._\n",
         "content_format": "markdown",
     })
+
+
+def stage_dataset(config, spec):
+    """A history holding one fixture file, as a researcher's would when they sit down."""
+    galaxy = tooltests.Galaxy(config["galaxy_root"], config.get("galaxy_key", ""))
+    path = pathlib.Path(__file__).resolve().parent.parent / "fixtures" / spec["file"]
+    history_id = galaxy.new_history(spec.get("history") or "olite eval")
+    dataset_id = galaxy.upload(history_id, spec["file"], path.read_bytes())
+    state = galaxy.await_dataset(dataset_id).get("state")
+    if state != "ok":
+        raise tooltests.ToolTestError(f"fixture landed in state {state}")
+    _resume_record(galaxy, history_id)
+    return {"galaxy": galaxy, "history_id": history_id,
+            "dataset_ids": {spec["file"]: dataset_id}, "test": None, "tool_id": None}

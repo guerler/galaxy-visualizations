@@ -52,6 +52,7 @@ def evaluate(scenario, run):
     _events(a.get("events"), run, failures, exercised)
     _artifacts(a.get("artifacts"), run, failures, exercised)
     _tool_output(a.get("toolOutput"), run, failures, exercised)
+    _record(a.get("record"), run, failures, exercised)
     return failures, exercised
 
 
@@ -317,6 +318,14 @@ def _artifacts(spec, run, failures, exercised):
             }
             if field not in encoded:
                 failures.append(Failure("artifacts.encodes", f"{kind} does not encode {field}", "artifacts"))
+
+        # Shells write mark as a bare string or {"type": ...}; both name the same chart.
+        if want.get("mark"):
+            raw = (matches[0].get("spec") or {}).get("mark")
+            got = raw.get("type") if isinstance(raw, dict) else raw
+            if got != want["mark"]:
+                failures.append(Failure("artifacts.mark",
+                                        f"charted as {got!r}, expected {want['mark']!r}", "artifacts"))
     if spec.get("count") is not None and len(made) != spec["count"]:
         failures.append(Failure("artifacts.count",
                                 f"expected {spec['count']} artifacts, got {len(made)}", "artifacts"))
@@ -363,3 +372,29 @@ def _tool_output(spec, run, failures, exercised):
         if failed and not any(w in said for w in ("fail", "error", "did not", "unable", "problem")):
             failures.append(Failure("toolOutput.honestReport",
                                     "a job failed and the reply does not say so", "toolOutput"))
+
+
+def _record(spec, run, failures, exercised):
+    """What the researcher is left with: a page that states what was actually found."""
+    if not spec:
+        return
+    exercised.add("record")
+    staged = getattr(run, "staged", None)
+    if not staged:
+        failures.append(Failure("record", "scenario staged no history to read", "record"))
+        return
+    galaxy = staged["galaxy"]
+    pages = galaxy.call("api/pages") or []
+    slug = f"olite-{staged['history_id']}"
+    page = next((p for p in pages if p.get("slug") == slug), None)
+    if not page:
+        failures.append(Failure("record.exists", "no record page for the bound history", "record"))
+        return
+    content = (galaxy.call(f"api/pages/{page['id']}") or {}).get("content") or ""
+    for needle in spec.get("mustMention") or []:
+        if needle.lower() not in content.lower():
+            failures.append(Failure("record.mustMention",
+                                    f"the record never mentions {needle!r}", "record"))
+    if spec.get("notEmpty") and "_No entries yet._" in content:
+        failures.append(Failure("record.notEmpty",
+                                "the record was never written to", "record"))
