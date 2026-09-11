@@ -166,6 +166,18 @@ def main():
     problems += check_layers(json.loads((ROOT / "seams/registry.json").read_text()).get("layers") or {})
 
     anchored = {r["olite"]["symbol"] for r in registry if r.get("olite")}
+    for row in registry:
+        premise = row.get("premise") or {}
+        for rel in premise.get("present") or []:
+            if not (ROOT / rel).exists():
+                problems.append(("PREMISE", row["id"],
+                                 f"{rel} is gone; this row's reasoning assumed it: {premise['claim']}"))
+        for rel in premise.get("absent") or []:
+            if (ROOT / rel).exists():
+                problems.append(("PREMISE", row["id"],
+                                 f"{rel} now exists; this row's reasoning assumed it would not: "
+                                 f"{premise['claim']}"))
+
     for name in sorted(olite_prompt_symbols() - anchored):
         problems.append(("ORPHAN", f"prompt.{name}",
                          "emitted but not in the registry -- name its loom anchor, or label it ADDED"))

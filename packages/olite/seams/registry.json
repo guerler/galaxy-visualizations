@@ -59,7 +59,14 @@
         "symbol": "OPERATING_DISCIPLINE"
       },
       "label": "PORTED",
-      "note": "Secrets section adapted: olite needs no credentials."
+      "note": "Secrets section adapted: loom points at ~/.loom/config.json and Orbit Preferences, which olite has no equivalent of.",
+      "premise": {
+        "claim": "olite holds a provider key, so the block must not tell the model it has none",
+        "present": [
+          "src/credentials.ts",
+          "brain/olite/drivers/loop/secret_redaction.py"
+        ]
+      }
     },
     {
       "id": "prompt.buildVerificationDisciplineBlock",
@@ -91,7 +98,13 @@
         "symbol": "PLAN_CONVENTION"
       },
       "label": "PORTED",
-      "note": "olite emits no anchors at all, so it matches the omit path."
+      "note": "olite emits no anchors at all, so it matches the omit path.",
+      "premise": {
+        "claim": "olite emits no plan anchors, so it takes loom's omit path",
+        "absent": [
+          "brain/olite/drivers/loop/anchors.py"
+        ]
+      }
     },
     {
       "id": "prompt.buildParameterReviewBlock",
@@ -223,7 +236,13 @@
       },
       "olite": null,
       "label": "NA",
-      "note": "No team dispatch."
+      "note": "No team dispatch.",
+      "premise": {
+        "claim": "team dispatch is vendored for rendering only, never dispatched",
+        "absent": [
+          "brain/olite/drivers/loop/team_dispatch.py"
+        ]
+      }
     },
     {
       "id": "prompt.buildSessionIndexContext",
