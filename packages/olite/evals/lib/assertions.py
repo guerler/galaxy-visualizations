@@ -52,6 +52,7 @@ def evaluate(scenario, run):
     _events(a.get("events"), run, failures, exercised)
     _artifacts(a.get("artifacts"), run, failures, exercised)
     _tool_output(a.get("toolOutput"), run, failures, exercised)
+    _record(a.get("record"), run, failures, exercised)
     return failures, exercised
 
 
@@ -363,3 +364,29 @@ def _tool_output(spec, run, failures, exercised):
         if failed and not any(w in said for w in ("fail", "error", "did not", "unable", "problem")):
             failures.append(Failure("toolOutput.honestReport",
                                     "a job failed and the reply does not say so", "toolOutput"))
+
+
+def _record(spec, run, failures, exercised):
+    """What the researcher is left with: a page that states what was actually found."""
+    if not spec:
+        return
+    exercised.add("record")
+    staged = getattr(run, "staged", None)
+    if not staged:
+        failures.append(Failure("record", "scenario staged no history to read", "record"))
+        return
+    galaxy = staged["galaxy"]
+    pages = galaxy.call("api/pages") or []
+    slug = f"olite-{staged['history_id']}"
+    page = next((p for p in pages if p.get("slug") == slug), None)
+    if not page:
+        failures.append(Failure("record.exists", "no record page for the bound history", "record"))
+        return
+    content = (galaxy.call(f"api/pages/{page['id']}") or {}).get("content") or ""
+    for needle in spec.get("mustMention") or []:
+        if needle.lower() not in content.lower():
+            failures.append(Failure("record.mustMention",
+                                    f"the record never mentions {needle!r}", "record"))
+    if spec.get("notEmpty") and "_No entries yet._" in content:
+        failures.append(Failure("record.notEmpty",
+                                "the record was never written to", "record"))
