@@ -10,6 +10,15 @@ import os
 # Excluded, not translated: adapting these would change what they measure.
 NOT_PORTABLE = {
     "init-gate-galaxy-no-connection": "asserts no turn starts; this harness always emits turn_start",
+    "standing-instructions-tool-preference": (
+        "exercises a workspace LOOM.md; olite runs in a browser with no project directory "
+        "and no standing-instructions channel to steer a plan"
+    ),
+    "evidence-gate-in-progress-contradiction": (
+        "asserts loom's /override command, its activity.jsonl events and plan anchors, none "
+        "of which olite has; the contradiction itself is covered by record-jobs, which marks "
+        "a step `- [!]` when the watcher sees its job fail"
+    ),
 }
 
 # pi's lifecycle events mapped to the smaller set this harness emits; unmapped names drop.

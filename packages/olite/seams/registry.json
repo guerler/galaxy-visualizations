@@ -422,6 +422,7 @@
       "source": "loom evals/scenarios",
       "fingerprints": {
         "behavior-underspecified-ask": "464ffdbc1b2a40fa",
+        "evidence-gate-in-progress-contradiction": "bd85feee53dbfe9f",
         "execution-after-approval": "3d8f4014d1a232ec",
         "init-gate-galaxy-no-connection": "9b59f2b7a8a639dc",
         "plan-collections-tags-datatype": "16263b1668940469",
@@ -434,6 +435,7 @@
         "routing-clear-galaxy": "21b6b4d5afe67ff7",
         "routing-clear-local": "9d4dd5a98f7cda73",
         "smoke-echo": "0ef9b672b9c90b2b",
+        "standing-instructions-tool-preference": "6ab245106ec2dab8",
         "udt-authoring-container": "ed21826b2bf647b4",
         "udt-authoring-select-params": "33252c01161252a5",
         "udt-authoring-threads": "15e165c9ca7dfcaa"

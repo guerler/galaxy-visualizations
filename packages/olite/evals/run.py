@@ -67,6 +67,15 @@ def main():
             for name, why in sorted(loom_scenarios.NOT_PORTABLE.items()):
                 print(f"  skip {name}: {why}")
         scenarios = shared + scenarios
+
+    # A live scenario needs a Galaxy. Without one it cannot run, and a scenario that
+    # cannot run must not report a verdict.
+    if not os.environ.get("GALAXY_URL", "").strip():
+        live = [s for s in scenarios if s.get("substrate") == "live"]
+        for s in live:
+            print(f"  skip {s['id']}: needs GALAXY_URL; substrate is live")
+        scenarios = [s for s in scenarios if s.get("substrate") != "live"]
+
     models, skipped = available_models(matrix, args.model)
 
     for model, missing in skipped:
