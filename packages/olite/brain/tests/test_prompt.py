@@ -382,3 +382,30 @@ def test_no_prompt_block_ships_a_literal_galaxy_id():
     if xml.exists():
         assert not re.findall(r"\b[0-9a-f]{16}\b", xml.read_text()), \
             "the identity prompt in olite.xml must not carry a literal id either"
+
+
+def test_the_record_never_takes_the_slot_after_the_user_s_request():
+    """It is agent-writable; the final slot is read as the operative instruction."""
+    from olite.runtime import RECORD_MARKER, _inject_record
+
+    turn = _inject_record(
+        [
+            {"role": "system", "content": "sys"},
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "ok"},
+            {"role": "user", "content": "analyse my data"},
+        ],
+        "record body",
+    )
+
+    assert turn[-1]["role"] == "user"
+    assert turn[-1]["content"] == "analyse my data"
+    assert RECORD_MARKER in turn[-2]["content"]
+
+
+def test_the_record_is_appended_when_no_user_turn_exists_yet():
+    from olite.runtime import RECORD_MARKER, _inject_record
+
+    turn = _inject_record([{"role": "system", "content": "sys"}], "record body")
+
+    assert RECORD_MARKER in turn[-1]["content"]

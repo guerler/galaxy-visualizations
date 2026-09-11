@@ -399,6 +399,22 @@
       },
       "label": "PORTED",
       "note": ""
+    },
+    {
+      "id": "context.project-data-placement",
+      "kind": "prompt-branch",
+      "loom": {
+        "file": "extensions/loom/context.ts",
+        "symbol": "setupContextInjection",
+        "condition": "every turn that injects notebook or workspace context",
+        "fingerprint": "3ca7669264cdb799"
+      },
+      "olite": {
+        "file": "brain/olite/runtime.py",
+        "symbol": "_inject_record"
+      },
+      "label": "PORTED",
+      "note": "olite has one project-data channel (the record); loom has two."
     }
   ],
   "layers": {
