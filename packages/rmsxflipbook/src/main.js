@@ -1,7 +1,11 @@
 import { Viewer } from "molstar/lib/apps/viewer/app";
 import { Binding } from "molstar/lib/mol-util/binding";
+import { ParamDefinition } from "molstar/lib/mol-util/param-definition";
+import { SmaaParams } from "molstar/lib/mol-canvas3d/passes/smaa";
 import "molstar/build/viewer/molstar.css";
 import "./main.css";
+import { structureStats } from "./structure-geometry";
+import { saveViewImage } from "./view-image";
 
 (function () {
     "use strict";
@@ -53,6 +57,7 @@ import "./main.css";
     let dragState = null;
     let renderToken = 0;
     let queuedSceneUpdate = null;
+    let queuedSceneAction = null;
     let sceneReloadPromise = null;
     let sceneReloadRequested = false;
     let sceneReloadAutoView = false;
@@ -89,6 +94,8 @@ import "./main.css";
         radiusMin: 0.63,
         radiusMax: 3.18,
         marker: false,
+        selectionActive: true,
+        savingImage: false,
         localDrag: true,
         rotationSensitivity: 0.35,
         renderMode: "clean-interactive",
@@ -111,6 +118,7 @@ import "./main.css";
           <h1>RMSX Flipbook</h1>
           <div class="control-row primary-row">
             <button id="resetViewButton" type="button" data-testid="molstar-reset">Reset View</button>
+            <button id="saveImageButton" type="button" data-testid="save-image" title="Save the visible view as a PNG, including Analysis plots and structures, without controls" disabled>Save image</button>
           </div>
           <div class="view-tabs" role="tablist" aria-label="Viewer mode" data-testid="viewer-mode-tabs">
             <button id="structuresTab" class="active" type="button" role="tab" aria-selected="true" aria-controls="molstarViewport" data-testid="structures-tab">Structures</button>
@@ -218,6 +226,7 @@ import "./main.css";
     const elements = {
         status: document.getElementById("status"),
         resetViewButton: document.getElementById("resetViewButton"),
+        saveImageButton: document.getElementById("saveImageButton"),
         structuresTab: document.getElementById("structuresTab"),
         heatmapTab: document.getElementById("heatmapTab"),
         analysisTab: document.getElementById("analysisTab"),
@@ -291,6 +300,7 @@ import "./main.css";
     function setStatus(message, isError) {
         elements.status.textContent = message;
         elements.status.classList.toggle("error", Boolean(isError));
+        elements.saveImageButton.disabled = !state.loaded || state.savingImage;
     }
 
     async function fetchManifest() {
@@ -617,62 +627,6 @@ import "./main.css";
             analysisStatsCache.set(key, structureStats(pdbForLane(slice, lane)));
         }
         return analysisStatsCache.get(key);
-    }
-
-    function structureStats(pdb) {
-        const stats = {
-            minX: Infinity,
-            maxX: -Infinity,
-            minY: Infinity,
-            maxY: -Infinity,
-            minZ: Infinity,
-            maxZ: -Infinity,
-            sumX: 0,
-            sumY: 0,
-            sumZ: 0,
-            count: 0,
-        };
-        pdb.split(/\r?\n/).forEach((line) => {
-            if (!line.startsWith("ATOM") && !line.startsWith("HETATM")) {
-                return;
-            }
-            const x = Number(line.slice(30, 38));
-            const y = Number(line.slice(38, 46));
-            const z = Number(line.slice(46, 54));
-            if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) {
-                return;
-            }
-            stats.minX = Math.min(stats.minX, x);
-            stats.maxX = Math.max(stats.maxX, x);
-            stats.minY = Math.min(stats.minY, y);
-            stats.maxY = Math.max(stats.maxY, y);
-            stats.minZ = Math.min(stats.minZ, z);
-            stats.maxZ = Math.max(stats.maxZ, z);
-            stats.sumX += x;
-            stats.sumY += y;
-            stats.sumZ += z;
-            stats.count += 1;
-        });
-        if (!stats.count) {
-            return {
-                ...stats,
-                width: 30,
-                height: 30,
-                depth: 30,
-                center: { x: 0, y: 0, z: 0 },
-            };
-        }
-        return {
-            ...stats,
-            width: Math.max(1, stats.maxX - stats.minX),
-            height: Math.max(1, stats.maxY - stats.minY),
-            depth: Math.max(1, stats.maxZ - stats.minZ),
-            center: {
-                x: stats.sumX / stats.count,
-                y: stats.sumY / stats.count,
-                z: stats.sumZ / stats.count,
-            },
-        };
     }
 
     function degreesToRadians(value) {
@@ -1296,7 +1250,7 @@ import "./main.css";
                           },
                       }
                     : { name: "off", params: {} },
-                antialiasing: { name: "smaa", params: {} },
+                antialiasing: { name: "smaa", params: ParamDefinition.getDefaultValues(SmaaParams) },
                 shadow: { name: "off", params: {} },
                 dof: { name: "off", params: {} },
                 sharpening: { name: "off", params: {} },
@@ -1378,6 +1332,7 @@ import "./main.css";
             return Promise.resolve();
         }
         const resetAfterLayout = () => {
+            if (state.savingImage) return;
             requestMolstarDraw();
             resetView();
         };
@@ -1409,11 +1364,13 @@ import "./main.css";
             const heightChanged = Math.abs(rect.height - lastHeight) > 2;
             lastWidth = rect.width;
             lastHeight = rect.height;
-            if (!state.loaded || (!widthChanged && !heightChanged)) {
+            if (!state.loaded || state.savingImage || (!widthChanged && !heightChanged)) {
                 return;
             }
             window.clearTimeout(resizeResetTimer);
             resizeResetTimer = window.setTimeout(() => {
+                resizeResetTimer = null;
+                if (state.savingImage) return;
                 requestMolstarDraw();
                 if (state.activeView === "analysis") {
                     requestAnalysisDraw();
@@ -2219,8 +2176,8 @@ import "./main.css";
 
     function updateHeatmapSelection() {
         const selected = selectedHeatmapCell();
-        if (!selected.residue || !selected.slice) {
-            elements.heatmapSelection.textContent = "-";
+        if (!state.selectionActive || !selected.residue || !selected.slice) {
+            elements.heatmapSelection.textContent = "No selection";
             return;
         }
         const chain = selected.residue.chain ? `Chain ${selected.residue.chain}` : "Unassigned chain";
@@ -2325,7 +2282,7 @@ import "./main.css";
                 const x = plot.x + column * cellWidth;
                 const y = plot.y + row * cellHeight;
                 context.fillRect(x, y, Math.ceil(cellWidth + 0.25), Math.ceil(cellHeight + 0.25));
-                if (selected.sliceIndex === column && selected.residue?.key === residue.key) {
+                if (state.selectionActive && selected.sliceIndex === column && selected.residue?.key === residue.key) {
                     context.strokeStyle = "#FFFFFF";
                     context.lineWidth = 3;
                     context.strokeRect(x + 1.5, y + 1.5, Math.max(1, cellWidth - 3), Math.max(1, cellHeight - 3));
@@ -2455,6 +2412,7 @@ import "./main.css";
             return;
         }
         state.currentIndex = hit.sliceIndex;
+        state.selectionActive = true;
         state.selectedResidueKey = hit.residue.key;
         state.marker = true;
         renderChips();
@@ -2462,6 +2420,24 @@ import "./main.css";
         requestHeatmapDraw();
         requestAnalysisDraw();
         queueSelectedResidueMarkerUpdate();
+    }
+
+    function clearPlotSelection() {
+        if (!REPORT || state.savingImage || (!state.selectionActive && !state.marker)) return;
+        state.selectionActive = false;
+        state.marker = false;
+        elements.heatmapTooltip.hidden = true;
+        elements.analysisTooltip.hidden = true;
+        requestHeatmapDraw();
+        requestAnalysisDraw();
+        queueSelectedResidueMarkerUpdate(0);
+        setLoadedSceneStatus();
+    }
+
+    function handleHeatmapClick(canvas, event) {
+        const hit = heatmapHitForEvent(canvas, event);
+        if (hit) event.stopPropagation();
+        selectHeatmapCell(hit);
     }
 
     function handleHeatmapKeydown(canvas, event) {
@@ -2524,7 +2500,7 @@ import "./main.css";
             canvas.addEventListener("pointerleave", () => {
                 elements.heatmapTooltip.hidden = true;
             });
-            canvas.addEventListener("click", (event) => selectHeatmapCell(heatmapHitForEvent(canvas, event)));
+            canvas.addEventListener("click", (event) => handleHeatmapClick(canvas, event));
             canvas.addEventListener("keydown", (event) => handleHeatmapKeydown(canvas, event));
             section.append(heading, canvas);
             return section;
@@ -2604,14 +2580,17 @@ import "./main.css";
             }
         });
         context.stroke();
-        const selectedTime = sliceTimeNs(REPORT.slices[state.currentIndex], state.currentIndex);
-        const markerX = xForTime(selectedTime);
-        context.strokeStyle = "#B42318";
-        context.lineWidth = 1.5;
-        context.beginPath();
-        context.moveTo(markerX + 0.5, plot.y);
-        context.lineTo(markerX + 0.5, plot.y + plot.height);
-        context.stroke();
+        if (state.selectionActive) {
+            const selectedTime = sliceTimeNs(REPORT.slices[state.currentIndex], state.currentIndex);
+            const markerX = xForTime(selectedTime);
+            context.strokeStyle = "#B42318";
+            context.lineWidth = 1.5;
+            context.beginPath();
+            context.moveTo(markerX + 0.5, plot.y);
+            context.lineTo(markerX + 0.5, plot.y + plot.height);
+            context.stroke();
+        }
+        canvas.dataset.selectionVisible = String(state.selectionActive);
         context.fillStyle = "#5F6B7A";
         context.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         context.textAlign = "right";
@@ -2671,7 +2650,7 @@ import "./main.css";
         });
         context.stroke();
         const selectedIndex = group.residues.findIndex((residue) => residue.key === state.selectedResidueKey);
-        if (selectedIndex >= 0) {
+        if (state.selectionActive && selectedIndex >= 0) {
             const markerY = yForIndex(selectedIndex);
             context.strokeStyle = "#B42318";
             context.lineWidth = 1.5;
@@ -2680,6 +2659,7 @@ import "./main.css";
             context.lineTo(plot.x + plot.width, markerY + 0.5);
             context.stroke();
         }
+        canvas.dataset.selectionVisible = String(state.selectionActive && selectedIndex >= 0);
         context.fillStyle = "#5F6B7A";
         context.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
         context.textAlign = "center";
@@ -2724,7 +2704,13 @@ import "./main.css";
         }
         const rect = canvas.getBoundingClientRect();
         const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * geometry.logicalWidth;
-        if (x < geometry.plot.x || x > geometry.plot.x + geometry.plot.width) {
+        const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * geometry.logicalHeight;
+        if (
+            x < geometry.plot.x ||
+            x > geometry.plot.x + geometry.plot.width ||
+            y < geometry.plot.y ||
+            y > geometry.plot.y + geometry.plot.height
+        ) {
             showAnalysisTooltip(event, null);
             return;
         }
@@ -2734,6 +2720,8 @@ import "./main.css";
         const slice = REPORT.slices[sliceIndex];
         showAnalysisTooltip(event, `${slice.label} · ${formatNumber(sliceTimeNs(slice, sliceIndex))} ns`);
         if (select) {
+            event.stopPropagation();
+            state.selectionActive = true;
             state.currentIndex = sliceIndex;
             renderChips();
             requestHeatmapDraw();
@@ -2749,8 +2737,14 @@ import "./main.css";
             return;
         }
         const rect = canvas.getBoundingClientRect();
+        const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * geometry.logicalWidth;
         const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * geometry.logicalHeight;
-        if (y < geometry.plot.y || y > geometry.plot.y + geometry.plot.height) {
+        if (
+            x < geometry.plot.x ||
+            x > geometry.plot.x + geometry.plot.width ||
+            y < geometry.plot.y ||
+            y > geometry.plot.y + geometry.plot.height
+        ) {
             showAnalysisTooltip(event, null);
             return;
         }
@@ -2764,6 +2758,8 @@ import "./main.css";
         const value = geometry.values[residueIndex];
         showAnalysisTooltip(event, `Chain ${group.chain} · Residue ${residue.id} · RMSF ${formatNumber(value)}`);
         if (select) {
+            event.stopPropagation();
+            state.selectionActive = true;
             state.selectedResidueKey = residue.key;
             state.marker = true;
             requestHeatmapDraw();
@@ -2838,7 +2834,7 @@ import "./main.css";
                 );
             });
             heatmap.addEventListener("pointerleave", () => showAnalysisTooltip({}, null));
-            heatmap.addEventListener("click", (event) => selectHeatmapCell(heatmapHitForEvent(heatmap, event)));
+            heatmap.addEventListener("click", (event) => handleHeatmapClick(heatmap, event));
             heatmap.addEventListener("keydown", (event) => handleHeatmapKeydown(heatmap, event));
             panel.append(heatmap);
             if (hasMetrics) {
@@ -2891,8 +2887,10 @@ import "./main.css";
             elements.analysisChainGrid.querySelectorAll(".analysis-rmsf").forEach(drawAnalysisRmsfCanvas);
             updateHeatmapSelection();
             const selected = selectedHeatmapCell();
-            if (selected.residue && selected.slice) {
+            if (state.selectionActive && selected.residue && selected.slice) {
                 elements.analysisSelection.textContent = `Chain ${selected.residue.chain} · Residue ${selected.residue.id} · ${selected.slice.label}`;
+            } else {
+                elements.analysisSelection.textContent = "No selection";
             }
         });
     }
@@ -3094,7 +3092,7 @@ import "./main.css";
     }
 
     function requestAnalysisLayout() {
-        if (analysisLayoutFrame !== null) {
+        if (state.savingImage || analysisLayoutFrame !== null) {
             return;
         }
         analysisLayoutFrame = window.requestAnimationFrame(() => {
@@ -3250,6 +3248,7 @@ import "./main.css";
             state.currentIndex = firstVisibleSliceIndex();
         }
         state.marker = false;
+        state.selectionActive = true;
         state.localDrag = true;
         state.selectedResidueKey = defaultResidueKey();
 
@@ -3350,19 +3349,61 @@ import "./main.css";
     }
 
     function queueSceneReload(autoView = false, delay = 120) {
-        window.clearTimeout(queuedSceneUpdate);
-        queuedSceneUpdate = window.setTimeout(() => reloadScene(autoView), delay);
+        scheduleSceneUpdate(() => reloadScene(autoView), delay);
     }
 
     function queueGeometryUpdate(autoView = false, delay = 60) {
-        window.clearTimeout(queuedSceneUpdate);
-        queuedSceneUpdate = window.setTimeout(() => {
+        scheduleSceneUpdate(() => {
             if (state.loaded && state.liveTransforms) {
                 applyLiveTransforms(autoView, true);
             } else {
-                reloadScene(autoView);
+                return reloadScene(autoView);
             }
         }, delay);
+    }
+
+    function scheduleSceneUpdate(action, delay) {
+        window.clearTimeout(queuedSceneUpdate);
+        queuedSceneAction = action;
+        queuedSceneUpdate = window.setTimeout(() => {
+            queuedSceneAction = null;
+            queuedSceneUpdate = null;
+            action();
+        }, delay);
+    }
+
+    async function settleImageScene() {
+        const resizePending = resizeResetTimer !== null;
+        window.clearTimeout(resizeResetTimer);
+        resizeResetTimer = null;
+        if (analysisLayoutFrame !== null) {
+            window.cancelAnimationFrame(analysisLayoutFrame);
+            analysisLayoutFrame = null;
+        }
+        const interactivePending = interactiveFrame !== null;
+        if (interactivePending) {
+            window.cancelAnimationFrame(interactiveFrame);
+            interactiveFrame = null;
+        }
+        window.clearTimeout(queuedSceneUpdate);
+        const action = queuedSceneAction;
+        queuedSceneAction = null;
+        queuedSceneUpdate = null;
+        if (action) await action();
+        if (sceneReloadPromise) await sceneReloadPromise;
+        if (interactivePending) {
+            if (state.loaded && state.liveTransforms) applyLiveTransforms(false, true);
+            else await reloadScene(false);
+        }
+        requestMolstarDraw();
+        if (resizePending && state.activeView !== "analysis") resetView();
+        if (state.activeView === "analysis") await activateAnalysis();
+        window.clearTimeout(markerUpdateTimer);
+        await refreshSelectedResidueMarkers();
+        if (state.activeView === "analysis") updateAnalysisLayout();
+        requestHeatmapDraw();
+        requestAnalysisDraw();
+        await new Promise((resolve) => window.requestAnimationFrame(resolve));
     }
 
     function queueTileLayoutUpdate() {
@@ -3519,6 +3560,46 @@ import "./main.css";
     }
 
     function wireEvents() {
+        let pointerOrigin = null;
+        let dragged = false;
+        document.addEventListener(
+            "pointerdown",
+            (event) => {
+                pointerOrigin = { x: event.clientX, y: event.clientY };
+                dragged = false;
+            },
+            true,
+        );
+        document.addEventListener(
+            "pointermove",
+            (event) => {
+                if (pointerOrigin && Math.hypot(event.clientX - pointerOrigin.x, event.clientY - pointerOrigin.y) > 4)
+                    dragged = true;
+            },
+            true,
+        );
+        document.addEventListener(
+            "pointerup",
+            () => {
+                pointerOrigin = null;
+            },
+            true,
+        );
+        document.addEventListener(
+            "pointercancel",
+            () => {
+                pointerOrigin = null;
+            },
+            true,
+        );
+        document.addEventListener("click", (event) => {
+            if (
+                (event.detail > 0 && dragged) ||
+                event.target.closest("button, a, input, select, textarea, summary, label")
+            )
+                return;
+            clearPlotSelection();
+        });
         elements.controlPanels.forEach((panelElement) => {
             panelElement.addEventListener("toggle", () => {
                 if (panelElement.open) {
@@ -3527,6 +3608,40 @@ import "./main.css";
             });
         });
         elements.resetViewButton.addEventListener("click", resetView);
+        elements.saveImageButton.addEventListener("click", async () => {
+            if (!state.loaded || state.savingImage) return;
+            state.savingImage = true;
+            elements.saveImageButton.disabled = true;
+            elements.saveImageButton.textContent = "Saving…";
+            const app = document.querySelector(".rmsx-app");
+            const previousInert = app.inert;
+            app.inert = true;
+            try {
+                await settleImageScene();
+                await saveViewImage({
+                    plugin: viewer.plugin,
+                    viewport: elements.viewport,
+                    region: elements.viewerRegion,
+                    overlay:
+                        state.activeView === "analysis"
+                            ? elements.analysisView
+                            : state.activeView === "heatmap"
+                              ? elements.heatmapView
+                              : null,
+                    mode: state.activeView,
+                });
+                setLoadedSceneStatus();
+            } catch (error) {
+                console.error(error);
+                setStatus(`Could not save the image: ${error.message}`, true);
+            } finally {
+                state.savingImage = false;
+                app.inert = previousInert;
+                if (state.activeView === "analysis") requestAnalysisLayout();
+                elements.saveImageButton.disabled = !state.loaded;
+                elements.saveImageButton.textContent = "Save image";
+            }
+        });
         elements.structuresTab.addEventListener("click", () => setActiveView("structures"));
         elements.heatmapTab.addEventListener("click", () => setActiveView("heatmap"));
         elements.analysisTab.addEventListener("click", () => setActiveView("analysis"));
@@ -3648,7 +3763,13 @@ import "./main.css";
         elements.viewport.addEventListener("pointerup", endDrag, true);
         elements.viewport.addEventListener("pointercancel", endDrag, true);
         document.addEventListener("keydown", (event) => {
+            if (state.savingImage) return;
             if (event.target && ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName)) {
+                return;
+            }
+            if (event.key === "Escape") {
+                event.preventDefault();
+                clearPlotSelection();
                 return;
             }
             const colorStep = Number(REPORT.visualMapping?.colorDomainStep ?? 0.5);

@@ -146,6 +146,8 @@ button.active {
 .primary-row {
     margin-left: 0;
     width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .primary-row button {
     width: 100%;
