@@ -79,6 +79,21 @@ async function exportRegions(page, download, regions) {
     );
 }
 
+async function heatmapDrawn(page) {
+    // The chain canvases are sized and painted after the tab switch, so measuring or
+    // exporting before that captures the default 300x150 buffer. heatmapGeometry is
+    // assigned at the end of the draw.
+    await expect
+        .poll(() =>
+            page
+                .locator(".heatmap-chains canvas")
+                .evaluateAll(
+                    (canvases) => canvases.length > 0 && canvases.every((canvas) => Boolean(canvas.heatmapGeometry)),
+                ),
+        )
+        .toBe(true);
+}
+
 async function regionsInView(page, selector) {
     return page.locator(selector).evaluateAll((elements) => {
         const root = document.getElementById("viewerRegion").getBoundingClientRect();
@@ -192,6 +207,7 @@ test("saves Structures immediately after spacing changes and Heatmap without a m
     expect(image.regions[0].colored).toBeGreaterThan(3000);
     await expect(page.getByTestId("molstar-spacing-number")).toHaveValue("0.7");
     await page.getByTestId("heatmap-tab").click();
+    await heatmapDrawn(page);
     const heatmaps = await regionsInView(page, ".heatmap-chains canvas");
     const heatmap = await saveImage(page, testInfo, "protease-heatmap.png");
     const heatmapImage = await exportRegions(page, heatmap, heatmaps);
