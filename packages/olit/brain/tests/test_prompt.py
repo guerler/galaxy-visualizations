@@ -23,6 +23,8 @@ def test_every_ported_block_is_composed():
         "## Verification before completion",
         "### What to check, by format",
         "### Drafting a new plan",
+        "### Importing SRA/ENA sequencing runs",
+        "### Executing a Galaxy step",
         "## Parameter review",
         "## Chat formatting",
         "## The record",
@@ -30,6 +32,31 @@ def test_every_ported_block_is_composed():
         "## Current date",
     ):
         assert heading in text, f"missing block: {heading}"
+
+
+def test_the_identity_prompt_does_not_ask_for_a_polling_loop():
+    """The shell watches submitted work and delivers a follow-up turn, so a loop here would
+    spend the step budget waiting for something it is already told about."""
+    xml = Path(__file__).resolve().parents[2] / "public" / "olit.xml"
+    if not xml.is_file():
+        pytest.skip("olit.xml not present next to the brain package")
+    text = xml.read_text()
+
+    assert "poll it" not in text
+    assert "until it is ok or error" not in text
+    # And the block that owns the rule is the one that states it.
+    assert "Do not spend a turn in a polling loop" in prompt.EXECUTING_A_STEP
+
+
+def test_iwc_is_named_the_same_on_both_surfaces():
+    """A wrong expansion in the identity prompt contradicted the terminology block."""
+    xml = Path(__file__).resolve().parents[2] / "public" / "olit.xml"
+    if not xml.is_file():
+        pytest.skip("olit.xml not present next to the brain package")
+
+    assert "Intergalactic Workflow Commission" in xml.read_text()
+    assert "Interactive Workflow Composer" not in xml.read_text()
+    assert "Intergalactic Workflow Commission" in prompt.GALAXY_TERMINOLOGY
 
 
 def test_no_block_promises_a_runtime_olit_does_not_have():
