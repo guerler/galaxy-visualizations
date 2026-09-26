@@ -391,6 +391,25 @@ def test_the_unavailable_notice_replaces_the_guidance_rather_than_leaving_a_hole
     assert "## Galaxy: NOT AVAILABLE" not in prompt.system_text(galaxy_ok=True)
 
 
+def test_the_unavailable_notice_names_the_cause_the_gate_measures():
+    """It blamed the openapi catalog, which `_galaxy_ok` deliberately does not consult: the gate
+    is whether the server answers and the ops path exists."""
+    down = " ".join(prompt.system_text(galaxy_ok=False).split())
+
+    assert "Galaxy did not answer" in down
+    assert "catalog" not in down.lower()
+
+
+def test_the_notification_promise_matches_what_the_shell_delivers():
+    """`isResumableOutcome` follows up on a finished or failed run only, and the automatic turns
+    are capped, so an unqualified "you are told" would leave the agent waiting on silence."""
+    text = " ".join(prompt.EXECUTING_A_STEP.split())
+
+    assert "You are told when a run finishes or fails" in text
+    assert "cancelled or skipped sends no such message" in text
+    assert "check it yourself" in text
+
+
 def test_the_discipline_blocks_are_not_gated():
     """Only the Galaxy-derived sections move; loom's unconditional blocks stay unconditional."""
     down = prompt.system_text(galaxy_ok=False)

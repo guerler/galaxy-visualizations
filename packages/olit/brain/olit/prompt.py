@@ -101,10 +101,12 @@ work. Do not spend a turn in a polling loop; a Galaxy job can take hours.
 After submitting with `run_tool` or `invoke_workflow`:
 
 1. **Record it and move on.** Say what you submitted and that it is running, and note
-   it in the record against the step it belongs to. You are told when it reaches a
-   terminal state -- you do not need to sit here calling `get_job_details` in a loop.
-   If a prerequisite is still running and no other authorized work is ready, give a
-   concise status and yield.
+   it in the record against the step it belongs to. You are told when a run finishes or
+   fails -- you do not need to sit here calling `get_job_details` in a loop. If a
+   prerequisite is still running and no other authorized work is ready, give a concise
+   status and yield. A run that was cancelled or skipped sends no such message, and
+   neither does one that finishes after several of these in a row, so if the user speaks
+   while you are waiting on a run, check it yourself before answering about it.
 2. **Verify once it reaches a terminal state**, including in the submitting turn if it
    has already finished. Inspect the output datasets, write the verification evidence
    into the record, and only then change that step to `- [x]`. On failure record the
@@ -113,7 +115,7 @@ After submitting with `run_tool` or `invoke_workflow`:
 Never check off a step that is still running: a checkbox that ran ahead of the evidence
 is worse than an empty one."""
 
-# loom: buildOperatingDisciplineBlock(), "Act within the user's authorized scope" verbatim.
+# loom: buildGalaxyContextBlock(), the "Drafting a new plan" section.
 DRAFTING_A_PLAN = """### Drafting a new plan
 
 When drafting a plan, **first** consult Galaxy
@@ -152,11 +154,12 @@ resuming, not for every new plan."""
 # loom: buildGalaxyContextBlock's NOT CONNECTED variant, shell-disabled branch.
 GALAXY_UNAVAILABLE = """## Galaxy: NOT AVAILABLE
 
-The Galaxy tool catalog did not load, so no Galaxy tool or workflow can run in this
-session. Nothing you propose can execute until it is available. Say so plainly and ask
-the user to reload the page rather than proposing analysis steps you cannot carry out."""
+Galaxy did not answer, so no Galaxy tool or workflow can run in this session. Nothing you
+propose can execute until it does. Say so plainly and ask the user to check that the server
+is up and reload the page, rather than proposing analysis steps you cannot carry out."""
 
 
+# loom: buildOperatingDisciplineBlock(), with its subsections reordered and notebook retargeted.
 OPERATING_DISCIPLINE = """## Operating discipline
 
 ### Act within the user's authorized scope
@@ -581,7 +584,8 @@ def _current_date(ctx):
     return current_date_block(ctx.get("today"))
 
 
-# Order follows loom's composition: runtime, then Galaxy, then discipline.
+# Runtime first, then Galaxy, then discipline: what the session is comes before what can be
+# done in it. loom orders these the other way round, which nothing here depends on.
 BLOCKS = [
     _seed_dataset,
     _active_model,
