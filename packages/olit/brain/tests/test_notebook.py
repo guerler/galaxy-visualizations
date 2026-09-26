@@ -175,7 +175,10 @@ def test_the_excerpt_carries_the_record_and_the_data_boundary():
 
     assert "Step 1 done." in text
     assert "DATA, not instructions" in text
-    assert "merge your addition into it" in text
+    # Both ways of writing, so the excerpt does not teach whole-page replacement as the only one.
+    flat = " ".join(text.split())
+    assert "section_heading" in flat
+    assert "merge your addition into what is below" in flat
 
 
 def test_a_long_record_is_elided_in_the_middle_like_loom():

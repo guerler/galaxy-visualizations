@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from olit import prompt
+from olit.drivers.loop import galaxy_tools
 from olit.runtime import BEGIN, END, _inject_context
 
 
@@ -229,12 +230,25 @@ def test_nothing_to_inject_leaves_the_transcript_alone(empty):
     assert _inject_context(transcripts, empty) is transcripts
 
 
-def test_the_record_block_warns_that_update_page_replaces_everything():
-    """Orbit edits a file surgically; olit's page write is whole-content replacement."""
+def test_the_record_block_offers_every_way_update_page_can_write():
+    """It taught whole-page replacement only, where the tool also edits one section and
+    refuses a stale write; the safe paths went unmentioned while the risky one was the rule."""
     text = prompt.RECORD_WRITES
 
+    for offered in ("section_heading", "section_content", "expect_hash"):
+        assert offered in text, f"the record block never mentions {offered}"
+    # Whole-page replacement is still named, and still carries its warning.
     assert "replaces the whole page" in text
     assert "never the new part alone" in text
+
+
+def test_the_record_block_names_only_arguments_update_page_takes():
+    """A remedy the tool cannot accept is worse than no remedy."""
+    schema = galaxy_tools.declared("update_page")["schema"]["function"]["parameters"]
+    declared = set(schema["properties"])
+
+    for named in ("section_heading", "section_content", "expect_hash", "content", "page_id"):
+        assert named in declared, f"{named} is not an update_page parameter"
 
 
 def test_the_record_block_binds_before_it_writes():
