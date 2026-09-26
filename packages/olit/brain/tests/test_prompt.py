@@ -7,6 +7,7 @@ import pytest
 
 from olit import prompt
 from olit.drivers.loop import galaxy_tools
+from olit.drivers.loop.galaxy_tool_docs import DOCS
 from olit.runtime import BEGIN, END, _inject_context
 
 
@@ -447,6 +448,46 @@ def test_no_prompt_block_ships_a_literal_galaxy_id():
         assert not re.findall(
             r"\b[0-9a-f]{16}\b", xml.read_text()
         ), "the identity prompt in olit.xml must not carry a literal id either"
+
+
+# The tool descriptions olit serves are galaxy-mcp's docstrings verbatim, so what is wrong in
+# them is wrong upstream and is fixed there. These two ratchets hold the count where it is, so a
+# refreshed snapshot cannot quietly bring more of either.
+TOOLS_WITH_A_LITERAL_ID = 11
+TOOLS_THAT_ASK_FOR_POLLING = 2
+
+
+def test_no_more_descriptions_ship_a_literal_galaxy_id_than_already_do():
+    """Same defect as the block above, in the larger surface it does not cover: a 16-hex example
+    id an agent can copy as if it were real. Upstream's to fix; ours not to let grow."""
+    import re
+
+    carrying = sorted(name for name, doc in DOCS.items() if re.findall(r"\b[0-9a-f]{16}\b", doc))
+    assert len(carrying) <= TOOLS_WITH_A_LITERAL_ID, (
+        f"{len(carrying)} descriptions carry a literal id where {TOOLS_WITH_A_LITERAL_ID} did: "
+        f"{carrying}. Replace the example with a placeholder upstream rather than raising this."
+    )
+    assert len(carrying) == TOOLS_WITH_A_LITERAL_ID, (
+        f"only {len(carrying)} descriptions carry a literal id now; lower "
+        f"TOOLS_WITH_A_LITERAL_ID to {len(carrying)} so the next one cannot arrive unnoticed."
+    )
+
+
+def test_no_more_descriptions_ask_the_model_to_poll_than_already_do():
+    """`EXECUTING_A_STEP` forbids the polling loop; these descriptions still ask for one, which is
+    the contradiction the identity prompt used to add a third voice to."""
+    import re
+
+    asking = sorted(
+        name for name, doc in DOCS.items() if re.search(r"\bpoll\b|Monitor job|check job status", doc, re.I)
+    )
+    assert len(asking) <= TOOLS_THAT_ASK_FOR_POLLING, (
+        f"{len(asking)} descriptions ask for polling where {TOOLS_THAT_ASK_FOR_POLLING} did: "
+        f"{asking}. The shell watches submitted work; fix the docstring upstream."
+    )
+    assert (
+        len(asking) == TOOLS_THAT_ASK_FOR_POLLING
+    ), f"only {len(asking)} ask for polling now; lower TOOLS_THAT_ASK_FOR_POLLING to {len(asking)}."
 
 
 def test_the_record_never_takes_the_slot_after_the_user_s_request():
