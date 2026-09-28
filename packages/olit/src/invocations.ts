@@ -81,6 +81,56 @@ export function extractWatched(toolName: string, content: string): Watched[] {
   return out.filter((w) => !isTerminal(w.kind, w.state));
 }
 
+/** A message as the transcript stores one; a tool result keeps the name that produced it. */
+export interface StoredMessage {
+  role: string;
+  name?: string;
+  content: string | null;
+}
+
+/** Work a stored transcript submitted, from the same reader the live path uses. */
+export function watchedFromMessages(messages: StoredMessage[]): Watched[] {
+  const found = new Map<string, Watched>();
+  for (const message of messages) {
+    if (message.role !== "tool" || !message.name || !message.content) continue;
+    for (const w of extractWatched(message.name, message.content)) {
+      found.set(`${w.kind}:${w.id}`, w);
+    }
+  }
+  return [...found.values()];
+}
+
+/** Watched work split by what Galaxy says about it now. */
+export interface Reconciled {
+  unfinished: Watched[];
+  settled: Array<{ watched: Watched; state: string }>;
+}
+
+/** What a restored session was waiting for, against the states Galaxy holds now. */
+export async function reconcileWatched(
+  candidates: Watched[],
+  readState: (w: Watched) => Promise<string | undefined>,
+): Promise<Reconciled> {
+  const out: Reconciled = { unfinished: [], settled: [] };
+  for (const candidate of candidates) {
+    let state: string | undefined;
+    try {
+      state = await readState(candidate);
+    } catch {
+      // A transient read must not drop work the session was waiting for.
+      out.unfinished.push({ ...candidate });
+      continue;
+    }
+    const watched = { ...candidate, state: state || candidate.state };
+    if (state && isTerminal(candidate.kind, state)) {
+      out.settled.push({ watched, state });
+    } else {
+      out.unfinished.push(watched);
+    }
+  }
+  return out;
+}
+
 export interface WatcherOptions {
   /** Reads the current state of one item. Injected so the poll loop is testable. */
   readState: (w: Watched) => Promise<string | undefined>;
@@ -117,6 +167,17 @@ export class InvocationWatcher {
 
   get pending(): number {
     return this.watching.size;
+  }
+
+  /** Take back work an earlier session was watching; it was announced when it was submitted. */
+  resume(items: Watched[]): void {
+    for (const w of items) {
+      const key = `${w.kind}:${w.id}`;
+      if (!this.watching.has(key)) {
+        this.watching.set(key, { ...w });
+      }
+    }
+    this.ensureRunning();
   }
 
   /** What is still unfinished, for a turn that would otherwise read it again itself. */

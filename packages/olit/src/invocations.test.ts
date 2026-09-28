@@ -9,7 +9,9 @@ import {
   isFailure,
   isTerminal,
   outcomeOf,
+  reconcileWatched,
   settleInvocation,
+  watchedFromMessages,
   type Watched,
 } from "./invocations";
 
@@ -251,5 +253,113 @@ describe("galaxyStateReader", () => {
     expect(await read({ kind: "invocation", id: "i1", label: "invoke_workflow" })).toBe(
       "cancelled",
     );
+  });
+});
+
+describe("recovering a reloaded session's watches", () => {
+  const toolMessage = (name: string, content: string) => ({
+    role: "tool",
+    name,
+    content,
+  });
+  const running = async (w: Watched) => (w.kind === "invocation" ? "scheduled" : "running");
+
+  it("reads submitted work back out of a stored transcript", () => {
+    const out = watchedFromMessages([
+      { role: "user", content: "run it" },
+      toolMessage("invoke_workflow", galaxyResult({ id: "inv1", state: "new" })),
+    ]);
+
+    expect(out).toEqual([
+      { kind: "invocation", id: "inv1", label: "invoke_workflow", state: "new" },
+    ]);
+  });
+
+  it("names one id once, however many times the transcript submitted it", () => {
+    const result = galaxyResult({ id: "inv1", state: "new" });
+    const out = watchedFromMessages([
+      toolMessage("invoke_workflow", result),
+      toolMessage("invoke_workflow", result),
+    ]);
+
+    expect(out).toHaveLength(1);
+  });
+
+  it("ignores a message that is not a tool result", () => {
+    const content = galaxyResult({ id: "inv1", state: "new" });
+
+    expect(watchedFromMessages([{ role: "assistant", name: "invoke_workflow", content }])).toEqual(
+      [],
+    );
+  });
+
+  it("finds nothing in a result the size limit replaced, as the live path finds nothing", () => {
+    // Characterization: truncation drops the ids before either consumer sees the result.
+    const discarded =
+      'Tool call "invoke_workflow" returned 300 KB, over the 256 KB limit for a single ' +
+      "result, so it was discarded.";
+
+    expect(watchedFromMessages([toolMessage("invoke_workflow", discarded)])).toEqual([]);
+  });
+
+  it("keeps work Galaxy is still running", async () => {
+    const candidates = watchedFromMessages([
+      toolMessage("invoke_workflow", galaxyResult({ id: "inv1", state: "new" })),
+    ]);
+
+    const { unfinished, settled } = await reconcileWatched(candidates, running);
+
+    expect(settled).toEqual([]);
+    expect(unfinished).toEqual([
+      { kind: "invocation", id: "inv1", label: "invoke_workflow", state: "scheduled" },
+    ]);
+  });
+
+  it("hands back work that finished while the session was gone", async () => {
+    const candidates = watchedFromMessages([
+      toolMessage("run_tool", runToolResult([{ id: "job1", state: "new" }])),
+    ]);
+
+    const { unfinished, settled } = await reconcileWatched(candidates, async () => "ok");
+
+    expect(unfinished).toEqual([]);
+    expect(settled).toEqual([
+      { watched: { kind: "job", id: "job1", label: "run_tool", state: "ok" }, state: "ok" },
+    ]);
+  });
+
+  it("keeps work whose state Galaxy would not answer for", async () => {
+    const candidates: Watched[] = [{ kind: "job", id: "job1", label: "run_tool" }];
+
+    const { unfinished } = await reconcileWatched(candidates, async () => {
+      throw new Error("502");
+    });
+
+    expect(unfinished).toEqual(candidates);
+  });
+
+  it("watches recovered work without announcing it as newly submitted", () => {
+    const onSubmitted = vi.fn();
+    const watcher = new InvocationWatcher({
+      readState: running,
+      onSettled: () => {},
+      onSubmitted,
+    });
+
+    watcher.resume([{ kind: "invocation", id: "inv1", label: "invoke_workflow" }]);
+
+    expect(watcher.watched()).toHaveLength(1);
+    expect(onSubmitted).not.toHaveBeenCalled();
+    watcher.stop();
+  });
+
+  it("does not watch what it is already watching", () => {
+    const watcher = new InvocationWatcher({ readState: running, onSettled: () => {} });
+    watcher.ingest("invoke_workflow", galaxyResult({ id: "inv1", state: "new" }));
+
+    watcher.resume([{ kind: "invocation", id: "inv1", label: "invoke_workflow" }]);
+
+    expect(watcher.watched()).toHaveLength(1);
+    watcher.stop();
   });
 });

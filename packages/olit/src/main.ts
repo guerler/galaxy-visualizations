@@ -32,8 +32,20 @@ import { createConfirm } from "./confirm-modal";
 import { PyodideManager } from "./pyodide/pyodide-manager";
 import { runOlit, type LoopEvent, type Message } from "./pyodide-runner";
 import { paneArtifacts, renderArtifact, type Artifact } from "./artifacts";
-import { InvocationWatcher, galaxyStateReader, outcomeOf } from "./invocations";
-import { buildResumePrompt, createFollowUpDelivery, isResumableOutcome } from "./auto-resume";
+import {
+  InvocationWatcher,
+  galaxyStateReader,
+  outcomeOf,
+  reconcileWatched,
+  watchedFromMessages,
+  type Watched,
+} from "./invocations";
+import {
+  buildResumePrompt,
+  createFollowUpDelivery,
+  isResumableOutcome,
+  reportedIds,
+} from "./auto-resume";
 import { mountLayout } from "./layout";
 import { mountArtifactPane } from "./artifact-pane";
 import { mountUsageBar } from "./usage-bar";
@@ -209,7 +221,7 @@ async function main() {
   });
   let ready = false;
   const readyInfo = chat.addInfoMessage("Loading Olit...");
-  pyodide
+  const booted = pyodide
     .initialize()
     .then(() => {
       ready = true;
@@ -241,40 +253,43 @@ async function main() {
         (content) => noteSubmitted(content, w),
       );
     },
-    onSettled: (w, state) => {
-      const what = WHAT[w.kind];
-      const outcome = outcomeOf(w.kind, state);
-      const failed = outcome === "failed";
-      if (failed) {
-        chat.addErrorMessage(`${what} ${w.id} finished as ${state}.`);
-      } else if (outcome === "cancelled") {
-        // The user asked for this; an alarm about it would be the loudest thing in the room.
-        chat.addInfoMessage(`${what} ${w.id} was cancelled.`);
-      } else {
-        chat.addInfoMessage(`${what} ${w.id} finished (${state}).`);
-      }
-      // Continue without asking the user to relay the notification.
-      if (isResumableOutcome(state, failed)) {
-        followUp.deliver(
-          buildResumePrompt([
-            {
-              kind: w.kind,
-              id: w.id,
-              label: `${what} ${w.id}`,
-              outcome: failed ? "failed" : "completed",
-            },
-          ]),
-        );
-      }
-      // loom's poller advances the notebook itself.
-      if (config.history_id) {
-        void editRecord(
-          { root: config.galaxy_root, credentials, historyId: config.history_id },
-          (content) => applyJobOutcome(content, { id: w.id, kind: w.kind, state, outcome }),
-        );
-      }
-    },
+    onSettled: (w, state) => reportSettled(w, state),
   });
+
+  /** What a terminal state means for the chat, the record and the agent. */
+  function reportSettled(w: Watched, state: string): void {
+    const what = WHAT[w.kind];
+    const outcome = outcomeOf(w.kind, state);
+    const failed = outcome === "failed";
+    if (failed) {
+      chat.addErrorMessage(`${what} ${w.id} finished as ${state}.`);
+    } else if (outcome === "cancelled") {
+      // The user asked for this; an alarm about it would be the loudest thing in the room.
+      chat.addInfoMessage(`${what} ${w.id} was cancelled.`);
+    } else {
+      chat.addInfoMessage(`${what} ${w.id} finished (${state}).`);
+    }
+    // Continue without asking the user to relay the notification.
+    if (isResumableOutcome(state, failed)) {
+      followUp.deliver(
+        buildResumePrompt([
+          {
+            kind: w.kind,
+            id: w.id,
+            label: `${what} ${w.id}`,
+            outcome: failed ? "failed" : "completed",
+          },
+        ]),
+      );
+    }
+    // loom's poller advances the notebook itself.
+    if (config.history_id) {
+      void editRecord(
+        { root: config.galaxy_root, credentials, historyId: config.history_id },
+        (content) => applyJobOutcome(content, { id: w.id, kind: w.kind, state, outcome }),
+      );
+    }
+  }
 
   let busy = false;
 
@@ -288,6 +303,33 @@ async function main() {
   const followUp = createFollowUpDelivery((text) => void runAutomaticTurn(text), {
     onPaused: (text) => chat.addInfoMessage(text),
   });
+
+  /**
+   * Take back the Galaxy work a restored session was waiting for.
+   *
+   * The watch list is derived from the transcript, so a reload rebuilds it from the transcript
+   * rather than from a store of its own. Ids a follow-up already reported are left out: the
+   * agent was told about those in a turn this conversation kept.
+   */
+  async function recoverWatches(): Promise<void> {
+    const reported = reportedIds(restored);
+    const candidates = watchedFromMessages(restored).filter((w) => !reported.has(w.id));
+    if (candidates.length === 0) return;
+    const { unfinished, settled } = await reconcileWatched(
+      candidates,
+      galaxyStateReader(config.galaxy_root, credentials),
+    );
+    if (unfinished.length > 0) {
+      watcher.resume(unfinished);
+      chat.addInfoMessage(
+        `Watching ${unfinished.length} Galaxy run(s) this conversation started earlier.`,
+      );
+    }
+    // A transition Olit was not open for is still the transition, and is reported as one.
+    for (const item of settled) {
+      reportSettled(item.watched, item.state);
+    }
+  }
   // Last diagnostics the brain reported; undefined until the first turn returns.
   let latest: import("./diagnostics").Diagnostics | undefined;
 
@@ -421,6 +463,12 @@ async function main() {
     });
     el.reset.classList.toggle("hidden", !session.enabled);
     usage.add(reply.usage);
+  }
+
+  // Nothing to take back unless a conversation came back, and nothing to hand it to until
+  // the brain is up: a follow-up delivered before then would be dropped.
+  if (resumed) {
+    void booted.then(() => (ready ? recoverWatches() : undefined));
   }
 
   async function submit() {

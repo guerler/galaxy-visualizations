@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createFollowUpDelivery, buildResumePrompt, isResumableOutcome } from "./auto-resume";
+import {
+  createFollowUpDelivery,
+  buildResumePrompt,
+  isResumableOutcome,
+  reportedIds,
+} from "./auto-resume";
 
 const delivery = (sent: string[], opts = {}) =>
   createFollowUpDelivery((t) => sent.push(t), { graceMs: 0, ...opts });
@@ -130,5 +135,21 @@ describe("buildResumePrompt", () => {
       { kind: "job", id: "j1", label: "Galaxy job j1", outcome: "failed" },
     ]);
     expect(prompt.split(/\s+/).length).toBeLessThan(60);
+  });
+});
+
+describe("reportedIds", () => {
+  const prompt = buildResumePrompt([
+    { kind: "invocation", id: "inv1", label: "Workflow invocation inv1", outcome: "completed" },
+  ]);
+
+  it("names the runs a delivered follow-up already handed to the agent", () => {
+    expect(reportedIds([{ content: prompt }])).toEqual(new Set(["inv1"]));
+  });
+
+  it("names nothing from the conversation around it", () => {
+    const messages = [{ content: "invoke inv1 again" }, { content: null }];
+
+    expect(reportedIds(messages)).toEqual(new Set());
   });
 });

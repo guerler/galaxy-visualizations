@@ -23,6 +23,7 @@ const TYPES = {
 };
 
 let script = "confirm";     // confirm | slow | compact | ratelimit | plan | plan-after-graph
+let invocationState = "new";  // what Galaxy says about inv1, so a drive can settle it
 let galaxyUp = true;        // /api/version answers, which is what the brain probes for reachability
 let rateLimited = 0;
 let calls = 0;
@@ -45,6 +46,12 @@ const message = (content, tool_calls, promptTokens = 30000) => ({
     choices: [{ finish_reason: tool_calls ? "tool_calls" : "stop", message: { role: "assistant", content, tool_calls } }],
     usage: { prompt_tokens: promptTokens, completion_tokens: 20, total_tokens: promptTokens + 20 },
 });
+
+const runWorkflow = [{
+    id: "call_1",
+    type: "function",
+    function: { name: "invoke_workflow", arguments: JSON.stringify({ workflow_id: "wf1", history_id: "h1" }) },
+}];
 
 const deleteHistory = [{
     id: "call_1",
@@ -185,6 +192,10 @@ const server = http.createServer(async (req, res) => {
         galaxyUp = new URL(url, "http://x").searchParams.get("up") !== "0";
         return json(res, 200, { galaxyUp });
     }
+    if (url.startsWith("/__invocation")) {
+        invocationState = new URL(url, "http://x").searchParams.get("state") || "new";
+        return json(res, 200, { invocationState });
+    }
     if (url.startsWith("/__forget")) {
         prompts.length = 0;
         return json(res, 200, { prompts: 0 });
@@ -261,6 +272,15 @@ const server = http.createServer(async (req, res) => {
         if (script === "compact") {
             return json(res, 200, message("ok"));
         }
+        if (script === "invocation") {
+            const msgs = body.messages || [];
+            const tail = msgs[msgs.length - 1] || {};
+            const resumed = String(tail.content || "").startsWith("[Olit automatic Galaxy follow-up]");
+            if (resumed) return json(res, 200, message("The run finished, so there is nothing left to start."));
+            return json(res, 200, tail.role === "tool"
+                ? message("Started it; I will say when it finishes.")
+                : message("", runWorkflow));
+        }
         if (script === "ops-bridge") {
             const msgs = body.messages || [];
             const tail = msgs[msgs.length - 1] || {};
@@ -301,6 +321,11 @@ const server = http.createServer(async (req, res) => {
     if (url.includes("/api/datasets/")) {
         return json(res, 200, { id: "d1", name: "peptide.pdb", extension: "pdb" });
     }
+    if (url.includes("/api/invocations/")) {
+        if (url.includes("/jobs_summary")) return json(res, 200, { states: { ok: 1 } });
+        return json(res, 200, { id: "inv1", state: invocationState });
+    }
+    if (url.includes("/invocations")) return json(res, 200, { id: "inv1", state: invocationState });
     if (url.includes("/api/visualizations")) return json(res, 200, { id: "v1" });
     if (url.includes("/api/histories")) return json(res, 200, { id: "h1", name: "stub" });
     return json(res, 200, {});
