@@ -238,3 +238,33 @@ describe("the rate limit", () => {
     expect(reached).toHaveLength(3);
   });
 });
+
+describe("the Galaxy chat proxy", () => {
+  it("receives system messages as user messages, in place, and the rest unchanged", async () => {
+    const { models, model } = await connect(resolve({ ai_provider: "galaxy", ai_model: "" }));
+    let sent: { messages: { role: string; content: unknown }[] } = { messages: [] };
+    const stream = models.streamSimple(
+      models.getModel(model.provider as never, model.modelId)!,
+      {
+        systemPrompt: "You are Olit.",
+        messages: [
+          { role: "user", content: "hi", timestamp: 0 },
+          { role: "system", content: "", sections: { record: "## The record" }, timestamp: 1 },
+          { role: "user", content: "again", timestamp: 2 },
+        ],
+      } as never,
+      {
+        fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
+          sent = JSON.parse(String(init?.body));
+          return new Response("data: [DONE]\n\n", {
+            headers: { "content-type": "text/event-stream" },
+          });
+        },
+      } as never,
+    );
+    await stream.result();
+    expect(sent.messages.map((m) => m.role)).toEqual(["user", "user", "user", "user"]);
+    expect(sent.messages[0].content).toBe("You are Olit.");
+    expect(String(sent.messages[2].content)).toContain("## The record");
+  });
+});
