@@ -137,6 +137,16 @@ describe("connect", () => {
     expect(headers.has("authorization")).toBe(false);
   });
 
+  it("sends a Galaxy API key to the Galaxy proxy as Galaxy reads one, not as a bearer token", async () => {
+    const { headers } = await request({
+      ai_provider: "galaxy",
+      ai_base_url: "http://g/api/plugins/olit",
+      ai_api_key: "galaxy-key",
+    });
+    expect(headers.get("x-api-key")).toBe("galaxy-key");
+    expect(headers.has("authorization")).toBe(false);
+  });
+
   it("does not carry a provider's earlier key over to a connection that gives none", async () => {
     const { connect } = olitModels();
     await connect(resolve({ ai_provider: "openrouter", ai_model: "m", ai_api_key: "sk-first" }));

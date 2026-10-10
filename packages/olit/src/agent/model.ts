@@ -226,8 +226,14 @@ export function olitModels(env: Record<string, string | undefined> = {}) {
         cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
         contextWindow: target.contextWindow ?? DEFAULT_CONTEXT_WINDOW,
         maxTokens: target.maxTokens || 0,
-        // A keyless endpoint (the Galaxy proxy) authenticates with the page's session instead.
-        headers: target.apiKey ? {} : { Authorization: null },
+        // A keyless endpoint (the Galaxy proxy) authenticates with the page's session instead;
+        // given a Galaxy API key, as headless, the proxy reads it where Galaxy reads one.
+        headers:
+          provider.id === "galaxy" && target.apiKey
+            ? { "x-api-key": target.apiKey, Authorization: null }
+            : target.apiKey
+              ? {}
+              : { Authorization: null },
         compat: provider.compat,
       } as unknown as Model<Api>;
       inner.setProvider(
