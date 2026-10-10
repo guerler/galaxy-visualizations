@@ -205,11 +205,14 @@ async function main() {
 
   /**
    * Saving mid-run would store a half-finished run, and an empty conversation has none. A model
-   * switch configures the open conversation, so it waits for the worker to have one.
+   * switch configures the open conversation, so it waits for the worker to have one, as does a
+   * message.
    */
   function refreshControls() {
     el.save.disabled = busy || !ready || view.turns === 0;
     el.model.disabled = !ready;
+    el.input.disabled = !ready;
+    el.send.disabled = !ready;
     el.reset.classList.toggle("hidden", view.turns === 0);
   }
 
@@ -374,8 +377,6 @@ async function main() {
       line.append(take);
     } else if (message.type === "lost") {
       ready = false;
-      el.input.disabled = true;
-      el.send.disabled = true;
       refreshControls();
       chat.addErrorMessage("Olit was opened in another tab, which has it now.");
     } else if (message.type === "failed") {
