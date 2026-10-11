@@ -8,14 +8,25 @@
  * Galaxy provides data via: document.getElementById("app").dataset.incoming
  */
 
+import SmilesDrawer from "smiles-drawer";
+import "./index.css";
+
 /* ── Constants ─────────────────────────────────────────────── */
-const SMILES_DRAWER_CDN = "https://unpkg.com/smiles-drawer@2/dist/smiles-drawer.min.js";
 const CANVAS_SIZE       = 200;   // px — width & height of each molecule canvas
 const PAGE_SIZE         = 48;    // molecules per page
 const MAX_LABEL_LEN     = 40;    // truncate long molecule names in the card label
 
 /* ── Bootstrap: read Galaxy-injected data ───────────────────── */
 const appEl    = document.getElementById("app");
+if (import.meta.env.DEV) {
+    const pageUrl = new URL(window.location.href);
+    appEl.dataset.incoming = JSON.stringify({
+        root: "/",
+        visualization_config: {
+            dataset_id: pageUrl.searchParams.get("dataset_id") || process.env.dataset_id || "__test__",
+        },
+    });
+}
 const incoming = JSON.parse(appEl?.dataset.incoming || "{}");
 const root     = incoming.root     || "/";
 const config   = incoming.visualization_config || {};
@@ -292,17 +303,6 @@ colEl.addEventListener("change", () => {
 /* ── Search ─────────────────────────────────────────────────── */
 searchEl.addEventListener("input", applyFilter);
 
-/* ── Load SmilesDrawer library dynamically ──────────────────── */
-function loadScript(src) {
-    return new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = src;
-        s.onload  = resolve;
-        s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-        document.head.appendChild(s);
-    });
-}
-
 /* ── Main init ──────────────────────────────────────────────── */
 async function init() {
     if (!datasetId) {
@@ -328,17 +328,6 @@ async function init() {
     allMolecules = parseContent(text);
     if (allMolecules.length === 0) {
         showError("No valid SMILES strings found in the dataset.");
-        setStatus("");
-        return;
-    }
-
-    setStatus(`Loading SmilesDrawer library…`);
-
-    // 3. Load the SmilesDrawer library from CDN
-    try {
-        await loadScript(SMILES_DRAWER_CDN);
-    } catch (err) {
-        showError(`Could not load SmilesDrawer: ${err.message}`);
         setStatus("");
         return;
     }
