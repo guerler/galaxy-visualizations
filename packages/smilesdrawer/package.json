@@ -1,6 +1,6 @@
 {
     "name": "@galaxyproject/smilesdrawer",
-    "version": "0.0.1",
+    "version": "0.0.0",
     "description": "A visualization for 2D molecular structures from SMILES based on SmilesDrawer.",
     "keywords": [
         "galaxy",
