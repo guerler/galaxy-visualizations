@@ -1,4 +1,5 @@
-<visualization name="Smiles Drawer" embeddable="true">
+<?xml version="1.0" encoding="UTF-8"?>
+<visualization name="SmilesDrawer" embeddable="true">
     <description>Visualize molecular structures from SMILES notation</description>
     <tags>
         <tag>Chemistry</tag>
@@ -17,20 +18,22 @@
     <entry_point src="index.js" css="index.css" />
     <tests>
         <test>
-            <param name="dataset_id" value="https://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.smi" ftype="smi" />
+            <param name="dataset_id" label="Paracetamol and aspirin" value="https://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.smi" ftype="smi" />
         </test>
     </tests>
     <help format="markdown"><![CDATA[
-# SmilesDrawer
+# What is SmilesDrawer?
 
-Visualizes **2D molecular structures** from SMILES (Simplified Molecular Input Line Entry System) notation.
+SmilesDrawer renders **2D structure diagrams** of molecules written in SMILES (Simplified Molecular Input Line Entry System) notation, directly in your browser.
 
-## Supported format
-- `.smi` — SMILES files (one SMILES string per line, optionally followed by a molecule name)
+After selecting a `smi` dataset, every molecule is drawn as a structure card labelled with its name and SMILES string. Each line of the dataset holds one SMILES string, optionally followed by whitespace and a molecule name; lines starting with `#` are skipped.
 
-## Usage
-Select a dataset containing SMILES strings and open it with this visualization.
-The viewer will render each molecule as a 2D structural diagram on an HTML5 canvas.
+## Key Features
+
+- **Structure Grid**: The grid fits the window, choosing the column count automatically; datasets with more molecules than fit are split into pages.
+- **Search**: Filter molecules by name or SMILES substring.
+- **Themes**: Switch between SmilesDrawer's color themes, including dark ones.
+- **Error Marking**: Lines that cannot be parsed as SMILES are shown as such instead of being dropped.
 
 To learn more about SmilesDrawer, visit:
 [https://github.com/reymond-group/smilesDrawer](https://github.com/reymond-group/smilesDrawer)
