@@ -1,0 +1,8 @@
+# Edge cases for the line parser
+C	Methane
+[Na+].[Cl-]	Sodium chloride
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C	Caffeine
+C1CC)(	Unbalanced parentheses
+c1ccccc1
+
+O=C(O)C[C@H](N)C(=O)O	L-aspartic acid
