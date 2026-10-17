@@ -17,6 +17,18 @@ const viewerUrl = import.meta.env.DEV
     : new URL(/* @vite-ignore */ "viewer/index.html", import.meta.url);
 viewerUrl.searchParams.set("btv_api", "1");
 
+/** Where Big Tree Viewer keeps whether its side panel is open; Galaxy's panel takes its place. */
+const PANEL_KEY = "big-tree-viewer:sidebar-visible:open";
+
+/** What stays of the viewer's own panel once it is closed: its toggles and the tour, which walks through it. */
+const PANEL_CONTROLS = `
+    .mobile-sidebar-toggle,
+    .viewer-corner-button[aria-label$="side panel"],
+    .tutorial-prompt {
+        display: none !important;
+    }
+`;
+
 const viewer = ref(null);
 const errorMessage = ref("");
 const statusMessage = ref("Loading dataset…");
@@ -33,14 +45,67 @@ async function fetchText(url) {
 }
 
 function waitForViewer() {
+    try {
+        sessionStorage.setItem(PANEL_KEY, "false");
+    } catch {
+        // Without storage the viewer opens with its panel, and Galaxy's settings still apply.
+    }
     return new Promise((resolve) => {
         window.addEventListener("message", (event) => {
             if (event.source === viewer.value?.contentWindow && event.data?.type === "big-tree-viewer:ready") {
+                const style = viewer.value.contentDocument.createElement("style");
+                style.textContent = PANEL_CONTROLS;
+                viewer.value.contentDocument.head.append(style);
                 resolve();
             }
         });
         viewer.value.src = viewerUrl.href;
     });
+}
+
+/** A boolean setting, or undefined to leave the viewer's own default. */
+function flag(value) {
+    return value === undefined ? undefined : String(value) === "true";
+}
+
+/** Branch lengths as drawn: a cladogram ignores them, an ultrametric one also aligns the tips. */
+function cladogramSettings(lengths) {
+    if (lengths === undefined) {
+        return {};
+    }
+    const ultrametric = !["phylogram", "cladogram"].includes(lengths);
+    return {
+        showCladogram: lengths !== "phylogram",
+        ultrametricCladogram: ultrametric,
+        ...(ultrametric ? { ultrametricCladogramMethod: lengths } : {}),
+    };
+}
+
+/** The view settings, as the `visual` part of Big Tree Viewer's load payload. */
+function visualSettings(settings) {
+    return {
+        ...cladogramSettings(settings.branch_lengths),
+        viewMode: settings.view_mode,
+        order: settings.order,
+        branchThicknessScale: settings.branch_thickness === undefined ? undefined : Number(settings.branch_thickness),
+        showTipLabels: flag(settings.tip_labels),
+        alignTipLabels: flag(settings.align_tip_labels),
+        showGenusLabels: flag(settings.genus_labels),
+        showInternalNodeLabels: flag(settings.internal_node_labels),
+        showBootstrapLabels: flag(settings.bootstrap_labels),
+        showScaleBars: flag(settings.scale_bars),
+        showTimeStripes: flag(settings.time_stripes),
+        timeStripeStyle: settings.time_stripe_style,
+        timeAxisScale: settings.time_axis_scale,
+    };
+}
+
+/** Taxonomy mapping, when a source is chosen; the viewer downloads and caches that taxonomy itself. */
+function taxonomySettings(settings) {
+    if (!settings.taxonomy || settings.taxonomy === "none") {
+        return undefined;
+    }
+    return { runMapping: true, allowDownload: true, source: settings.taxonomy };
 }
 
 /** The metadata table chosen in the settings, as Big Tree Viewer's load payload takes it. */
@@ -65,6 +130,10 @@ async function readMetadata() {
         valueColumn: settings.value_column?.trim() || undefined,
         colorMode: settings.color_mode === "auto" ? undefined : settings.color_mode,
         applyScope: settings.apply_scope,
+        labelsEnabled: !!settings.label_column?.trim(),
+        labelColumn: settings.label_column?.trim() || undefined,
+        markersEnabled: !!settings.marker_column?.trim(),
+        markerColumn: settings.marker_column?.trim() || undefined,
     };
 }
 
@@ -78,7 +147,16 @@ async function render() {
     }
     statusMessage.value = "Drawing tree…";
     viewer.value.contentWindow.postMessage(
-        { type: "big-tree-viewer:load", payload: { newick, label: "Galaxy dataset", metadata } },
+        {
+            type: "big-tree-viewer:load",
+            payload: {
+                newick,
+                label: "Galaxy dataset",
+                metadata,
+                taxonomy: taxonomySettings(props.settings || {}),
+                visual: visualSettings(props.settings || {}),
+            },
+        },
         viewerUrl.origin,
     );
 }

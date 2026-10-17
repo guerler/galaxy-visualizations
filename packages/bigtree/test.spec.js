@@ -60,6 +60,27 @@ test("colors the tree by a metadata table from the history", async ({ page }) =>
     await expect(page.locator("#bt-error")).toBeHidden();
 });
 
+test("replaces the viewer's own panel with Galaxy's settings", async ({ page }) => {
+    await galaxy(page);
+    await page.goto("/?dataset_id=1");
+    await expect.poll(async () => (await viewerState(page))?.treeLoaded, { timeout: 30_000 }).toBe(true);
+    const viewer = page.frameLocator("#bt-viewer");
+    await expect(viewer.locator(".app-shell")).toContainClass("sidebar-hidden");
+    await expect(viewer.getByRole("button", { name: "Show side panel" })).toBeHidden();
+    await page.click(".n-button");
+    await page.locator(".n-base-selection", { hasText: "Rectangular" }).click();
+    await page.locator(".n-base-select-option", { hasText: "Radial" }).click();
+    await expect.poll(async () => (await viewerState(page))?.viewMode).toBe("circular");
+    await page.locator(".n-base-selection", { hasText: "As in the tree" }).click();
+    await page.locator(".n-base-select-option", { hasText: "Ultrametric cladogram, Grafen" }).click();
+    await expect
+        .poll(async () => {
+            const state = await viewerState(page);
+            return [state?.showCladogram, state?.ultrametricCladogram, state?.ultrametricCladogramMethod];
+        })
+        .toEqual([true, true, "grafen"]);
+});
+
 test("reports a failed fetch", async ({ page }) => {
     await page.route("**/api/datasets/*/display", (route) => route.fulfill({ status: 404, body: "" }));
     await page.goto("/?dataset_id=missing");

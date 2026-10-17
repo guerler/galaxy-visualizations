@@ -19,6 +19,181 @@
     <entry_point src="index.js" css="index.css" />
     <settings>
         <input>
+            <label>Layout</label>
+            <name>view_mode</name>
+            <type>select</type>
+            <value>rectangular</value>
+            <data>
+                <data>
+                    <label>Rectangular</label>
+                    <value>rectangular</value>
+                </data>
+                <data>
+                    <label>Radial</label>
+                    <value>circular</value>
+                </data>
+                <data>
+                    <label>Spiral</label>
+                    <value>spiral</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Order</label>
+            <name>order</name>
+            <type>select</type>
+            <value>asc</value>
+            <data>
+                <data>
+                    <label>Smallest clades first</label>
+                    <value>asc</value>
+                </data>
+                <data>
+                    <label>Largest clades first</label>
+                    <value>desc</value>
+                </data>
+                <data>
+                    <label>Input order</label>
+                    <value>input</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Branch lengths</label>
+            <name>branch_lengths</name>
+            <type>select</type>
+            <value>phylogram</value>
+            <data>
+                <data>
+                    <label>As in the tree</label>
+                    <value>phylogram</value>
+                </data>
+                <data>
+                    <label>Cladogram</label>
+                    <value>cladogram</value>
+                </data>
+                <data>
+                    <label>Ultrametric cladogram, by levels</label>
+                    <value>levels</value>
+                </data>
+                <data>
+                    <label>Ultrametric cladogram, logarithmic</label>
+                    <value>logarithmic</value>
+                </data>
+                <data>
+                    <label>Ultrametric cladogram, Grafen</label>
+                    <value>grafen</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Branch thickness</label>
+            <name>branch_thickness</name>
+            <type>float</type>
+            <min>0.5</min>
+            <max>4</max>
+            <value>1</value>
+        </input>
+        <input>
+            <label>Show tip labels</label>
+            <name>tip_labels</name>
+            <type>boolean</type>
+            <value>true</value>
+        </input>
+        <input>
+            <label>Align tip labels</label>
+            <name>align_tip_labels</name>
+            <type>boolean</type>
+            <value>false</value>
+        </input>
+        <input>
+            <label>Show genus labels</label>
+            <name>genus_labels</name>
+            <type>boolean</type>
+            <value>true</value>
+        </input>
+        <input>
+            <label>Show internal node labels</label>
+            <name>internal_node_labels</name>
+            <type>boolean</type>
+            <value>false</value>
+        </input>
+        <input>
+            <label>Show bootstrap values</label>
+            <name>bootstrap_labels</name>
+            <type>boolean</type>
+            <value>false</value>
+        </input>
+        <input>
+            <label>Show scale bars</label>
+            <name>scale_bars</name>
+            <type>boolean</type>
+            <value>true</value>
+        </input>
+        <input>
+            <label>Show time stripes</label>
+            <name>time_stripes</name>
+            <type>boolean</type>
+            <value>true</value>
+        </input>
+        <input>
+            <label>Time stripe style</label>
+            <name>time_stripe_style</name>
+            <type>select</type>
+            <value>bands</value>
+            <data>
+                <data>
+                    <label>Bands</label>
+                    <value>bands</value>
+                </data>
+                <data>
+                    <label>Age gradient</label>
+                    <value>age-gradient</value>
+                </data>
+                <data>
+                    <label>Dashed</label>
+                    <value>dashed</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Time axis</label>
+            <name>time_axis_scale</name>
+            <type>select</type>
+            <value>linear</value>
+            <data>
+                <data>
+                    <label>Linear</label>
+                    <value>linear</value>
+                </data>
+                <data>
+                    <label>Logarithmic</label>
+                    <value>log</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Taxonomy</label>
+            <help>Map tip names to taxonomic groups. The first use downloads the taxonomy into your browser.</help>
+            <name>taxonomy</name>
+            <type>select</type>
+            <value>none</value>
+            <data>
+                <data>
+                    <label>None</label>
+                    <value>none</value>
+                </data>
+                <data>
+                    <label>NCBI</label>
+                    <value>ncbi</value>
+                </data>
+                <data>
+                    <label>Catalogue of Life</label>
+                    <value>catalogue-of-life</value>
+                </data>
+            </data>
+        </input>
+        <input>
             <label>Metadata table</label>
             <help>A table from your history with one row per tip, matched to the tree by a key column.</help>
             <name>metadata</name>
@@ -79,6 +254,18 @@
                     <value>subtree</value>
                 </data>
             </data>
+        </input>
+        <input>
+            <label>Label tips by column</label>
+            <help>A metadata column to write beside the tips.</help>
+            <name>label_column</name>
+            <type>text</type>
+        </input>
+        <input>
+            <label>Mark tips by column</label>
+            <help>A metadata column to show as tip markers.</help>
+            <name>marker_column</name>
+            <type>text</type>
         </input>
     </settings>
     <tests>
