@@ -17,6 +17,70 @@
         <param required="true">dataset_id</param>
     </params>
     <entry_point src="index.js" css="index.css" />
+    <settings>
+        <input>
+            <label>Metadata table</label>
+            <help>A table from your history with one row per tip, matched to the tree by a key column.</help>
+            <name>metadata</name>
+            <type>data</type>
+            <extension>tabular,csv,tsv</extension>
+            <optional>true</optional>
+        </input>
+        <input>
+            <label>First row holds column names</label>
+            <name>header</name>
+            <type>boolean</type>
+            <value>true</value>
+        </input>
+        <input>
+            <label>Key column</label>
+            <help>The column holding the tip labels. Defaults to the first column.</help>
+            <name>key_column</name>
+            <type>text</type>
+        </input>
+        <input>
+            <label>Color by column</label>
+            <help>Defaults to the second column.</help>
+            <name>value_column</name>
+            <type>text</type>
+        </input>
+        <input>
+            <label>Color mode</label>
+            <name>color_mode</name>
+            <type>select</type>
+            <value>auto</value>
+            <data>
+                <data>
+                    <label>Automatic</label>
+                    <value>auto</value>
+                </data>
+                <data>
+                    <label>Categorical</label>
+                    <value>categorical</value>
+                </data>
+                <data>
+                    <label>Continuous</label>
+                    <value>continuous</value>
+                </data>
+            </data>
+        </input>
+        <input>
+            <label>Color</label>
+            <name>apply_scope</name>
+            <type>select</type>
+            <value>branch</value>
+            <data>
+                <data>
+                    <label>Matched branches</label>
+                    <value>branch</value>
+                </data>
+                <data>
+                    <label>Matched subtrees</label>
+                    <value>subtree</value>
+                </data>
+            </data>
+        </input>
+    </settings>
     <tests>
         <test>
             <param name="dataset_id" label="Mammals" value="https://cdn.jsdelivr.net/gh/galaxyproject/galaxy-test-data/1.newick" ftype="newick" />
@@ -33,7 +97,7 @@ After selecting a `newick`, `nhx` or `nex` dataset, the tree opens in the viewer
 
 - **Layouts**: Rectangular, radial and spiral layouts.
 - **Taxonomy**: Map tip names to NCBI or Catalogue of Life taxonomy and show taxonomic ribbons.
-- **Metadata**: Color branches and add markers from a CSV or TSV table.
+- **Metadata**: Color branches and add markers from a CSV or TSV table, including one chosen from your history in the settings.
 - **Export**: Save publication-quality SVG or PNG figures.
 
 To learn more about Big Tree Viewer, visit:

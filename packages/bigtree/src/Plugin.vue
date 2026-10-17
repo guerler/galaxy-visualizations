@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 
 const TEST_DATA_FILE = "test-data/1.newick";
 
@@ -22,6 +22,7 @@ const errorMessage = ref("");
 const statusMessage = ref("Loading dataset…");
 
 let newick = "";
+let pending = null;
 
 async function fetchText(url) {
     const response = await fetch(url);
@@ -42,10 +43,42 @@ function waitForViewer() {
     });
 }
 
-function render() {
+/** The metadata table chosen in the settings, as Big Tree Viewer's load payload takes it. */
+async function readMetadata() {
+    const settings = props.settings || {};
+    const table = settings.metadata;
+    if (!table?.id) {
+        return undefined;
+    }
+    const header = String(settings.header) !== "false";
+    let text = await fetchText(`${props.root}api/datasets/${table.id}/display`);
+    // Galaxy marks a tabular header with "#", which would otherwise become part of the first column's name.
+    if (header) {
+        text = text.replace(/^#/, "");
+    }
+    return {
+        text,
+        label: table.name || "Galaxy metadata",
+        firstRowIsHeader: header,
+        enabled: true,
+        keyColumn: settings.key_column?.trim() || undefined,
+        valueColumn: settings.value_column?.trim() || undefined,
+        colorMode: settings.color_mode === "auto" ? undefined : settings.color_mode,
+        applyScope: settings.apply_scope,
+    };
+}
+
+async function render() {
+    errorMessage.value = "";
+    let metadata;
+    try {
+        metadata = await readMetadata();
+    } catch (err) {
+        errorMessage.value = `Could not fetch metadata table: ${err.message}`;
+    }
     statusMessage.value = "Drawing tree…";
     viewer.value.contentWindow.postMessage(
-        { type: "big-tree-viewer:load", payload: { newick, label: "Galaxy dataset" } },
+        { type: "big-tree-viewer:load", payload: { newick, label: "Galaxy dataset", metadata } },
         viewerUrl.origin,
     );
 }
@@ -78,6 +111,18 @@ onMounted(async () => {
     }
     render();
 });
+
+// Typing in a text setting changes it per key; redraw once it settles.
+watch(
+    () => props.settings,
+    () => {
+        if (newick) {
+            clearTimeout(pending);
+            pending = setTimeout(render, 500);
+        }
+    },
+    { deep: true },
+);
 </script>
 
 <template>
