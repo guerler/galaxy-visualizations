@@ -20,14 +20,20 @@
         "build": "npm run build:viewer && vite build",
         "build:viewer": "vite build --config vite.config.viewer.js",
         "preview": "vite preview",
-        "prettier": "prettier --config ./prettier.config.js --write './*.{js,ts,json}' 'src/**/*.{js,css}'",
+        "prettier": "prettier --config ./prettier.config.js --write './*.{js,ts,json}' 'src/**/*.{js,css,vue}'",
         "test": "npx playwright test"
     },
     "devDependencies": {
         "@playwright/test": "^1.64.0",
+        "@tailwindcss/vite": "^4.3.3",
         "@vitejs/plugin-react": "^6.1.2",
+        "@vitejs/plugin-vue": "^6.0.10",
         "big-tree-viewer": "github:John-Allard/big_tree_viewer#v0.1.24",
+        "galaxy-charts": "^0.1.18",
+        "galaxy-charts-xml-parser": "^1.0.3",
         "prettier": "^3.9.10",
-        "vite": "^8.3.4"
+        "tailwindcss": "^4.3.3",
+        "vite": "^8.3.4",
+        "vue": "^3.5.44"
     }
 }
